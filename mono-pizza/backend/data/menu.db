@@ -1,0 +1,13 @@
+{"name":"بيتزا 4 جبنات","description":"موزاريلا وشيدر وجودة وبارميزان","price":35,"category":"بيتزا","image":"","addons":[{"price":0,"name":"ريحان طازج"},{"price":6,"name":"جبن إضافي"}],"available":true,"createdAt":{"$$date":1780847126893},"_id":"0V6SC2lb3ENdlV8d"}
+{"name":"شاي بالنعناع","description":"شاي أحمر بالنعناع الطازج","price":7,"category":"مشروبات","image":"","addons":[{"price":2,"name":"عسل"},{"price":1,"name":"زنجبيل"}],"available":true,"createdAt":{"$$date":1780847127066},"_id":"4C7z1OYLanDaWGBh"}
+{"name":"بيتزا دجاج مشوي","description":"دجاج مشوي مع فلفل وبصل وصوص باربيكيو","price":32,"category":"بيتزا","image":"","addons":[{"price":5,"name":"جبن إضافي"},{"price":4,"name":"مشروم"},{"price":2,"name":"فلفل حار"}],"available":true,"createdAt":{"$$date":1780847126880},"_id":"4LFF7UcGfyNwuHGP"}
+{"name":"بيبسي","description":"علبة بيبسي 330 مل","price":5,"category":"مشروبات","image":"","addons":[],"available":true,"createdAt":{"$$date":1780847127006},"_id":"JU2WXOD4NsFLsCnI"}
+{"name":"حلقات بصل","description":"حلقات بصل مقلية بعجينة هشة","price":14,"category":"مقبلات","image":"","addons":[{"price":0,"name":"صوص باربيكيو"},{"price":0,"name":"صوص ثوم"}],"available":true,"createdAt":{"$$date":1780847126949},"_id":"U9IYCOB1cRPFhUOU"}
+{"name":"سلطة سيزر","description":"خس روماني وجبن بارميزان وخبز محمص","price":16,"category":"مقبلات","image":"","addons":[{"price":8,"name":"دجاج مشوي"},{"price":6,"name":"بيكون"}],"available":true,"createdAt":{"$$date":1780847126990},"_id":"kve2at2OnwizaF2b"}
+{"name":"عصير برتقال طازج","description":"برتقال طازج 100%","price":10,"category":"مشروبات","image":"","addons":[{"price":0,"name":"نعناع"},{"price":0,"name":"ثلج إضافي"}],"available":true,"createdAt":{"$$date":1780847127023},"_id":"qD77nguxYAbSW1wr"}
+{"name":"بينزا ","description":"","price":25,"category":"بيتزا","image":"/uploads/1780846380617.png","addons":[{"name":"زيادة بطاطا ","price":2}],"available":true,"createdAt":{"$$date":1780846380657},"_id":"u9zm3iBr5dpe4Lad"}
+{"name":"بيتزا مارغريتا","description":"طماطم طازجة وجبن موزاريلا وريحان","price":25,"category":"بيتزا","image":"","addons":[{"price":5,"name":"جبن إضافي"},{"price":3,"name":"زيتون"},{"price":2,"name":"فلفل حار"}],"available":true,"createdAt":{"$$date":1780847126852},"_id":"yfrTkLDpRcfqXu2l"}
+{"$$deleted":true,"_id":"u9zm3iBr5dpe4Lad"}
+{"$$deleted":true,"_id":"0V6SC2lb3ENdlV8d"}
+{"$$deleted":true,"_id":"4C7z1OYLanDaWGBh"}
+{"$$deleted":true,"_id":"4LFF7UcGfyNwuHGP"}

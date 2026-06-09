@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#080808"/>
+    </radialGradient>
+    <linearGradient id="redG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E63946"/>
+      <stop offset="100%" stop-color="#B02030"/>
+    </linearGradient>
+    <filter id="sh">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="250" cy="250" r="250" fill="url(#bg)"/>
+  <circle cx="250" cy="250" r="242" fill="none" stroke="#E63946" stroke-width="3" opacity="0.5"/>
+
+  <!-- Burger icon -->
+  <!-- Top bun -->
+  <path d="M148,178 Q148,122 250,118 Q352,122 352,178 L348,194 Q290,178 250,178 Q210,178 152,194 Z" fill="#E63946" filter="url(#sh)"/>
+  <!-- Seeds -->
+  <ellipse cx="210" cy="148" rx="10" ry="5" fill="#B02030" transform="rotate(-20,210,148)"/>
+  <ellipse cx="250" cy="138" rx="10" ry="5" fill="#B02030"/>
+  <ellipse cx="290" cy="148" rx="10" ry="5" fill="#B02030" transform="rotate(20,290,148)"/>
+
+  <!-- Patty -->
+  <rect x="148" y="196" width="204" height="20" rx="6" fill="#5a2d0c"/>
+  <!-- Cheese -->
+  <path d="M142,218 L358,218 L354,232 L146,232 Z" fill="#F4A50D"/>
+  <!-- Lettuce -->
+  <path d="M148,232 Q200,224 250,228 Q300,224 352,232 L350,240 Q300,232 250,236 Q200,232 150,240 Z" fill="#2d8b30"/>
+  <!-- Bottom bun -->
+  <rect x="148" y="240" width="204" height="26" rx="13" fill="#E63946" filter="url(#sh)"/>
+
+  <!-- Fork & Knife icons -->
+  <g opacity="0.25" fill="#E63946">
+    <rect x="108" y="300" width="6" height="50" rx="3"/>
+    <rect x="104" y="295" width="14" height="18" rx="4"/>
+    <rect x="138" y="295" width="6" height="50" rx="3"/>
+    <rect x="136" y="295" width="3" height="22" rx="1"/>
+    <rect x="143" y="295" width="3" height="22" rx="1"/>
+  </g>
+
+  <!-- ORDER NOW text -->
+  <text x="250" y="345"
+    font-family="'Bebas Neue', 'Arial Black', sans-serif"
+    font-size="52" font-weight="900"
+    fill="url(#redG)" text-anchor="middle"
+    letter-spacing="6" filter="url(#sh)">اطلب هلأ</text>
+
+  <!-- Subtitle -->
+  <text x="250" y="385"
+    font-family="Cairo, Arial, sans-serif"
+    font-size="20" fill="white"
+    text-anchor="middle" opacity="0.7"
+    letter-spacing="2">توصيل · استلام · كيف ما بدك</text>
+
+  <!-- Bottom tagline -->
+  <text x="250" y="430"
+    font-family="Cairo, Arial, sans-serif"
+    font-size="15" fill="#E63946"
+    text-anchor="middle" opacity="0.6"
+    letter-spacing="1">موقعك الإلكتروني جاهز 🚀</text>
+</svg>

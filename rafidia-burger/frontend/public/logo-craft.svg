@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+
+  <!-- Dark background square -->
+  <rect width="500" height="500" fill="#1a1a1a"/>
+
+  <!-- ══ TOP BUN (yellow, tilted parallelogram) ══ -->
+  <polygon points="
+    88,290
+    148,225
+    395,152
+    430,212
+    175,282
+  " fill="#F5C000"/>
+
+  <!-- White shine LEFT -->
+  <polygon points="80,268  108,248  100,282" fill="white"/>
+
+  <!-- White shine TOP-RIGHT -->
+  <polygon points="393,143  418,148  405,168" fill="white"/>
+
+  <!-- ══ BLACK GAP 1 ══ -->
+  <polygon points="
+    88,292
+    175,284
+    430,214
+    435,228
+    180,298
+    90,306
+  " fill="#1a1a1a"/>
+
+  <!-- ══ RED PATTY 1 ══ -->
+  <polygon points="
+    90,308
+    180,300
+    435,230
+    440,252
+    185,320
+    92,328
+  " fill="#CC1111"/>
+
+  <!-- ══ BLACK GAP 2 ══ -->
+  <polygon points="
+    92,330
+    185,322
+    440,254
+    444,266
+    188,334
+    93,342
+  " fill="#1a1a1a"/>
+
+  <!-- ══ RED PATTY 2 (with step on bottom-left) ══ -->
+  <polygon points="
+    72,344
+    188,336
+    444,268
+    448,298
+    260,340
+    260,358
+    200,358
+    200,370
+    80,370
+    68,358
+  " fill="#CC1111"/>
+
+  <!-- ══ BLACK GAP 3 ══ -->
+  <polygon points="
+    65,372
+    200,372
+    200,360
+    260,360
+    260,342
+    448,300
+    452,315
+    265,356
+    265,374
+    205,374
+    205,386
+    63,386
+  " fill="#1a1a1a"/>
+
+  <!-- ══ BOTTOM BUN (yellow, with notch top-center) ══ -->
+  <polygon points="
+    60,388
+    205,388
+    205,376
+    265,376
+    265,358
+    452,317
+    460,360
+    420,400
+    330,430
+    230,438
+    130,428
+    68,408
+  " fill="#F5C000"/>
+
+</svg>
