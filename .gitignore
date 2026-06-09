@@ -1,0 +1,5 @@
+darna-restaurant/
+chalet-booking/
+node_modules/
+*.db
+.claude/
