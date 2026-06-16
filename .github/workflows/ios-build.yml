@@ -80,7 +80,9 @@ jobs:
             -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
             -allowProvisioningUpdates \
             CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=RTYG6CS9G2
+            DEVELOPMENT_TEAM=RTYG6CS9G2 \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE=""
 
       - name: Export & Upload to TestFlight
         env:
