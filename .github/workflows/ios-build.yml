@@ -40,31 +40,52 @@ jobs:
         working-directory: glamora-salon
         run: npx cap sync ios
 
-      - name: Setup Ruby 3.1 (needed for Fastlane + OpenSSL EC key compatibility)
+      - name: Setup Ruby 3.1
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
           bundler-cache: false
 
-      - name: Install Fastlane & CocoaPods
-        run: gem install fastlane cocoapods --no-document
+      - name: Write and normalize ASC API Key
+        # Re-encodes the .p8 key via LibreSSL to normalize EC curve name format.
+        # Fixes "OpenSSL::PKey::ECError: invalid curve name" in Fastlane/spaceship
+        # on arm64 macOS runners where Ruby's openssl gem 3.2+ is stricter about EC OIDs.
+        env:
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/original_key.p8
+          echo "Original key size: $(wc -c < /tmp/original_key.p8) bytes"
+          if /usr/bin/openssl pkey -in /tmp/original_key.p8 -out /tmp/normalized_key.p8 2>/dev/null; then
+            echo "Key normalized with LibreSSL successfully"
+            cp /tmp/normalized_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
+          else
+            echo "LibreSSL normalization skipped, using original key"
+            cp /tmp/original_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
+          fi
+
+      - name: Install Ruby gems via Bundler
+        working-directory: glamora-salon/ios/App
+        run: |
+          gem install bundler --no-document
+          bundle install --jobs 4 --retry 3
 
       - name: Install CocoaPods dependencies
         working-directory: glamora-salon/ios/App
-        run: pod install
+        run: bundle exec pod install
 
       - name: Build & Upload to TestFlight
         working-directory: glamora-salon/ios/App
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          ASC_KEY_PATH: /tmp/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           GITHUB_ACTOR: ${{ github.actor }}
-        run: fastlane beta
+        run: bundle exec fastlane beta
 
       - name: Save IPA as artifact
         if: always()
