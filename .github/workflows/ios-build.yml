@@ -32,7 +32,7 @@ jobs:
 
       - name: Install Node dependencies
         working-directory: glamora-salon
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Write ASC API Key
         env:
