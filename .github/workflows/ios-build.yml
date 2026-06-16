@@ -86,13 +86,6 @@ jobs:
             PROVISIONING_PROFILE="" \
             CODE_SIGN_ENTITLEMENTS="App/App.entitlements"
 
-      - name: Verify push entitlements in archive
-        run: |
-          APP_PATH=$(find /tmp/App.xcarchive -name "*.app" | head -1)
-          echo "App path: $APP_PATH"
-          codesign -d --entitlements - "$APP_PATH" 2>&1 | grep -i "aps\|push" || echo "WARNING: No push entitlements found in binary!"
-          codesign -d --entitlements - "$APP_PATH" 2>&1 | head -30
-
       - name: Export & Upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -123,6 +116,21 @@ jobs:
             -authenticationKeyID "${ASC_KEY_ID}" \
             -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
             -allowProvisioningUpdates
+
+      - name: Verify push entitlements in exported IPA
+        if: always()
+        run: |
+          IPA=$(find /tmp/build -name "*.ipa" | head -1)
+          if [ -z "$IPA" ]; then echo "No IPA found!"; exit 0; fi
+          echo "IPA: $IPA"
+          mkdir -p /tmp/ipa_check
+          cp "$IPA" /tmp/ipa_check/app.ipa
+          cd /tmp/ipa_check && unzip -q app.ipa
+          APP=$(find /tmp/ipa_check/Payload -name "*.app" | head -1)
+          echo "=== Entitlements ==="
+          codesign -d --entitlements :- "$APP" 2>/dev/null || codesign -d --entitlements - "$APP" 2>&1
+          echo "=== APS check ==="
+          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -i "aps" && echo "✅ APS entitlement FOUND" || echo "❌ APS entitlement NOT FOUND"
 
       - name: Save IPA as artifact
         if: always()
