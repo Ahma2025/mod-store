@@ -2,6 +2,3 @@ source "https://rubygems.org"
 
 gem "fastlane"
 gem "cocoapods"
-# Pin openssl gem to avoid EC key parsing regression on arm64 macOS with OpenSSL 3.2+
-# See: https://github.com/fastlane/fastlane/issues/21531
-gem "openssl", "~> 3.1.0"

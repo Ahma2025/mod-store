@@ -27,6 +27,13 @@ jobs:
           sudo xcode-select -s /Applications/$LATEST/Contents/Developer
           xcodebuild -version
 
+      - name: Setup Ruby 3.1
+        # Must come before cap sync so bundler uses Ruby 3.1 (not system Homebrew Ruby 3.3)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,33 +43,30 @@ jobs:
         working-directory: glamora-salon
         run: npm install
 
-      - name: Sync Capacitor iOS
-        working-directory: glamora-salon
-        run: npx cap sync ios
-
-      - name: Setup Ruby 3.1
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: false
-
       - name: Write and normalize ASC API Key
-        # Re-encodes the .p8 key via LibreSSL to normalize EC curve name format.
-        # Fixes "OpenSSL::PKey::ECError: invalid curve name" in Fastlane/spaceship
-        # on arm64 macOS runners where Ruby's openssl gem 3.2+ is stricter about EC OIDs.
+        # Converts .p8 from PKCS#8 to traditional EC format then back to PKCS#8
+        # via macOS LibreSSL. This normalizes the EC curve OID format and fixes
+        # "OpenSSL::PKey::ECError: invalid curve name" in Fastlane/spaceship on
+        # arm64 macOS GitHub Actions runners.
         env:
           ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/original_key.p8
           echo "Original key size: $(wc -c < /tmp/original_key.p8) bytes"
-          if /usr/bin/openssl pkey -in /tmp/original_key.p8 -out /tmp/normalized_key.p8 2>/dev/null; then
-            echo "Key normalized with LibreSSL successfully"
+          # Convert PKCS#8 → traditional EC → PKCS#8 to normalize OID encoding
+          if /usr/bin/openssl ec -in /tmp/original_key.p8 -out /tmp/ec_key.pem 2>/dev/null && \
+             /usr/bin/openssl pkcs8 -topk8 -nocrypt -in /tmp/ec_key.pem -out /tmp/normalized_key.p8 2>/dev/null; then
+            echo "Key converted through EC format and re-encoded as PKCS8"
+            cp /tmp/normalized_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
+          elif /usr/bin/openssl pkey -in /tmp/original_key.p8 -out /tmp/normalized_key.p8 2>/dev/null; then
+            echo "Key normalized with pkey"
             cp /tmp/normalized_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
           else
-            echo "LibreSSL normalization skipped, using original key"
+            echo "Normalization skipped, using original key"
             cp /tmp/original_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
           fi
+          echo "Final key size: $(wc -c < /tmp/AuthKey_${ASC_KEY_ID}.p8) bytes"
 
       - name: Install Ruby gems via Bundler
         working-directory: glamora-salon/ios/App
@@ -70,9 +74,13 @@ jobs:
           gem install bundler --no-document
           bundle install --jobs 4 --retry 3
 
+      - name: Sync Capacitor iOS
+        working-directory: glamora-salon
+        run: npx cap sync ios
+
       - name: Install CocoaPods dependencies
         working-directory: glamora-salon/ios/App
-        run: pod install --repo-update
+        run: pod install
 
       - name: Build & Upload to TestFlight
         working-directory: glamora-salon/ios/App
