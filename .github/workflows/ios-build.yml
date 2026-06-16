@@ -83,7 +83,15 @@ jobs:
             DEVELOPMENT_TEAM=RTYG6CS9G2 \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            PROVISIONING_PROFILE=""
+            PROVISIONING_PROFILE="" \
+            CODE_SIGN_ENTITLEMENTS="App/App.entitlements"
+
+      - name: Verify push entitlements in archive
+        run: |
+          APP_PATH=$(find /tmp/App.xcarchive -name "*.app" | head -1)
+          echo "App path: $APP_PATH"
+          codesign -d --entitlements - "$APP_PATH" 2>&1 | grep -i "aps\|push" || echo "WARNING: No push entitlements found in binary!"
+          codesign -d --entitlements - "$APP_PATH" 2>&1 | head -30
 
       - name: Export & Upload to TestFlight
         env:
