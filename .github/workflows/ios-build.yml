@@ -56,7 +56,7 @@ jobs:
         working-directory: glamora-salon
         env:
           BUNDLE_GEMFILE: ""
-        run: npx cap sync ios --no-deps
+        run: npx cap copy ios
 
       - name: Install Pods
         working-directory: glamora-salon/ios/App
