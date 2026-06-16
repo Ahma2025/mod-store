@@ -52,13 +52,17 @@ jobs:
       - name: Install CocoaPods
         run: gem install cocoapods --no-document
 
-      - name: Sync Capacitor iOS
+      - name: Sync Capacitor iOS (skip pod install)
         working-directory: glamora-salon
-        run: npx cap sync ios
+        env:
+          BUNDLE_GEMFILE: ""
+        run: npx cap sync ios --no-deps
 
       - name: Install Pods
         working-directory: glamora-salon/ios/App
-        run: pod install
+        env:
+          BUNDLE_GEMFILE: ""
+        run: pod install --repo-update
 
       - name: Build & Archive (xcodebuild - automatic signing)
         working-directory: glamora-salon/ios/App
