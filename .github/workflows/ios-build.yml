@@ -28,7 +28,6 @@ jobs:
           xcodebuild -version
 
       - name: Setup Ruby 3.1
-        # Must come before cap sync so bundler uses Ruby 3.1 (not system Homebrew Ruby 3.3)
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
@@ -48,7 +47,9 @@ jobs:
           ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
+          mkdir -p ~/.private_keys
           echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/AuthKey_${ASC_KEY_ID}.p8
+          cp /tmp/AuthKey_${ASC_KEY_ID}.p8 ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
           echo "Key written: $(wc -c < /tmp/AuthKey_${ASC_KEY_ID}.p8) bytes"
 
       - name: Install Ruby gems via Bundler
@@ -65,95 +66,65 @@ jobs:
         working-directory: glamora-salon/ios/App
         run: pod install
 
-      - name: Patch Fastlane spaceship for arm64 OpenSSL EC key bug
-        # Fastlane's spaceship/connect_api/token.rb calls OpenSSL::PKey.read() on the
-        # Apple .p8 API key. On arm64 macOS with OpenSSL 3.3+, this raises
-        # "invalid curve name (OpenSSL::PKey::ECError)" because prime256v1 OID handling
-        # changed. We patch spaceship to use Python's cryptography lib (pre-installed on
-        # macOS runners) to read the key instead — Python handles this correctly.
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        run: |
-          TOKEN_RB=$(find "$HOME/.rbenv" "$HOME/.rubies" "$HOME/hostedtoolcache" /Users/runner/hostedtoolcache \
-            -name "token.rb" -path "*/spaceship/connect_api/*" 2>/dev/null | head -1)
-          if [ -z "$TOKEN_RB" ]; then
-            TOKEN_RB=$(bundle exec ruby -e "require 'spaceship'; puts Spaceship::ConnectAPI::Token.instance_method(:initialize).source_location[0]" \
-              2>/dev/null || echo "")
-          fi
-          echo "Found spaceship token.rb: $TOKEN_RB"
-
-          # Use Python to convert the .p8 key to DER bytes, then inject a monkey-patch
-          # into spaceship that uses those bytes directly via the lower-level EC API.
-          python3 - <<'PYEOF'
-          import subprocess, sys
-          # Generate a Ruby patch snippet that reads EC key using OpenSSL's raw DER API
-          # instead of PKey.read which fails on arm64 with prime256v1 OID
-          patch = '''
-          module SpaceshipECKeyFix
-            def self.load_p8_key(key_content)
-              # Try standard approach first
-              begin
-                return OpenSSL::PKey.read(key_content)
-              rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError
-              end
-              # Fallback: use OpenSSL::PKey::EC with explicit DER conversion
-              begin
-                # Strip PEM headers and decode base64 to get DER
-                b64 = key_content.gsub(/-----[^-]+-----/, '').gsub(/\\s+/, '')
-                der = Base64.decode64(b64)
-                # Try reading as EC key via DER
-                return OpenSSL::PKey::EC.new(der)
-              rescue => e
-              end
-              # Last resort: try reading with explicit algorithm
-              OpenSSL::PKey.read(key_content)
-            end
-          end
-          '''
-          print("Ruby patch snippet ready")
-          PYEOF
-
-          if [ -n "$TOKEN_RB" ] && [ -f "$TOKEN_RB" ]; then
-            echo "Patching $TOKEN_RB"
-            # Replace 'OpenSSL::PKey.read(key_content)' with a rescue fallback
-            sed -i.bak \
-              's/OpenSSL::PKey\.read(key_content)/begin; OpenSSL::PKey.read(key_content); rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError; b64 = key_content.gsub(\/-----[^-]+-----\/, "").gsub(\/\\\\s+\/, ""); OpenSSL::PKey::EC.new(Base64.decode64(b64)); end/' \
-              "$TOKEN_RB" 2>/dev/null || true
-            echo "Patch applied. Line 70-72:"
-            sed -n '69,73p' "$TOKEN_RB"
-          else
-            echo "token.rb not found, will try alternate patch approach"
-            # Find via bundle
-            TOKEN_RB=$(bundle exec ruby -e \
-              "require 'spaceship'; puts Gem.find_files('spaceship/connect_api/token.rb').first" \
-              2>/dev/null | tail -1)
-            if [ -n "$TOKEN_RB" ] && [ -f "$TOKEN_RB" ]; then
-              echo "Found via bundle: $TOKEN_RB"
-              sed -i.bak \
-                's/OpenSSL::PKey\.read(key_content)/begin; OpenSSL::PKey.read(key_content); rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError; b64 = key_content.gsub(\/-----[^-]+-----\/, "").gsub(\/\\\\s+\/, ""); OpenSSL::PKey::EC.new(Base64.decode64(b64)); end/' \
-                "$TOKEN_RB" 2>/dev/null || true
-            fi
-          fi
-        working-directory: glamora-salon/ios/App
-
-      - name: Build & Upload to TestFlight
+      - name: Build app archive (Fastlane - no API key)
+        # Uses match readonly=true so no Apple API key / OpenSSL needed.
+        # build_only lane archives but skips IPA packaging.
+        # xcodebuild will handle the export + TestFlight upload natively.
         working-directory: glamora-salon/ios/App
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_PATH: /tmp/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
           GITHUB_ACTOR: ${{ github.actor }}
-        run: bundle exec fastlane beta
+        run: bundle exec fastlane build_only
+
+      - name: Upload to TestFlight via xcodebuild
+        # xcodebuild uses Apple's Security framework (not Ruby/OpenSSL) to read
+        # the .p8 key, so the prime256v1 EC curve name issue does not apply.
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          # Write ExportOptions.plist for direct upload to TestFlight
+          cat > /tmp/ExportOptions.plist << 'PLIST_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>teamID</key>
+            <string>RTYG6CS9G2</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.glamora.salon</key>
+              <string>match AppStore com.glamora.salon</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST_EOF
+
+          echo "Uploading /tmp/App.xcarchive to TestFlight..."
+          xcodebuild -exportArchive \
+            -archivePath /tmp/App.xcarchive \
+            -exportOptionsPlist /tmp/ExportOptions.plist \
+            -exportPath /tmp/build \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "${ASC_KEY_ID}" \
+            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
+            -allowProvisioningUpdates
 
       - name: Save IPA as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Glamora-Salon-IPA
-          path: glamora-salon/ios/App/App.ipa
+          path: |
+            /tmp/build/*.ipa
+            glamora-salon/ios/App/App.ipa
           if-no-files-found: ignore
           retention-days: 30
