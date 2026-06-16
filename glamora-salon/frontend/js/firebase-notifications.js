@@ -99,22 +99,24 @@ async function initNativeNotifications() {
       const platform = Capacitor.getPlatform();
 
       if (platform === 'ios') {
-        // On iOS wait up to 15 seconds for Firebase to inject real FCM token
-        // AppDelegate retries injection at 1s, 3s, 6s, 10s, 15s
-        const fcmFromFirebase = await waitForIOSFCMToken(15000);
+        // On iOS: NEVER save the raw APNs token — it's not a valid FCM token.
+        // Wait up to 20 seconds for AppDelegate to inject the real FCM token.
+        const fcmFromFirebase = await waitForIOSFCMToken(20000);
         if (fcmFromFirebase) {
           fcmToken = fcmFromFirebase;
+          localStorage.setItem('glamora_fcm_token', fcmToken);
+          console.log('iOS FCM token saved:', fcmToken.substring(0, 20));
+          await saveFCMToken(fcmToken, 'ios');
         } else {
-          // Save APNs token as fallback - onNativeFCMToken will update it later
-          fcmToken = token.value;
+          // FCM token not ready yet — onNativeFCMToken will handle it when it arrives
+          console.log('iOS: waiting for FCM token from AppDelegate...');
         }
       } else {
         fcmToken = token.value;
+        localStorage.setItem('glamora_fcm_token', fcmToken);
+        console.log('Android FCM token saved:', fcmToken.substring(0, 20));
+        await saveFCMToken(fcmToken, platform);
       }
-
-      localStorage.setItem('glamora_fcm_token', fcmToken);
-      console.log('Token saved, platform:', platform, 'prefix:', fcmToken.substring(0, 20));
-      await saveFCMToken(fcmToken, platform);
     });
 
     PushNotifications.addListener('registrationError', async (err) => {
