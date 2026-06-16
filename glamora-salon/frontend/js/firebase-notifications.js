@@ -69,6 +69,7 @@ async function initWebNotifications() {
 async function initNativeNotifications() {
   try {
     const PushNotifications = Capacitor.Plugins.PushNotifications;
+    const FCM = Capacitor.Plugins.FCM;
     if (!PushNotifications) {
       console.warn('PushNotifications plugin not available');
       return;
@@ -80,41 +81,34 @@ async function initNativeNotifications() {
     }
     if (permStatus.receive !== 'granted') return;
 
-    // Set up onNativeFCMToken FIRST before anything else
-    // AppDelegate will call this when Firebase gives us a real FCM token
-    window.onNativeFCMToken = async (token) => {
-      if (!token || token === fcmToken) return;
-      fcmToken = token;
-      localStorage.setItem('glamora_fcm_token', token);
-      await saveFCMToken(token, 'ios');
-      console.log('FCM token from AppDelegate:', token.substring(0, 20));
-    };
-
-    // Also check if AppDelegate already injected the token (early injection)
-    if (window.__nativeFCMToken) {
-      window.onNativeFCMToken(window.__nativeFCMToken);
-    }
-
     PushNotifications.addListener('registration', async (token) => {
       const platform = Capacitor.getPlatform();
 
-      if (platform === 'ios') {
-        // On iOS: NEVER save the raw APNs token — it's not a valid FCM token.
-        // Wait up to 20 seconds for AppDelegate to inject the real FCM token.
+      if (platform === 'ios' && FCM) {
+        // Use @capacitor-community/fcm plugin to get the real FCM token on iOS
+        try {
+          const result = await FCM.getToken();
+          if (result && result.token) {
+            fcmToken = result.token;
+            localStorage.setItem('glamora_fcm_token', fcmToken);
+            console.log('iOS FCM token via FCM plugin:', fcmToken.substring(0, 20));
+            await saveFCMToken(fcmToken, 'ios');
+            return;
+          }
+        } catch (e) {
+          console.warn('FCM plugin getToken failed:', e.message);
+        }
+        // Fallback: wait for AppDelegate injection
         const fcmFromFirebase = await waitForIOSFCMToken(20000);
         if (fcmFromFirebase) {
           fcmToken = fcmFromFirebase;
           localStorage.setItem('glamora_fcm_token', fcmToken);
-          console.log('iOS FCM token saved:', fcmToken.substring(0, 20));
           await saveFCMToken(fcmToken, 'ios');
-        } else {
-          // FCM token not ready yet — onNativeFCMToken will handle it when it arrives
-          console.log('iOS: waiting for FCM token from AppDelegate...');
         }
       } else {
         fcmToken = token.value;
         localStorage.setItem('glamora_fcm_token', fcmToken);
-        console.log('Android FCM token saved:', fcmToken.substring(0, 20));
+        console.log('FCM token:', platform, fcmToken.substring(0, 20));
         await saveFCMToken(fcmToken, platform);
       }
     });
