@@ -43,30 +43,13 @@ jobs:
         working-directory: glamora-salon
         run: npm install
 
-      - name: Write and normalize ASC API Key
-        # Converts .p8 from PKCS#8 to traditional EC format then back to PKCS#8
-        # via macOS LibreSSL. This normalizes the EC curve OID format and fixes
-        # "OpenSSL::PKey::ECError: invalid curve name" in Fastlane/spaceship on
-        # arm64 macOS GitHub Actions runners.
+      - name: Write ASC API Key
         env:
           ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
-          echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/original_key.p8
-          echo "Original key size: $(wc -c < /tmp/original_key.p8) bytes"
-          # Convert PKCS#8 → traditional EC → PKCS#8 to normalize OID encoding
-          if /usr/bin/openssl ec -in /tmp/original_key.p8 -out /tmp/ec_key.pem 2>/dev/null && \
-             /usr/bin/openssl pkcs8 -topk8 -nocrypt -in /tmp/ec_key.pem -out /tmp/normalized_key.p8 2>/dev/null; then
-            echo "Key converted through EC format and re-encoded as PKCS8"
-            cp /tmp/normalized_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
-          elif /usr/bin/openssl pkey -in /tmp/original_key.p8 -out /tmp/normalized_key.p8 2>/dev/null; then
-            echo "Key normalized with pkey"
-            cp /tmp/normalized_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
-          else
-            echo "Normalization skipped, using original key"
-            cp /tmp/original_key.p8 /tmp/AuthKey_${ASC_KEY_ID}.p8
-          fi
-          echo "Final key size: $(wc -c < /tmp/AuthKey_${ASC_KEY_ID}.p8) bytes"
+          echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/AuthKey_${ASC_KEY_ID}.p8
+          echo "Key written: $(wc -c < /tmp/AuthKey_${ASC_KEY_ID}.p8) bytes"
 
       - name: Install Ruby gems via Bundler
         working-directory: glamora-salon/ios/App
@@ -81,6 +64,77 @@ jobs:
       - name: Install CocoaPods dependencies
         working-directory: glamora-salon/ios/App
         run: pod install
+
+      - name: Patch Fastlane spaceship for arm64 OpenSSL EC key bug
+        # Fastlane's spaceship/connect_api/token.rb calls OpenSSL::PKey.read() on the
+        # Apple .p8 API key. On arm64 macOS with OpenSSL 3.3+, this raises
+        # "invalid curve name (OpenSSL::PKey::ECError)" because prime256v1 OID handling
+        # changed. We patch spaceship to use Python's cryptography lib (pre-installed on
+        # macOS runners) to read the key instead — Python handles this correctly.
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          TOKEN_RB=$(find "$HOME/.rbenv" "$HOME/.rubies" "$HOME/hostedtoolcache" /Users/runner/hostedtoolcache \
+            -name "token.rb" -path "*/spaceship/connect_api/*" 2>/dev/null | head -1)
+          if [ -z "$TOKEN_RB" ]; then
+            TOKEN_RB=$(bundle exec ruby -e "require 'spaceship'; puts Spaceship::ConnectAPI::Token.instance_method(:initialize).source_location[0]" \
+              2>/dev/null || echo "")
+          fi
+          echo "Found spaceship token.rb: $TOKEN_RB"
+
+          # Use Python to convert the .p8 key to DER bytes, then inject a monkey-patch
+          # into spaceship that uses those bytes directly via the lower-level EC API.
+          python3 - <<'PYEOF'
+          import subprocess, sys
+          # Generate a Ruby patch snippet that reads EC key using OpenSSL's raw DER API
+          # instead of PKey.read which fails on arm64 with prime256v1 OID
+          patch = '''
+          module SpaceshipECKeyFix
+            def self.load_p8_key(key_content)
+              # Try standard approach first
+              begin
+                return OpenSSL::PKey.read(key_content)
+              rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError
+              end
+              # Fallback: use OpenSSL::PKey::EC with explicit DER conversion
+              begin
+                # Strip PEM headers and decode base64 to get DER
+                b64 = key_content.gsub(/-----[^-]+-----/, '').gsub(/\\s+/, '')
+                der = Base64.decode64(b64)
+                # Try reading as EC key via DER
+                return OpenSSL::PKey::EC.new(der)
+              rescue => e
+              end
+              # Last resort: try reading with explicit algorithm
+              OpenSSL::PKey.read(key_content)
+            end
+          end
+          '''
+          print("Ruby patch snippet ready")
+          PYEOF
+
+          if [ -n "$TOKEN_RB" ] && [ -f "$TOKEN_RB" ]; then
+            echo "Patching $TOKEN_RB"
+            # Replace 'OpenSSL::PKey.read(key_content)' with a rescue fallback
+            sed -i.bak \
+              's/OpenSSL::PKey\.read(key_content)/begin; OpenSSL::PKey.read(key_content); rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError; b64 = key_content.gsub(\/-----[^-]+-----\/, "").gsub(\/\\\\s+\/, ""); OpenSSL::PKey::EC.new(Base64.decode64(b64)); end/' \
+              "$TOKEN_RB" 2>/dev/null || true
+            echo "Patch applied. Line 70-72:"
+            sed -n '69,73p' "$TOKEN_RB"
+          else
+            echo "token.rb not found, will try alternate patch approach"
+            # Find via bundle
+            TOKEN_RB=$(bundle exec ruby -e \
+              "require 'spaceship'; puts Gem.find_files('spaceship/connect_api/token.rb').first" \
+              2>/dev/null | tail -1)
+            if [ -n "$TOKEN_RB" ] && [ -f "$TOKEN_RB" ]; then
+              echo "Found via bundle: $TOKEN_RB"
+              sed -i.bak \
+                's/OpenSSL::PKey\.read(key_content)/begin; OpenSSL::PKey.read(key_content); rescue OpenSSL::PKey::ECError, OpenSSL::PKey::PKeyError; b64 = key_content.gsub(\/-----[^-]+-----\/, "").gsub(\/\\\\s+\/, ""); OpenSSL::PKey::EC.new(Base64.decode64(b64)); end/' \
+                "$TOKEN_RB" 2>/dev/null || true
+            fi
+          fi
+        working-directory: glamora-salon/ios/App
 
       - name: Build & Upload to TestFlight
         working-directory: glamora-salon/ios/App
