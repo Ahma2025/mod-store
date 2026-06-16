@@ -17,20 +17,45 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Messaging.messaging().apnsToken = deviceToken
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+
+        // Explicitly request FCM token after APNs token is set
+        Messaging.messaging().token { [weak self] token, error in
+            if let error = error {
+                print("FCM: token error: \(error.localizedDescription)")
+                return
+            }
+            guard let token = token else { return }
+            print("FCM: Got token via explicit call: \(token.prefix(20))...")
+            self?.injectFCMToken(token)
+        }
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("FCM: Failed to register for remote notifications: \(error)")
+        print("FCM: Failed APNs registration: \(error.localizedDescription)")
     }
 
-    // Firebase calls this when FCM token is ready - inject it into the WebView
+    // Also receives token via delegate callback
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
-        print("FCM: Got FCM token: \(token.prefix(20))...")
+        print("FCM: Token via delegate: \(token.prefix(20))...")
+        injectFCMToken(token)
+    }
+
+    private func injectFCMToken(_ token: String) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             let bridge = (self.window?.rootViewController as? CAPBridgeViewController)?.bridge
             let js = "window.__nativeFCMToken = '\(token)';"
-            bridge?.webView?.evaluateJavaScript(js, completionHandler: nil)
+            bridge?.webView?.evaluateJavaScript(js) { _, err in
+                if let err = err {
+                    print("FCM: JS inject error: \(err.localizedDescription)")
+                    // Retry after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        bridge?.webView?.evaluateJavaScript(js, completionHandler: nil)
+                    }
+                } else {
+                    print("FCM: JS inject success")
+                }
+            }
         }
     }
 

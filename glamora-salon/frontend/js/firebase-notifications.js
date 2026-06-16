@@ -14,8 +14,11 @@ const VAPID_KEY = "BF6qEhfWlrvgJWK2hDzSeuGV18uZMIL1heQEQLkdyM1FpiL6I_OjDGEfAAaKM
 
 let messaging = null;
 let fcmToken = null;
+let _fcmInitialized = false;
 
 async function initFirebaseNotifications() {
+  if (_fcmInitialized) return;
+  _fcmInitialized = true;
   try {
     // Native platform (Android/iOS via Capacitor) - no Firebase JS SDK needed
     if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
@@ -152,7 +155,7 @@ async function initNativeNotifications() {
     // This runs in parallel - AppDelegate injects window.__nativeFCMToken when Firebase has it
     if (Capacitor.getPlatform() === 'ios') {
       debugLog('iOS: starting token wait (AppDelegate injection method)');
-      waitForIOSFCMToken(60000).then(async (token) => {
+      waitForIOSFCMToken(120000).then(async (token) => {
         if (token) {
           debugLog('iOS FCM token received from AppDelegate: ' + token.substring(0, 30));
           fcmToken = token;
