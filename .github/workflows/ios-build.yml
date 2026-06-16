@@ -76,8 +76,7 @@ jobs:
             --app_identifier com.glamora.salon \
             --team_id RTYG6CS9G2 \
             --output_path /tmp/profiles \
-            --force \
-            --app_store
+            --force
 
           PROFILE=$(ls /tmp/profiles/*.mobileprovision 2>/dev/null | head -1)
           if [ -z "$PROFILE" ]; then echo "ERROR: No profile downloaded!"; exit 1; fi
