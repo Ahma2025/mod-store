@@ -176,8 +176,8 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .salon-rating-badge { background: rgba(201,169,110,0.15); color: var(--gold); font-weight: 700; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
 
 /* ===== PAGE HEADER ===== */
-.page-header { padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 16px; background: var(--white); border-bottom: 1px solid var(--gray-light); display: flex; flex-direction: column; gap: 12px; }
-.page-header h2 { font-size: 22px; font-weight: 800; }
+.page-header { padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 16px; background: var(--white); border-bottom: 1px solid var(--gray-light); display: flex; flex-direction: row; align-items: center; gap: 12px; }
+.page-header h2 { font-size: 22px; font-weight: 800; flex: 1; }
 .booking-tabs { display: flex; gap: 4px; background: var(--cream2); padding: 4px; border-radius: 10px; width: fit-content; }
 .btab { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; transition: all 0.2s; }
 .btab.active { background: var(--white); color: var(--rose-dark); box-shadow: 0 1px 8px rgba(0,0,0,0.08); }
@@ -310,7 +310,8 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 
 /* ===== BOOKING WIZARD ===== */
 .wizard-header { padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 20px; background: var(--white); border-bottom: 1px solid var(--gray-light); }
-.wizard-header h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
+.wizard-header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.wizard-header h2 { font-size: 20px; font-weight: 800; flex: 1; margin: 0; }
 .wizard-steps { display: flex; align-items: center; gap: 0; }
 .wstep { width: 32px; height: 32px; border-radius: 50%; background: var(--gray-light); color: var(--gray); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; transition: all 0.3s; flex-shrink: 0; }
 .wstep.active { background: var(--rose); color: white; box-shadow: 0 2px 10px rgba(201,114,138,0.4); }
@@ -374,7 +375,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .msg-wrap { display: flex; flex-direction: column; max-width: 78%; }
 .msg-wrap.me { align-self: flex-start; align-items: flex-start; }
 .msg-wrap.them { align-self: flex-end; align-items: flex-end; }
-.msg-bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+.msg-bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
 .msg-wrap.me .msg-bubble { background: linear-gradient(135deg, var(--rose), var(--rose-dark)); color: white; border-bottom-right-radius: 6px; }
 .msg-wrap.them .msg-bubble { background: var(--white); color: var(--dark); box-shadow: 0 1px 6px rgba(0,0,0,0.06); border-bottom-left-radius: 6px; }
 .msg-time { font-size: 10px; color: var(--gray); margin-top: 4px; padding: 0 4px; }
