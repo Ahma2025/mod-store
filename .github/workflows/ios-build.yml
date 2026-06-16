@@ -43,16 +43,16 @@ jobs:
           echo "$ASC_KEY_BASE64" | base64 --decode > ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
           echo "Key size: $(wc -c < ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8) bytes"
 
-      - name: Setup Ruby & Fastlane (for CocoaPods only)
+      - name: Setup Ruby & Fastlane
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
           bundler-cache: false
 
-      - name: Install CocoaPods
-        run: gem install cocoapods --no-document
+      - name: Install CocoaPods and Fastlane
+        run: gem install cocoapods fastlane --no-document
 
-      - name: Sync Capacitor iOS (skip pod install)
+      - name: Sync Capacitor iOS
         working-directory: glamora-salon
         env:
           BUNDLE_GEMFILE: ""
@@ -64,7 +64,50 @@ jobs:
           BUNDLE_GEMFILE: ""
         run: pod install --repo-update
 
-      - name: Build & Archive (xcodebuild - automatic signing)
+      - name: Setup keychain for signing
+        run: |
+          security create-keychain -p "glamora123" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "glamora123" build.keychain
+          security set-keychain-settings -t 3600 -l build.keychain
+
+      - name: Run match to get provisioning profile WITH push notifications
+        working-directory: glamora-salon/ios/App
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          BUNDLE_GEMFILE: ""
+        run: |
+          # Write API key for match
+          KEY_FILE=~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+          fastlane run match \
+            type:appstore \
+            app_identifier:com.glamora.salon \
+            git_url:"${MATCH_GIT_URL}" \
+            git_basic_authorization:"$(echo -n "${GITHUB_ACTOR}:${MATCH_GIT_TOKEN}" | base64)" \
+            readonly:false \
+            force:true \
+            keychain_name:build.keychain \
+            keychain_password:glamora123 \
+            api_key_path:"${KEY_FILE}" \
+            api_key_id:"${ASC_KEY_ID}" \
+            api_key_issuer_id:"${ASC_ISSUER_ID}"
+
+          # Show what profile was installed
+          echo "=== Installed profiles ==="
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null | head -5
+          PROFILE=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          if [ -n "$PROFILE" ]; then
+            echo "=== Profile entitlements ==="
+            security cms -D -i "$PROFILE" | grep -A2 "aps-environment" || echo "No aps-environment in profile!"
+          fi
+
+      - name: Build & Archive with match profile (manual signing)
         working-directory: glamora-salon/ios/App
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -79,14 +122,14 @@ jobs:
             -authenticationKeyID "${ASC_KEY_ID}" \
             -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
             -allowProvisioningUpdates \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=RTYG6CS9G2 \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            PROVISIONING_PROFILE="" \
-            CODE_SIGN_ENTITLEMENTS="App/App.entitlements"
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="match AppStore com.glamora.salon" \
+            CODE_SIGN_ENTITLEMENTS="App/App.entitlements" \
+            OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
-      - name: Export IPA (local)
+      - name: Export IPA
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -104,7 +147,12 @@ jobs:
             <key>teamID</key>
             <string>RTYG6CS9G2</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.glamora.salon</key>
+              <string>match AppStore com.glamora.salon</string>
+            </dict>
           </dict>
           </plist>
           EOF
@@ -128,7 +176,7 @@ jobs:
           APP=$(find /tmp/ipa_check/Payload -name "*.app" | head -1)
           echo "=== Full Entitlements ==="
           codesign -d --entitlements :- "$APP" 2>/dev/null
-          echo "=== APS Environment ==="
+          echo "=== APS check ==="
           codesign -d --entitlements :- "$APP" 2>/dev/null | grep -i "aps-environment" && echo "✅ Push entitlement FOUND" || echo "❌ Push entitlement MISSING"
 
       - name: Upload to TestFlight
@@ -138,13 +186,6 @@ jobs:
         run: |
           IPA=$(find /tmp/build -name "*.ipa" | head -1)
           echo "Uploading: $IPA"
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$IPA" \
-            --apiKey "${ASC_KEY_ID}" \
-            --apiIssuer "${ASC_ISSUER_ID}" \
-            --private-key-path ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            --show-progress || \
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA" \
