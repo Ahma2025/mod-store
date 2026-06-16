@@ -72,7 +72,7 @@ jobs:
 
       - name: Install CocoaPods dependencies
         working-directory: glamora-salon/ios/App
-        run: bundle exec pod install
+        run: pod install --repo-update
 
       - name: Build & Upload to TestFlight
         working-directory: glamora-salon/ios/App
