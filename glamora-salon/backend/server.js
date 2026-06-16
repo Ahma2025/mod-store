@@ -5,7 +5,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 
-const { db, initDatabase } = require('./database');
+const { DB, db, initDatabase } = require('./database');
+const fcm = require('./fcm');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,16 +16,29 @@ const SECRET = process.env.JWT_SECRET || 'glamora_secret_2024';
 
 app.use(cors());
 app.use(express.json());
+const _logFile = require('path').join(__dirname, 'requests.log');
+require('fs').writeFileSync(_logFile, '');
+app.use((req, res, next) => {
+  const line = `[${new Date().toISOString()}] ${req.method} ${req.path} from ${req.ip}\n`;
+  require('fs').appendFileSync(_logFile, line);
+  next();
+});
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 initDatabase();
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/salons', require('./routes/salons'));
-app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/messages', require('./routes/messages'));
 app.use('/api/stylists', require('./routes/stylists'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/stylist', require('./routes/stylist-dashboard'));
+app.use('/api/media', require('./routes/media'));
+app.use('/api/blocked-slots', require('./routes/blocked-slots'));
+
+// Routes that need io for real-time events - injected after io is created
+app.use('/api/bookings', (req, res, next) => { req.io = io; next(); }, require('./routes/bookings'));
+app.use('/api/messages', (req, res, next) => { req.io = io; next(); }, require('./routes/messages'));
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -42,11 +56,27 @@ io.on('connection', (socket) => {
     const { receiver_id, content, booking_id } = data;
     if (!receiver_id || !content?.trim()) return;
 
-    const result = db.prepare('INSERT INTO messages (sender_id, receiver_id, booking_id, content) VALUES (?, ?, ?, ?)').run(socket.user.id, receiver_id, booking_id || null, content.trim());
-    const msg = db.prepare('SELECT m.*, u.name as sender_name, u.avatar as sender_avatar FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?').get(result.lastInsertRowid);
+    const msg = DB.messages.insert({
+      sender_id: socket.user.id,
+      receiver_id: parseInt(receiver_id),
+      booking_id: booking_id || null,
+      content: content.trim()
+    });
+    const sender = DB.users.findOne(u => u.id === socket.user.id);
+    const fullMsg = { ...msg, sender_name: sender?.name };
 
-    io.to(`user_${receiver_id}`).emit('new_message', msg);
-    socket.emit('message_sent', msg);
+    io.to(`user_${receiver_id}`).emit('new_message', fullMsg);
+    socket.emit('message_sent', fullMsg);
+
+    const notifTitle = `رسالة من ${sender?.name || 'مستخدمة'} 💬`;
+    const notifBody = content.trim().slice(0, 60);
+    DB.notifications.insert({ user_id: parseInt(receiver_id), title: notifTitle, body: notifBody, type: 'message' });
+    io.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: socket.user.id });
+
+    const receiver = DB.users.findOne(u => u.id === parseInt(receiver_id));
+    if (receiver?.fcm_token) {
+      fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+    }
   });
 
   socket.on('typing', (data) => {
@@ -54,6 +84,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {});
+});
+
+app.post('/api/debug-log', (req, res) => {
+  const msg = req.body.msg || '';
+  const line = `[DEBUG ${new Date().toISOString()}] ${msg}\n`;
+  require('fs').appendFileSync(require('path').join(__dirname, 'debug.log'), line);
+  res.json({ ok: true });
 });
 
 app.get('*', (req, res) => {

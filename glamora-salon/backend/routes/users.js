@@ -1,5 +1,6 @@
 const express = require('express');
-const { DB } = require('../database');
+const bcrypt = require('bcryptjs');
+const { DB, db } = require('../database');
 const { authenticate } = require('./auth');
 
 const router = express.Router();
@@ -36,15 +37,30 @@ router.get('/color-history', authenticate, (req, res) => {
 });
 
 router.put('/profile', authenticate, (req, res) => {
-  const { name, email } = req.body;
-  DB.users.updateOne(u => u.id === req.user.id, { name, email });
-  res.json({ success: true });
+  const { name, email, password } = req.body;
+  const userRec = db.get('users').find({ id: req.user.id }).value();
+  if (!userRec) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+  if (name) userRec.name = name;
+  if (email !== undefined) userRec.email = email;
+  if (password) userRec.password_hash = bcrypt.hashSync(password, 10);
+  db.write();
+
+  res.json({ success: true, user: { id: userRec.id, name: userRec.name, phone: userRec.phone, email: userRec.email, role: userRec.role } });
 });
 
 // FCM Token - save device token for push notifications
 router.post('/fcm-token', authenticate, (req, res) => {
   const { token, platform } = req.body;
+  console.log(`[FCM] Token received for user ${req.user.id} | platform: ${platform} | token: ${token ? token.substring(0,30)+'...' : 'NULL'}`);
   if (!token) return res.status(400).json({ error: 'Token مطلوب' });
+
+  // Remove this token from ALL other users first (one device = one account)
+  db.get('users').filter(u => u.fcm_token === token && u.id !== req.user.id).each(u => {
+    u.fcm_token = null;
+    u.fcm_platform = null;
+  }).value();
+  db.write();
 
   DB.users.updateOne(u => u.id === req.user.id, {
     fcm_token: token,
@@ -52,6 +68,14 @@ router.post('/fcm-token', authenticate, (req, res) => {
     fcm_updated_at: new Date().toISOString()
   });
 
+  res.json({ success: true });
+});
+
+router.delete('/fcm-token', authenticate, (req, res) => {
+  DB.users.updateOne(u => u.id === req.user.id, {
+    fcm_token: null,
+    fcm_platform: null
+  });
   res.json({ success: true });
 });
 

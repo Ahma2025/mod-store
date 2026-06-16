@@ -39,7 +39,10 @@ function switchTab(name, btn) {
   btn?.classList.add('active');
 
   if (name === 'bookings') loadMyBookings();
-  if (name === 'chat') loadConversations();
+  if (name === 'chat') {
+    loadConversations();
+    document.getElementById('chat-badge')?.classList.add('hidden');
+  }
   if (name === 'profile') loadProfile();
 }
 
@@ -110,13 +113,17 @@ function showError(el, msg) {
 }
 
 function enterApp(user) {
-  showScreen('main');
-  document.getElementById('home-user-name').textContent = user.name.split(' ')[0];
-  loadHome();
-  // Init push notifications after login
   if (typeof initFirebaseNotifications === 'function') {
     initFirebaseNotifications();
   }
+  if (user.role === 'stylist' || user.role === 'salon_owner') {
+    enterStylistDashboard(user);
+    return;
+  }
+  showScreen('main');
+  document.getElementById('home-user-name').textContent = user.name.split(' ')[0];
+  loadHome();
+  loadChatBadge();
 }
 
 function selectRole(role) {
@@ -144,11 +151,14 @@ async function loadHome() {
 }
 
 function renderFeaturedSalons(salons) {
-  const emojis = ['💅', '✨', '💎', '🌸', '👑'];
-  const html = salons.slice(0, 5).map((s, i) => `
+  const html = salons.slice(0, 5).map(s => {
+    const coverContent = s.cover_url
+      ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.parentElement.innerHTML='${s.cover_emoji || '💅'}<div class=featured-badge>⭐ ${s.rating}</div>'">`
+      : (s.cover_emoji || '💅');
+    return `
     <div class="featured-card" onclick="openSalon(${s.id})">
-      <div class="featured-cover">
-        ${emojis[i % emojis.length]}
+      <div class="featured-cover" style="${s.cover_url ? 'padding:0;overflow:hidden' : ''}">
+        ${coverContent}
         <div class="featured-badge">⭐ ${s.rating}</div>
       </div>
       <div class="featured-info">
@@ -158,8 +168,8 @@ function renderFeaturedSalons(salons) {
           <span>📍 ${s.city}</span>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
   document.getElementById('featured-salons').innerHTML = html;
 }
 
@@ -179,10 +189,13 @@ function renderTopStylists(salons) {
 }
 
 function renderSalonsList(salons) {
-  const emojis = ['💅', '✨', '💎', '🌸', '👑'];
-  document.getElementById('salons-list').innerHTML = salons.map((s, i) => `
+  document.getElementById('salons-list').innerHTML = salons.map(s => {
+    const thumb = s.cover_url
+      ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
+      : (s.cover_emoji || '💅');
+    return `
     <div class="salon-card" onclick="openSalon(${s.id})">
-      <div class="salon-thumb">${emojis[i % emojis.length]}</div>
+      <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
       <div class="salon-card-info">
         <h4>${s.name}</h4>
         <div class="salon-card-meta">
@@ -191,8 +204,8 @@ function renderSalonsList(salons) {
         </div>
         <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60) + '...' : ''}</p>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function searchSalons(q) {
@@ -225,6 +238,7 @@ async function openSalon(id) {
     renderSalonStylists(data.stylists);
     renderSalonReviews(data.reviews);
     renderSalonInfo(data);
+    loadSalonGallery(id);
 
     const cats = [...new Set(data.services.map(s => s.category))];
     const filterHtml = `<div class="svc-filter-chip active" onclick="filterSalonServices(this, '')">الكل</div>` +
@@ -282,6 +296,42 @@ function renderSalonReviews(reviews) {
       <div class="review-comment">${r.comment || ''}</div>
     </div>
   `).join('');
+}
+
+async function loadSalonGallery(salonId) {
+  try {
+    const media = await Api.salons.media(salonId);
+    const cover = media.find(m => m.is_cover && m.type === 'photo');
+    const coverEl = document.getElementById('salon-cover-media');
+    if (cover && coverEl) {
+      coverEl.style.backgroundImage = `url(${cover.url})`;
+      coverEl.style.opacity = '1';
+    }
+
+    const strip = document.getElementById('salon-gallery-strip');
+    if (!strip) return;
+    if (!media.length) { strip.classList.add('hidden'); return; }
+
+    strip.classList.remove('hidden');
+    strip.innerHTML = media.map(m => {
+      if (m.type === 'video') {
+        return `<div class="gallery-item" onclick="openMediaViewer('${m.url}','video')"><video src="${m.url}" class="gallery-thumb" muted></video><div class="gallery-play">▶</div></div>`;
+      }
+      return `<div class="gallery-item ${m.is_cover ? 'gallery-cover' : ''}" onclick="openMediaViewer('${m.url}','photo')"><img src="${m.url}" class="gallery-thumb">${m.is_cover ? '<div class="gallery-cover-badge">غلاف</div>' : ''}</div>`;
+    }).join('');
+  } catch (e) {}
+}
+
+function openMediaViewer(url, type) {
+  const overlay = document.createElement('div');
+  overlay.className = 'media-viewer-overlay';
+  overlay.onclick = () => overlay.remove();
+  if (type === 'video') {
+    overlay.innerHTML = `<video src="${url}" controls autoplay style="max-width:95%;max-height:90vh;border-radius:12px"></video>`;
+  } else {
+    overlay.innerHTML = `<img src="${url}" style="max-width:95%;max-height:90vh;border-radius:12px;object-fit:contain">`;
+  }
+  document.body.appendChild(overlay);
 }
 
 function renderSalonInfo(data) {
@@ -597,7 +647,7 @@ async function confirmBooking() {
     });
 
     document.getElementById('success-msg').textContent = `${s.service.name_ar || s.service.name} · ${formatDateAr(s.date)} · ${s.time}`;
-    document.getElementById('success-points').textContent = `+${points_earned} نقطة أضيفت لرصيدك 🌟`;
+    document.getElementById('success-points').textContent = `⏳ بانتظار موافقة الكوفيرة - ستصلك إشعار عند التأكيد`;
     document.getElementById('modal-success').classList.remove('hidden');
 
     wizardState = { step: 1, service: null, stylist: null, date: null, time: null, salonId: null };
@@ -625,8 +675,8 @@ function filterBookings(type, btn) {
   if (btn) { document.querySelectorAll('.btab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
   const today = new Date().toISOString().split('T')[0];
   const filtered = type === 'upcoming'
-    ? allBookings.filter(b => b.booking_date >= today && b.status !== 'cancelled')
-    : allBookings.filter(b => b.booking_date < today || b.status === 'cancelled');
+    ? allBookings.filter(b => (b.booking_date >= today && b.status !== 'cancelled' && b.status !== 'rejected') || b.status === 'pending')
+    : allBookings.filter(b => (b.booking_date < today && b.status !== 'pending') || b.status === 'cancelled' || b.status === 'rejected');
 
   if (!filtered.length) {
     document.getElementById('bookings-list').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>${type === 'upcoming' ? 'لا توجد حجوزات قادمة' : 'لا توجد حجوزات سابقة'}</h3><p>احجزي موعدك الأول الآن!</p></div>`;
@@ -634,21 +684,23 @@ function filterBookings(type, btn) {
   }
 
   document.getElementById('bookings-list').innerHTML = filtered.map(b => `
-    <div class="booking-item ${b.booking_date < today ? 'past' : ''} ${b.status === 'cancelled' ? 'cancelled' : ''}">
+    <div class="booking-item ${b.status === 'pending' ? 'pending-card' : ''} ${b.status === 'cancelled' || b.status === 'rejected' ? 'cancelled' : ''}" data-booking-id="${b.id}">
       <div class="booking-top">
         <div class="booking-service-name">${b.name_ar || b.service_name}</div>
-        <div class="booking-status status-${b.status}">${statusLabel(b.status)}</div>
+        <div class="status-${b.status}">${statusLabel(b.status)}</div>
       </div>
       <div class="booking-detail">
-        <span>👩 ${b.stylist_name}</span>
-        <span>🏠 ${b.salon_name}</span>
+        <span>👩 ${b.stylist_name || '-'}</span>
+        <span>🏠 ${b.salon_name || '-'}</span>
         <span>📅 ${formatDateAr(b.booking_date)}</span>
         <span>🕐 ${b.booking_time}</span>
         <span>💰 ₪${b.total_price}</span>
       </div>
-      ${b.status !== 'cancelled' && b.booking_date >= today ? `
+      ${b.status === 'pending' ? `<div style="font-size:12px;color:#856404;background:#FFF3CD;border-radius:8px;padding:8px 10px;margin-top:8px">⏳ بانتظار موافقة الكوفيرة - ستصلك إشعار فور التأكيد</div>` : ''}
+      ${b.status === 'rejected' ? `<div style="font-size:12px;color:#721c24;background:#F8D7DA;border-radius:8px;padding:8px 10px;margin-top:8px">❌ تم رفض الحجز - يمكنك اختيار وقت آخر</div>` : ''}
+      ${(b.status === 'pending' || b.status === 'confirmed') && b.booking_date >= today ? `
         <div class="booking-actions">
-          <button class="btn-sm btn-sm-primary" onclick="openChatWith(${b.stylist_id}, '${b.stylist_name}')">💬 تواصل</button>
+          ${b.status === 'confirmed' && b.stylist_user_id ? `<button class="btn-sm btn-sm-primary" onclick="openChatWith(${b.stylist_user_id}, '${(b.salon_name || b.stylist_name || '').replace(/'/g, '')}')">💬 تواصل مع الصالون</button>` : ''}
           <button class="btn-sm btn-sm-danger" onclick="cancelBooking(${b.id})">إلغاء</button>
         </div>` : ''}
       ${b.booking_date < today && b.status === 'confirmed' ? `
@@ -711,9 +763,15 @@ async function openChatWith(userId, userName) {
   showScreen('chat-conv');
 
   const msgs = await Api.messages.get(userId);
+  // Register all loaded IDs so incoming socket echoes are ignored
+  renderedMsgIds.clear();
+  msgs.forEach(m => { if (m.id) renderedMsgIds.add(m.id); });
   const container = document.getElementById('chat-messages');
   container.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
-  container.scrollTop = container.scrollHeight;
+  setTimeout(() => {
+    const screen = document.getElementById('screen-chat-conv');
+    if (screen) screen.scrollTop = screen.scrollHeight;
+  }, 50);
 }
 
 function buildMsgHtml(msg) {
@@ -729,7 +787,8 @@ function buildMsgHtml(msg) {
 function appendChatMessage(msg, isMe) {
   const container = document.getElementById('chat-messages');
   container.insertAdjacentHTML('beforeend', buildMsgHtml({ ...msg, sender_id: isMe ? currentUser?.id : msg.sender_id }));
-  container.scrollTop = container.scrollHeight;
+  const screen = document.getElementById('screen-chat-conv');
+  if (screen) screen.scrollTop = screen.scrollHeight;
 }
 
 function sendChatMessage() {
@@ -743,9 +802,27 @@ function sendChatMessage() {
 
   if (socket?.connected) {
     socket.emit('send_message', { receiver_id: currentChatUserId, content });
+    // message_sent event will register the real DB id
   } else {
-    Api.messages.send(currentChatUserId, content).catch(e => showToast('⚠️ ' + e.message));
+    Api.messages.send(currentChatUserId, content)
+      .then(msg => { if (msg?.id) renderedMsgIds.add(msg.id); })
+      .catch(e => showToast('⚠️ ' + e.message));
   }
+}
+
+async function doLogout() {
+  try {
+    const base = (typeof BASE !== 'undefined') ? BASE : `http://${window.location.hostname}:3000`;
+    const token = localStorage.getItem('glamora_token');
+    if (token) {
+      await fetch(base + '/api/users/fcm-token', {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+    }
+  } catch (e) {}
+  clearAuth();
+  location.reload();
 }
 
 // ===== PROFILE =====
@@ -826,34 +903,81 @@ async function showLoyaltyHistory() {
 async function showNotifications() {
   showScreen('notifications');
   document.querySelector('#screen-notifications h2').textContent = 'الإشعارات 🔔';
+  // Hide both badges
+  document.getElementById('notif-badge')?.classList.add('hidden');
+  document.getElementById('st-notif-badge')?.classList.add('hidden');
   try {
     const notifs = await Api.users.notifications();
     await Api.users.markNotifsRead();
-    document.getElementById('notif-badge').classList.add('hidden');
     if (!notifs.length) {
       document.getElementById('notifs-list').innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div><h3>لا توجد إشعارات</h3></div>';
       return;
     }
-    document.getElementById('notifs-list').innerHTML = notifs.map(n => `
-      <div class="notif-item">
-        <div class="notif-icon">${notifIcon(n.type)}</div>
-        <div>
-          <div class="notif-title">${n.title}</div>
-          <div class="notif-body">${n.body}</div>
-          <div class="notif-time">${formatTime(n.created_at)}</div>
+    document.getElementById('notifs-list').innerHTML = notifs.map(n => {
+      const isUnread = !n.is_read;
+      const clickable = n.type === 'booking' && n.booking_id;
+      const onclick = clickable ? `navigateToBooking(${n.booking_id})` : (n.type === 'message' ? `switchTab('chat', document.querySelector('.nav-btn:nth-child(4)')); goBack();` : '');
+      return `
+        <div class="notif-item ${isUnread ? 'notif-unread' : ''}" ${onclick ? `onclick="${onclick}" style="cursor:pointer"` : ''}>
+          <div class="notif-icon">${notifIcon(n.type)}</div>
+          <div style="flex:1">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-body">${n.body}</div>
+            <div class="notif-time">${formatTime(n.created_at)}</div>
+          </div>
+          ${clickable ? '<div style="color:var(--rose);font-size:18px">›</div>' : ''}
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (e) {}
+}
+
+function navigateToBooking(bookingId) {
+  goBack();
+  const role = currentUser?.role;
+  if (role === 'stylist' || role === 'salon_owner') {
+    stSwitchTab('bookings', document.querySelector('#screen-stylist .nav-btn:nth-child(3)'));
+    setTimeout(() => {
+      const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card?.classList.add('highlight-pulse');
+      setTimeout(() => card?.classList.remove('highlight-pulse'), 2000);
+    }, 300);
+  } else {
+    switchTab('bookings', document.querySelector('.nav-btn:nth-child(2)'));
+    setTimeout(() => {
+      const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card?.classList.add('highlight-pulse');
+      setTimeout(() => card?.classList.remove('highlight-pulse'), 2000);
+    }, 300);
+  }
 }
 
 async function loadNotifBadge() {
   try {
     const notifs = await Api.users.notifications();
     const unread = notifs.filter(n => !n.is_read).length;
-    const badge = document.getElementById('notif-badge');
-    if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
-    else badge.classList.add('hidden');
+    // Update both client and stylist bell badges
+    ['notif-badge', 'st-notif-badge'].forEach(id => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
+      if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+    });
+  } catch (e) {}
+}
+
+async function loadChatBadge() {
+  try {
+    const convs = await Api.messages.conversations();
+    const unread = convs.reduce((s, c) => s + (c.unread_count || 0), 0);
+    ['chat-badge', 'st-chat-badge'].forEach(id => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
+      if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+    });
   } catch (e) {}
 }
 
@@ -876,7 +1000,7 @@ function categoryIcon(cat) {
 }
 
 function statusLabel(s) {
-  const map = { confirmed: '✅ مؤكد', pending: '⏳ قيد المراجعة', cancelled: '❌ ملغي', completed: '✔️ مكتمل' };
+  const map = { confirmed: '✅ مؤكد', pending: '⏳ بانتظار', cancelled: '❌ ملغي', rejected: '❌ مرفوض', completed: '✔️ مكتمل' };
   return map[s] || s;
 }
 
@@ -929,10 +1053,8 @@ function formatTime(dateStr) {
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     if (authToken && currentUser) {
-      showScreen('main');
-      document.getElementById('home-user-name').textContent = currentUser.name.split(' ')[0];
-      loadHome();
       initSocket();
+      enterApp(currentUser);
     } else {
       showScreen('onboard');
     }

@@ -66,40 +66,54 @@ async function initWebNotifications() {
 }
 
 // ===== NATIVE (Android + iOS via Capacitor) =====
+function debugLog(msg) {
+  const base = (typeof BASE !== 'undefined') ? BASE : `http://${window.location.hostname}:3000`;
+  fetch(base + '/api/debug-log', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({msg}) }).catch(()=>{});
+}
+
 async function initNativeNotifications() {
   try {
     const PushNotifications = Capacitor.Plugins.PushNotifications;
     const FCM = Capacitor.Plugins.FCM;
+    const allPlugins = Object.keys(Capacitor.Plugins || {}).join(',');
+    debugLog('initNativeNotifications started | FCM plugin: ' + (FCM ? 'YES' : 'NO') + ' | all plugins: ' + allPlugins);
+
     if (!PushNotifications) {
-      console.warn('PushNotifications plugin not available');
+      debugLog('ERROR: PushNotifications plugin not available');
       return;
     }
 
     let permStatus = await PushNotifications.checkPermissions();
+    debugLog('permission status: ' + permStatus.receive);
     if (permStatus.receive === 'prompt') {
       permStatus = await PushNotifications.requestPermissions();
+      debugLog('after request: ' + permStatus.receive);
     }
-    if (permStatus.receive !== 'granted') return;
+    if (permStatus.receive !== 'granted') {
+      debugLog('BLOCKED: permission not granted: ' + permStatus.receive);
+      return;
+    }
 
     PushNotifications.addListener('registration', async (token) => {
       const platform = Capacitor.getPlatform();
+      debugLog('registration event fired | platform: ' + platform + ' | apns token: ' + (token.value||'').substring(0,20));
 
       if (platform === 'ios' && FCM) {
-        // Use @capacitor-community/fcm plugin to get the real FCM token on iOS
         try {
+          debugLog('calling FCM.getToken()...');
           const result = await FCM.getToken();
+          debugLog('FCM.getToken result: ' + (result && result.token ? result.token.substring(0,30) : 'null'));
           if (result && result.token) {
             fcmToken = result.token;
             localStorage.setItem('glamora_fcm_token', fcmToken);
-            console.log('iOS FCM token via FCM plugin:', fcmToken.substring(0, 20));
             await saveFCMToken(fcmToken, 'ios');
             return;
           }
         } catch (e) {
-          console.warn('FCM plugin getToken failed:', e.message);
+          debugLog('FCM.getToken failed: ' + e.message);
         }
-        // Fallback: wait for AppDelegate injection
         const fcmFromFirebase = await waitForIOSFCMToken(20000);
+        debugLog('waitForIOSFCMToken result: ' + (fcmFromFirebase ? fcmFromFirebase.substring(0,20) : 'null'));
         if (fcmFromFirebase) {
           fcmToken = fcmFromFirebase;
           localStorage.setItem('glamora_fcm_token', fcmToken);
@@ -108,13 +122,13 @@ async function initNativeNotifications() {
       } else {
         fcmToken = token.value;
         localStorage.setItem('glamora_fcm_token', fcmToken);
-        console.log('FCM token:', platform, fcmToken.substring(0, 20));
+        debugLog('FCM token (non-ios): ' + platform + ' | ' + fcmToken.substring(0, 20));
         await saveFCMToken(fcmToken, platform);
       }
     });
 
     PushNotifications.addListener('registrationError', async (err) => {
-      console.error('FCM registration error:', JSON.stringify(err));
+      debugLog('registrationError: ' + JSON.stringify(err));
       const cached = localStorage.getItem('glamora_fcm_token');
       if (cached) {
         fcmToken = cached;
@@ -134,7 +148,25 @@ async function initNativeNotifications() {
       handleNotificationAction(action.notification.data);
     });
 
+    // On iOS: start waiting for FCM token injected by AppDelegate MessagingDelegate
+    // This runs in parallel - AppDelegate injects window.__nativeFCMToken when Firebase has it
+    if (Capacitor.getPlatform() === 'ios') {
+      debugLog('iOS: starting token wait (AppDelegate injection method)');
+      waitForIOSFCMToken(60000).then(async (token) => {
+        if (token) {
+          debugLog('iOS FCM token received from AppDelegate: ' + token.substring(0, 30));
+          fcmToken = token;
+          localStorage.setItem('glamora_fcm_token', token);
+          await saveFCMToken(token, 'ios');
+        } else {
+          debugLog('iOS FCM token wait timed out after 60s');
+        }
+      });
+    }
+
+    debugLog('calling PushNotifications.register()...');
     await PushNotifications.register();
+    debugLog('register() returned');
 
     setTimeout(async () => {
       if (fcmToken) await saveFCMToken(fcmToken, Capacitor.getPlatform());

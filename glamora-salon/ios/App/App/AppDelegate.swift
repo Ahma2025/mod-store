@@ -4,12 +4,13 @@ import FirebaseCore
 import FirebaseMessaging
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
+        Messaging.messaging().delegate = self
         return true
     }
 
@@ -19,7 +20,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Failed to register for remote notifications: \(error)")
+        print("FCM: Failed to register for remote notifications: \(error)")
+    }
+
+    // Firebase calls this when FCM token is ready - inject it into the WebView
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let token = fcmToken else { return }
+        print("FCM: Got FCM token: \(token.prefix(20))...")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let bridge = (self.window?.rootViewController as? CAPBridgeViewController)?.bridge
+            let js = "window.__nativeFCMToken = '\(token)';"
+            bridge?.webView?.evaluateJavaScript(js, completionHandler: nil)
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {}
