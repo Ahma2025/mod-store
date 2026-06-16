@@ -151,18 +151,20 @@ async function initNativeNotifications() {
       handleNotificationAction(action.notification.data);
     });
 
-    // On iOS: start waiting for FCM token injected by AppDelegate MessagingDelegate
-    // This runs in parallel - AppDelegate injects window.__nativeFCMToken when Firebase has it
+    // On iOS: wait for FCM token injected by AppDelegate (via evaluateJavaScript)
+    // AppDelegate retries injection every 2s for up to 20s until WebView is ready
     if (Capacitor.getPlatform() === 'ios') {
-      debugLog('iOS: starting token wait (AppDelegate injection method)');
+      debugLog('iOS: starting token wait (AppDelegate injection + retry method)');
       waitForIOSFCMToken(120000).then(async (token) => {
         if (token) {
-          debugLog('iOS FCM token received from AppDelegate: ' + token.substring(0, 30));
-          fcmToken = token;
-          localStorage.setItem('glamora_fcm_token', token);
-          await saveFCMToken(token, 'ios');
+          debugLog('iOS FCM token received: ' + token.substring(0, 30));
+          if (token !== fcmToken) {
+            fcmToken = token;
+            localStorage.setItem('glamora_fcm_token', token);
+            await saveFCMToken(token, 'ios');
+          }
         } else {
-          debugLog('iOS FCM token wait timed out after 60s');
+          debugLog('iOS FCM token wait timed out after 120s - check native logs');
         }
       });
     }

@@ -57,17 +57,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     }
 
     private func injectFCMToken(_ token: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // Save to UserDefaults immediately — JS reads this on startup, no timing issues
+        UserDefaults.standard.set(token, forKey: "glamora_ios_fcm_token")
+        UserDefaults.standard.synchronize()
+        nativeDebug("FCM token saved to UserDefaults: \(token.prefix(30))...")
+
+        // Also try JS injection with retries in case WebView is already loaded
+        tryInjectJS(token: token, attempts: 0)
+    }
+
+    private func tryInjectJS(token: String, attempts: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (attempts == 0 ? 0.5 : 2.0)) {
             let bridge = (self.window?.rootViewController as? CAPBridgeViewController)?.bridge
-            let js = "window.__nativeFCMToken = '\(token)';"
-            bridge?.webView?.evaluateJavaScript(js) { _, err in
+            guard let webView = bridge?.webView else {
+                if attempts < 10 {
+                    self.nativeDebug("WebView not ready (attempt \(attempts)), retrying...")
+                    self.tryInjectJS(token: token, attempts: attempts + 1)
+                }
+                return
+            }
+            let js = "window.__nativeFCMToken = '\(token)'; console.log('[NATIVE] FCM token injected');"
+            webView.evaluateJavaScript(js) { _, err in
                 if let err = err {
-                    self.nativeDebug("JS inject FAILED: \(err.localizedDescription)")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        bridge?.webView?.evaluateJavaScript(js, completionHandler: nil)
+                    self.nativeDebug("JS inject failed attempt \(attempts): \(err.localizedDescription)")
+                    if attempts < 5 {
+                        self.tryInjectJS(token: token, attempts: attempts + 1)
                     }
                 } else {
-                    self.nativeDebug("JS inject SUCCESS - token set in WebView")
+                    self.nativeDebug("JS inject SUCCESS attempt \(attempts)")
                 }
             }
         }
@@ -76,7 +93,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     func applicationWillResignActive(_ application: UIApplication) {}
     func applicationDidEnterBackground(_ application: UIApplication) {}
     func applicationWillEnterForeground(_ application: UIApplication) {}
-    func applicationDidBecomeActive(_ application: UIApplication) {}
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Re-attempt FCM token fetch every time app becomes active
+        // Covers the case where didRegisterForRemoteNotificationsWithDeviceToken fired but injection failed
+        Messaging.messaging().token { [weak self] token, error in
+            if let token = token {
+                self?.nativeDebug("applicationDidBecomeActive FCM token: \(token.prefix(30))...")
+                self?.injectFCMToken(token)
+            } else if let error = error {
+                self?.nativeDebug("applicationDidBecomeActive FCM error: \(error.localizedDescription)")
+            } else {
+                // No token and no error - APNs not registered yet, try to force register
+                self?.nativeDebug("applicationDidBecomeActive: no FCM token, requesting APNs registration...")
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+    }
+
     func applicationWillTerminate(_ application: UIApplication) {}
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
