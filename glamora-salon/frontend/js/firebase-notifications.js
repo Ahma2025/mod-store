@@ -17,17 +17,24 @@ let fcmToken = null;
 
 async function initFirebaseNotifications() {
   try {
-    if (typeof firebase === 'undefined') return;
+    // Native platform (Android/iOS via Capacitor) - no Firebase JS SDK needed
+    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+      // Always try to claim cached token for current user on every login
+      const cached = localStorage.getItem('glamora_fcm_token');
+      if (cached) {
+        fcmToken = cached;
+        await saveFCMToken(cached, Capacitor.getPlatform());
+      }
+      await initNativeNotifications();
+      return;
+    }
 
+    // Web PWA - needs Firebase JS SDK
+    if (typeof firebase === 'undefined') return;
     if (!firebase.apps.length) {
       firebase.initializeApp(FIREBASE_CONFIG);
     }
-
-    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-      await initNativeNotifications();
-    } else {
-      await initWebNotifications();
-    }
+    await initWebNotifications();
   } catch (e) {
     console.warn('Firebase notifications init failed:', e.message);
   }
@@ -61,7 +68,11 @@ async function initWebNotifications() {
 // ===== NATIVE (Android + iOS via Capacitor) =====
 async function initNativeNotifications() {
   try {
-    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const PushNotifications = Capacitor.Plugins.PushNotifications;
+    if (!PushNotifications) {
+      console.warn('PushNotifications plugin not available');
+      return;
+    }
 
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive === 'prompt') {
@@ -69,11 +80,36 @@ async function initNativeNotifications() {
     }
     if (permStatus.receive !== 'granted') return;
 
-    await PushNotifications.register();
-
+    // Add listeners BEFORE register() to avoid race condition
     PushNotifications.addListener('registration', async (token) => {
-      fcmToken = token.value;
-      await saveFCMToken(fcmToken, Capacitor.getPlatform());
+      const platform = Capacitor.getPlatform();
+
+      if (platform === 'ios') {
+        // On iOS, the token from Capacitor is a raw APNs token.
+        // Firebase SDK in AppDelegate injects the real FCM token via window.__nativeFCMToken.
+        // Wait up to 3 seconds for Firebase to provide the FCM token.
+        const fcmFromFirebase = await waitForIOSFCMToken(3000);
+        fcmToken = fcmFromFirebase || token.value;
+      } else {
+        fcmToken = token.value;
+      }
+
+      localStorage.setItem('glamora_fcm_token', fcmToken);
+      console.log('Token saved, platform:', platform, 'token prefix:', fcmToken.substring(0, 20));
+      await saveFCMToken(fcmToken, platform);
+    });
+
+    PushNotifications.addListener('registrationError', async (err) => {
+      console.error('FCM registration error:', JSON.stringify(err));
+      const cached = localStorage.getItem('glamora_fcm_token');
+      if (cached) {
+        fcmToken = cached;
+        await saveFCMToken(cached, Capacitor.getPlatform());
+      } else {
+        setTimeout(async () => {
+          try { await PushNotifications.register(); } catch(e) {}
+        }, 5000);
+      }
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -83,9 +119,44 @@ async function initNativeNotifications() {
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       handleNotificationAction(action.notification.data);
     });
+
+    // Register native FCM token callback from AppDelegate injection
+    window.onNativeFCMToken = async (token) => {
+      fcmToken = token;
+      localStorage.setItem('glamora_fcm_token', token);
+      await saveFCMToken(token, 'ios');
+      console.log('Native FCM token received from AppDelegate:', token.substring(0, 20));
+    };
+
+    await PushNotifications.register();
+
+    setTimeout(async () => {
+      if (fcmToken) await saveFCMToken(fcmToken, Capacitor.getPlatform());
+    }, 500);
+
   } catch (e) {
     console.warn('Native notifications failed:', e.message);
   }
+}
+
+// Wait for iOS Firebase SDK to inject FCM token via AppDelegate
+function waitForIOSFCMToken(timeoutMs) {
+  return new Promise((resolve) => {
+    if (window.__nativeFCMToken) {
+      resolve(window.__nativeFCMToken);
+      return;
+    }
+    const start = Date.now();
+    const check = setInterval(() => {
+      if (window.__nativeFCMToken) {
+        clearInterval(check);
+        resolve(window.__nativeFCMToken);
+      } else if (Date.now() - start > timeoutMs) {
+        clearInterval(check);
+        resolve(null); // fall back to APNs token
+      }
+    }, 100);
+  });
 }
 
 // ===== SAVE TOKEN TO BACKEND =====
@@ -93,12 +164,17 @@ async function saveFCMToken(token, platform = 'web') {
   try {
     const stored = localStorage.getItem('glamora_token');
     if (!stored) return;
-    await fetch('/api/users/fcm-token', {
+    // Use BASE from api.js if available, otherwise auto-detect
+    const base = (typeof BASE !== 'undefined') ? BASE : (window.location.hostname === 'localhost' ? 'http://localhost:3000' : `http://${window.location.hostname}:3000`);
+    await fetch(base + '/api/users/fcm-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored}` },
       body: JSON.stringify({ token, platform })
     });
-  } catch (e) {}
+    console.log('FCM token saved to backend, platform:', platform);
+  } catch (e) {
+    console.warn('saveFCMToken failed:', e.message);
+  }
 }
 
 // ===== IN-APP NOTIFICATION BANNER =====
