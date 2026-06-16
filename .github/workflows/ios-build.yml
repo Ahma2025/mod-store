@@ -18,20 +18,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: List and select latest Xcode
+      - name: Select latest Xcode
         run: |
-          echo "=== Available Xcodes ==="
-          ls /Applications/ | grep -i xcode || true
           LATEST=$(ls /Applications/ | grep "^Xcode" | sort -V | tail -1)
-          echo "Selecting: $LATEST"
+          echo "Using: $LATEST"
           sudo xcode-select -s /Applications/$LATEST/Contents/Developer
           xcodebuild -version
-
-      - name: Setup Ruby 3.1
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,45 +40,51 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           mkdir -p ~/.private_keys
-          echo "$ASC_KEY_BASE64" | base64 --decode > /tmp/AuthKey_${ASC_KEY_ID}.p8
-          cp /tmp/AuthKey_${ASC_KEY_ID}.p8 ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
-          echo "Key written: $(wc -c < /tmp/AuthKey_${ASC_KEY_ID}.p8) bytes"
+          echo "$ASC_KEY_BASE64" | base64 --decode > ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+          echo "Key size: $(wc -c < ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8) bytes"
 
-      - name: Install Ruby gems via Bundler
-        working-directory: glamora-salon/ios/App
-        run: |
-          gem install bundler --no-document
-          bundle install --jobs 4 --retry 3
+      - name: Setup Ruby & Fastlane (for CocoaPods only)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: false
+
+      - name: Install CocoaPods
+        run: gem install cocoapods --no-document
 
       - name: Sync Capacitor iOS
         working-directory: glamora-salon
         run: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Install Pods
         working-directory: glamora-salon/ios/App
         run: pod install
 
-      - name: Build app archive (Fastlane - no API key)
-        # Uses match readonly=true so no Apple API key / OpenSSL needed.
-        # build_only lane archives but skips IPA packaging.
-        # xcodebuild will handle the export + TestFlight upload natively.
+      - name: Build & Archive (xcodebuild - automatic signing)
         working-directory: glamora-salon/ios/App
-        env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: bundle exec fastlane build_only
-
-      - name: Upload to TestFlight via xcodebuild
-        # xcodebuild uses Apple's Security framework (not Ruby/OpenSSL) to read
-        # the .p8 key, so the prime256v1 EC curve name issue does not apply.
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Write ExportOptions.plist for direct upload to TestFlight
-          cat > /tmp/ExportOptions.plist << 'PLIST_EOF'
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath /tmp/App.xcarchive \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "${ASC_KEY_ID}" \
+            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
+            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=RTYG6CS9G2 \
+            | xcpretty || true
+
+      - name: Export & Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > /tmp/ExportOptions.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -98,17 +96,11 @@ jobs:
             <key>teamID</key>
             <string>RTYG6CS9G2</string>
             <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>com.glamora.salon</key>
-              <string>match AppStore com.glamora.salon</string>
-            </dict>
+            <string>automatic</string>
           </dict>
           </plist>
-          PLIST_EOF
+          EOF
 
-          echo "Uploading /tmp/App.xcarchive to TestFlight..."
           xcodebuild -exportArchive \
             -archivePath /tmp/App.xcarchive \
             -exportOptionsPlist /tmp/ExportOptions.plist \
@@ -123,8 +115,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Glamora-Salon-IPA
-          path: |
-            /tmp/build/*.ipa
-            glamora-salon/ios/App/App.ipa
+          path: /tmp/build/*.ipa
           if-no-files-found: ignore
           retention-days: 30
