@@ -80,22 +80,40 @@ async function initNativeNotifications() {
     }
     if (permStatus.receive !== 'granted') return;
 
-    // Add listeners BEFORE register() to avoid race condition
+    // Set up onNativeFCMToken FIRST before anything else
+    // AppDelegate will call this when Firebase gives us a real FCM token
+    window.onNativeFCMToken = async (token) => {
+      if (!token || token === fcmToken) return;
+      fcmToken = token;
+      localStorage.setItem('glamora_fcm_token', token);
+      await saveFCMToken(token, 'ios');
+      console.log('FCM token from AppDelegate:', token.substring(0, 20));
+    };
+
+    // Also check if AppDelegate already injected the token (early injection)
+    if (window.__nativeFCMToken) {
+      window.onNativeFCMToken(window.__nativeFCMToken);
+    }
+
     PushNotifications.addListener('registration', async (token) => {
       const platform = Capacitor.getPlatform();
 
       if (platform === 'ios') {
-        // On iOS, the token from Capacitor is a raw APNs token.
-        // Firebase SDK in AppDelegate injects the real FCM token via window.__nativeFCMToken.
-        // Wait up to 3 seconds for Firebase to provide the FCM token.
-        const fcmFromFirebase = await waitForIOSFCMToken(3000);
-        fcmToken = fcmFromFirebase || token.value;
+        // On iOS wait up to 15 seconds for Firebase to inject real FCM token
+        // AppDelegate retries injection at 1s, 3s, 6s, 10s, 15s
+        const fcmFromFirebase = await waitForIOSFCMToken(15000);
+        if (fcmFromFirebase) {
+          fcmToken = fcmFromFirebase;
+        } else {
+          // Save APNs token as fallback - onNativeFCMToken will update it later
+          fcmToken = token.value;
+        }
       } else {
         fcmToken = token.value;
       }
 
       localStorage.setItem('glamora_fcm_token', fcmToken);
-      console.log('Token saved, platform:', platform, 'token prefix:', fcmToken.substring(0, 20));
+      console.log('Token saved, platform:', platform, 'prefix:', fcmToken.substring(0, 20));
       await saveFCMToken(fcmToken, platform);
     });
 
@@ -119,14 +137,6 @@ async function initNativeNotifications() {
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       handleNotificationAction(action.notification.data);
     });
-
-    // Register native FCM token callback from AppDelegate injection
-    window.onNativeFCMToken = async (token) => {
-      fcmToken = token;
-      localStorage.setItem('glamora_fcm_token', token);
-      await saveFCMToken(token, 'ios');
-      console.log('Native FCM token received from AppDelegate:', token.substring(0, 20));
-    };
 
     await PushNotifications.register();
 

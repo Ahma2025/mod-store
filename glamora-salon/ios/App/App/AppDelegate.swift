@@ -9,41 +9,61 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Initialize Firebase for FCM push notifications
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         return true
     }
 
-    // Firebase gives us the real FCM registration token here
-    // (This is what we send to our backend, not the raw APNs token)
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         UserDefaults.standard.set(token, forKey: "glamora_fcm_token_firebase")
-
-        // Inject FCM token into the WebView so JavaScript can pick it up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.injectFCMToken(token)
+        // Retry injection multiple times to handle slow WebView load
+        for delay in [1.0, 3.0, 6.0, 10.0, 15.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                self.injectFCMToken(token)
+            }
         }
     }
 
     private func injectFCMToken(_ token: String) {
-        guard let window = UIApplication.shared.windows.first,
-              let rootVC = window.rootViewController else { return }
-        let js = "window.__nativeFCMToken = '\(token)'; if(typeof onNativeFCMToken==='function') onNativeFCMToken('\(token)');"
-        findBridgeAndEval(js, in: rootVC)
-    }
-
-    private func findBridgeAndEval(_ js: String, in vc: UIViewController) {
-        if let bridge = (vc as? CAPBridgeViewController)?.bridge {
-            bridge.webView?.evaluateJavaScript(js, completionHandler: nil)
-        } else if let nav = vc as? UINavigationController,
-                  let top = nav.topViewController {
-            findBridgeAndEval(js, in: top)
+        let safeToken = token.replacingOccurrences(of: "'", with: "\\'")
+        let js = "window.__nativeFCMToken = '\(safeToken)'; if(typeof onNativeFCMToken==='function') onNativeFCMToken('\(safeToken)');"
+        DispatchQueue.main.async {
+            self.evalInAllWindows(js)
         }
     }
 
-    // When swizzling is disabled, we must manually forward the APNs token to Firebase
+    private func evalInAllWindows(_ js: String) {
+        let scenes = UIApplication.shared.connectedScenes
+        for scene in scenes {
+            if let windowScene = scene as? UIWindowScene {
+                for window in windowScene.windows {
+                    if let rootVC = window.rootViewController {
+                        self.evalInViewController(js, vc: rootVC)
+                    }
+                }
+            }
+        }
+    }
+
+    private func evalInViewController(_ js: String, vc: UIViewController) {
+        if let bridge = (vc as? CAPBridgeViewController)?.bridge {
+            bridge.webView?.evaluateJavaScript(js, completionHandler: nil)
+            return
+        }
+        if let presented = vc.presentedViewController {
+            evalInViewController(js, vc: presented)
+        }
+        for child in vc.children {
+            evalInViewController(js, vc: child)
+        }
+        if let nav = vc as? UINavigationController {
+            for childVC in nav.viewControllers {
+                evalInViewController(js, vc: childVC)
+            }
+        }
+    }
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Messaging.messaging().apnsToken = deviceToken
     }
@@ -61,5 +81,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
-
 }
