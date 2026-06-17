@@ -140,7 +140,7 @@ jobs:
             puts "✅ Push already enabled"
           end
 
-          # ── 3. Generate private key + CSR + create distribution certificate ─
+          # ── 3. Generate private key + CSR (DER format) + create dist cert ──
           system("security create-keychain -p glamora123 build.keychain 2>/dev/null || true")
           system("security default-keychain -s build.keychain")
           system("security unlock-keychain -p glamora123 build.keychain")
@@ -149,12 +149,11 @@ jobs:
 
           # Generate RSA private key
           system("openssl genrsa -out /tmp/ci_dist.key 2048 2>/dev/null")
-          # Generate CSR
-          system("openssl req -new -key /tmp/ci_dist.key -out /tmp/ci_dist.csr -subj '/CN=Glamora CI Distribution/O=Glamora/C=US' 2>/dev/null")
-          csr_content = File.read('/tmp/ci_dist.csr')
-          csr_b64 = Base64.strict_encode64(csr_content)
+          # Generate CSR in DER format (Apple requires DER, not PEM)
+          system("openssl req -new -key /tmp/ci_dist.key -out /tmp/ci_dist.csr.der -outform DER -subj '/CN=Glamora CI Distribution/O=Glamora/C=US' 2>/dev/null")
+          csr_b64 = Base64.strict_encode64(File.binread('/tmp/ci_dist.csr.der'))
 
-          # Delete old CI-created distribution certs to avoid limit
+          # List all certs (for debug) and delete old CI certs to avoid the 3-cert limit
           certs = api(token, 'GET', '/v1/certificates?limit=20')
           puts "All certs: #{(certs['data'] || []).map { |c| "#{c['id']}:#{c.dig('attributes','certificateType')}:#{c.dig('attributes','name')}" }.join(' | ')}"
           (certs['data'] || []).each do |c|
@@ -166,7 +165,7 @@ jobs:
             end
           end
 
-          # Create new distribution certificate
+          # Create new distribution certificate via CSR
           cert_resp = api(token, 'POST', '/v1/certificates', {
             data: {
               type: 'certificates',
@@ -177,25 +176,20 @@ jobs:
             }
           })
           unless cert_resp.dig('data', 'attributes', 'certificateContent')
-            abort "Certificate creation failed: #{cert_resp.inspect[0..500]}"
+            abort "Certificate creation failed: #{cert_resp.inspect[0..600]}"
           end
           cert_content = cert_resp.dig('data', 'attributes', 'certificateContent')
           cert_rid = cert_resp['data']['id']
-          puts "Created cert: #{cert_rid}"
+          puts "Created cert: #{cert_rid} (#{cert_resp.dig('data','attributes','name')})"
 
-          # Import private key + certificate into keychain
-          cert_data = Base64.decode64(cert_content)
-          cert_path = '/tmp/ci_dist.cer'
-          File.write(cert_path, cert_data)
-          # Convert cert + key to P12
-          # First import the cert as DER, then create P12 from key+cert
-          system("openssl x509 -inform DER -in #{cert_path} -out /tmp/ci_dist_cert.pem 2>/dev/null")
-          system("openssl pkcs12 -export -inkey /tmp/ci_dist.key -in /tmp/ci_dist_cert.pem -out /tmp/ci_dist.p12 -passout pass:glamora123 2>/dev/null")
+          # Build P12 from private key + Apple-signed certificate
+          cert_der = Base64.decode64(cert_content)
+          File.binwrite('/tmp/ci_dist.cer', cert_der)
+          system("openssl x509 -inform DER -in /tmp/ci_dist.cer -out /tmp/ci_dist_cert.pem 2>/dev/null")
+          system("openssl pkcs12 -export -inkey /tmp/ci_dist.key -in /tmp/ci_dist_cert.pem -out /tmp/ci_dist.p12 -passout pass:glamora123 2>/dev/null -legacy 2>/dev/null || openssl pkcs12 -export -inkey /tmp/ci_dist.key -in /tmp/ci_dist_cert.pem -out /tmp/ci_dist.p12 -passout pass:glamora123 2>/dev/null")
           result = system("security import /tmp/ci_dist.p12 -k build.keychain -P glamora123 -T /usr/bin/codesign -A 2>/dev/null")
           puts "P12 import: #{result ? 'OK' : 'FAILED'}"
           system("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k glamora123 build.keychain 2>/dev/null || true")
-
-          # Verify identity available
           system("security find-identity -v -p codesigning build.keychain | head -5")
 
           # ── 4. Delete old profiles for com.glamora.salon (App Store type) ─
