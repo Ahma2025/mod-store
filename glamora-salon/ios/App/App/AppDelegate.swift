@@ -23,7 +23,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         nativeDebug("App launched - Firebase configured")
-        return ApplicationDelegateProxy.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
+        return true
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
