@@ -336,17 +336,15 @@ function openMediaViewer(url, type) {
 
 function renderSalonInfo(data) {
   const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const hoursHtml = (data.hours || []).map(h => `
-    <div class="hour-row ${h.is_closed ? 'closed' : ''}">
-      <span class="day">${days[h.day_of_week]}</span>
-      <span class="time">${h.is_closed ? 'مغلق' : h.open_time + ' - ' + h.close_time}</span>
-    </div>
-  `).join('');
+  const closedDays = (data.hours || []).filter(h => h.is_closed).map(h => days[h.day_of_week]);
+  const offDaysHtml = closedDays.length
+    ? closedDays.map(d => `<span class="off-day-chip">${d}</span>`).join('')
+    : '<span style="color:#888">لا يوجد أيام إجازة</span>';
 
   document.getElementById('salon-info-content').innerHTML = `
     <div class="info-row"><span class="info-icon">📍</span><div><div class="info-label">العنوان</div><div class="info-value">${data.address || ''}, ${data.city}</div></div></div>
     <div class="info-row"><span class="info-icon">📞</span><div><div class="info-label">هاتف</div><div class="info-value">${data.phone || ''}</div></div></div>
-    <div class="info-row"><span class="info-icon">🕐</span><div><div class="info-label">ساعات العمل</div><div class="hours-grid">${hoursHtml}</div></div></div>
+    <div class="info-row"><span class="info-icon">🗓️</span><div><div class="info-label">أيام الإجازة</div><div class="off-days-wrap">${offDaysHtml}</div></div></div>
     <div class="info-row"><span class="info-icon">ℹ️</span><div><div class="info-label">عن الصالون</div><div class="info-value">${data.description || ''}</div></div></div>
   `;
 }

@@ -303,6 +303,8 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .info-label { font-size: 12px; color: var(--gray); margin-bottom: 2px; }
 .info-value { font-size: 15px; font-weight: 600; color: var(--dark); }
 .hours-grid { display: flex; flex-direction: column; gap: 4px; }
+.off-days-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.off-day-chip { background: #FEE2E2; color: #EF4444; border-radius: 20px; padding: 3px 12px; font-size: 13px; font-weight: 600; }
 .hour-row { display: flex; justify-content: space-between; font-size: 13px; }
 .hour-row .day { color: var(--gray); }
 .hour-row .time { font-weight: 600; color: var(--dark); }
