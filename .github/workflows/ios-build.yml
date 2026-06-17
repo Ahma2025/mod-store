@@ -46,11 +46,13 @@ jobs:
       - name: Setup Ruby & Fastlane
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
+          ruby-version: '3.2'
           bundler-cache: false
 
       - name: Install CocoaPods and Fastlane
-        run: gem install cocoapods fastlane --no-document
+        run: |
+          gem install i18n -v 1.14.6 --no-document
+          gem install cocoapods fastlane --no-document
 
       - name: Sync Capacitor iOS
         working-directory: glamora-salon
