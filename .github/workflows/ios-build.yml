@@ -66,13 +66,11 @@ jobs:
           BUNDLE_GEMFILE: ""
         run: pod install --repo-update
 
-      - name: Enable Push Notifications capability via App Store Connect API
+      - name: Setup Push Provisioning Profile via ASC API
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          gem install jwt --no-document 2>/dev/null || true
-
           ruby - <<'RUBYEOF'
           require 'openssl'
           require 'base64'
@@ -80,102 +78,162 @@ jobs:
           require 'net/http'
           require 'uri'
           require 'time'
+          require 'fileutils'
 
-          key_id = ENV['ASC_KEY_ID']
-          issuer_id = ENV['ASC_ISSUER_ID']
-          key_path = File.expand_path("~/.private_keys/AuthKey_#{key_id}.p8")
-
+          key_id     = ENV['ASC_KEY_ID']
+          issuer_id  = ENV['ASC_ISSUER_ID']
+          key_path   = File.expand_path("~/.private_keys/AuthKey_#{key_id}.p8")
           private_key = OpenSSL::PKey::EC.new(File.read(key_path))
 
           def base64url(data)
             Base64.strict_encode64(data).tr('+/', '-_').gsub('=', '')
           end
 
-          header = base64url({ alg: 'ES256', kid: ENV['ASC_KEY_ID'], typ: 'JWT' }.to_json)
-          now = Time.now.to_i
-          payload = base64url({ iss: ENV['ASC_ISSUER_ID'], iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' }.to_json)
-          signing_input = "#{header}.#{payload}"
-          sig_der = private_key.sign(OpenSSL::Digest::SHA256.new, signing_input)
-          # Convert DER to raw r,s for JWT
-          asn1 = OpenSSL::ASN1.decode(sig_der)
-          r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
-          s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
-          signature = base64url(r + s)
-          token = "#{signing_input}.#{signature}"
+          def make_token(key_id, issuer_id, private_key)
+            header  = base64url({ alg: 'ES256', kid: key_id, typ: 'JWT' }.to_json)
+            now     = Time.now.to_i
+            payload = base64url({ iss: issuer_id, iat: now, exp: now + 1200,
+                                  aud: 'appstoreconnect-v1' }.to_json)
+            signing_input = "#{header}.#{payload}"
+            sig_der = private_key.sign(OpenSSL::Digest::SHA256.new, signing_input)
+            asn1    = OpenSSL::ASN1.decode(sig_der)
+            r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
+            s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
+            "#{signing_input}.#{base64url(r + s)}"
+          end
 
-          def api_call(token, method, path, body = nil)
-            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+          def api(token, method, path, body = nil)
+            uri  = URI("https://api.appstoreconnect.apple.com#{path}")
             http = Net::HTTP.new(uri.host, uri.port)
-            http.use_ssl = true
-            req_class = { 'GET' => Net::HTTP::Get, 'POST' => Net::HTTP::Post }[method]
-            req = req_class.new(uri)
+            http.use_ssl    = true
+            http.read_timeout = 30
+            klass = { 'GET' => Net::HTTP::Get, 'POST' => Net::HTTP::Post,
+                      'DELETE' => Net::HTTP::Delete }[method]
+            req  = klass.new(uri)
             req['Authorization'] = "Bearer #{token}"
-            req['Content-Type'] = 'application/json'
+            req['Content-Type']  = 'application/json'
             req.body = body.to_json if body
-            JSON.parse(http.request(req).body)
+            resp = http.request(req)
+            JSON.parse(resp.body) rescue { 'raw' => resp.body }
           end
 
-          # Find bundle ID
-          data = api_call(token, 'GET', '/v1/bundleIds?filter[identifier]=com.glamora.salon')
-          if data['data'].nil? || data['data'].empty?
-            puts "Bundle ID com.glamora.salon not found in portal: #{data.inspect[0..300]}"
-            exit 0
-          end
-          bundle_resource_id = data['data'][0]['id']
-          puts "Bundle ID resource: #{bundle_resource_id}"
+          token = make_token(key_id, issuer_id, private_key)
 
-          # Check existing capabilities
-          caps = api_call(token, 'GET', "/v1/bundleIds/#{bundle_resource_id}/bundleIdCapabilities")
+          # ── 1. Find bundle ID ─────────────────────────────────────────────
+          data = api(token, 'GET', '/v1/bundleIds?filter[identifier]=com.glamora.salon')
+          abort "Bundle ID not found: #{data.inspect[0..400]}" if data['data'].nil? || data['data'].empty?
+          bundle_rid = data['data'][0]['id']
+          puts "Bundle ID rid: #{bundle_rid}"
+
+          # ── 2. Ensure Push Notifications capability is enabled ────────────
+          caps = api(token, 'GET', "/v1/bundleIds/#{bundle_rid}/bundleIdCapabilities")
           existing = (caps['data'] || []).map { |c| c.dig('attributes', 'capabilityType') }
-          puts "Existing capabilities: #{existing.join(', ')}"
-
-          if existing.include?('PUSH_NOTIFICATIONS')
-            puts "✅ Push Notifications already enabled!"
-            exit 0
+          puts "Capabilities: #{existing.join(', ')}"
+          unless existing.include?('PUSH_NOTIFICATIONS')
+            r = api(token, 'POST', '/v1/bundleIdCapabilities', {
+              data: { type: 'bundleIdCapabilities',
+                      attributes: { capabilityType: 'PUSH_NOTIFICATIONS', settings: [] },
+                      relationships: { bundleId: { data: { type: 'bundleIds', id: bundle_rid } } } }
+            })
+            puts "Enable push: #{r.dig('data','attributes','capabilityType') == 'PUSH_NOTIFICATIONS' ? '✅ enabled' : r.inspect[0..300]}"
+          else
+            puts "✅ Push already enabled"
           end
 
-          # Enable Push Notifications
-          body = {
+          # ── 3. Find distribution certificate ─────────────────────────────
+          certs = api(token, 'GET', '/v1/certificates?filter[certificateType]=IOS_DISTRIBUTION&limit=10')
+          dist_cert = (certs['data'] || []).find { |c| c.dig('attributes','certificateType') == 'IOS_DISTRIBUTION' }
+          abort "No IOS_DISTRIBUTION certificate found in portal!" unless dist_cert
+          cert_rid = dist_cert['id']
+          cert_content = dist_cert.dig('attributes', 'certificateContent')
+          puts "Cert rid: #{cert_rid}"
+
+          # Install the distribution cert in keychain
+          cert_data = Base64.decode64(cert_content)
+          cert_path = '/tmp/dist_cert.cer'
+          File.write(cert_path, cert_data)
+          system("security create-keychain -p glamora123 build.keychain 2>/dev/null || true")
+          system("security default-keychain -s build.keychain")
+          system("security unlock-keychain -p glamora123 build.keychain")
+          system("security set-keychain-settings -t 3600 build.keychain")
+          system("security import #{cert_path} -k build.keychain -T /usr/bin/codesign 2>/dev/null || true")
+          system("security set-key-partition-list -S apple-tool:,apple: -s -k glamora123 build.keychain 2>/dev/null || true")
+
+          # ── 4. Delete old profiles for com.glamora.salon (App Store type) ─
+          old_profiles = api(token, 'GET',
+            "/v1/profiles?filter[bundleId]=#{bundle_rid}&filter[profileType]=IOS_APP_STORE&limit=10")
+          (old_profiles['data'] || []).each do |p|
+            puts "Deleting old profile: #{p['id']} (#{p.dig('attributes','name')})"
+            api(token, 'DELETE', "/v1/profiles/#{p['id']}")
+          end
+
+          # ── 5. Create fresh App Store profile ────────────────────────────
+          profile_body = {
             data: {
-              type: 'bundleIdCapabilities',
-              attributes: { capabilityType: 'PUSH_NOTIFICATIONS', settings: [] },
-              relationships: { bundleId: { data: { type: 'bundleIds', id: bundle_resource_id } } }
+              type: 'profiles',
+              attributes: {
+                name: "Glamora Salon AppStore #{Time.now.to_i}",
+                profileType: 'IOS_APP_STORE'
+              },
+              relationships: {
+                bundleId:     { data: { type: 'bundleIds',     id: bundle_rid } },
+                certificates: { data: [{ type: 'certificates', id: cert_rid  }] },
+                devices:      { data: [] }
+              }
             }
           }
-          result = api_call(token, 'POST', '/v1/bundleIdCapabilities', body)
-          if result.dig('data', 'attributes', 'capabilityType') == 'PUSH_NOTIFICATIONS'
-            puts "✅ Push Notifications ENABLED successfully!"
-          else
-            puts "Response: #{result.inspect[0..500]}"
-            puts "⚠️ Check response - may already be enabled or needs manual portal action"
+          profile_resp = api(token, 'POST', '/v1/profiles', profile_body)
+          unless profile_resp.dig('data', 'attributes', 'profileContent')
+            abort "Profile creation failed: #{profile_resp.inspect[0..500]}"
           end
+
+          profile_content = profile_resp.dig('data', 'attributes', 'profileContent')
+          profile_uuid    = profile_resp.dig('data', 'attributes', 'uuid')
+          profile_name    = profile_resp.dig('data', 'attributes', 'name')
+          puts "Created profile: #{profile_name} (UUID: #{profile_uuid})"
+
+          # ── 6. Install profile ────────────────────────────────────────────
+          profile_data = Base64.decode64(profile_content)
+          profiles_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+          FileUtils.mkdir_p(profiles_dir)
+          profile_path = "#{profiles_dir}/#{profile_uuid}.mobileprovision"
+          File.write(profile_path, profile_data)
+          puts "Profile installed: #{profile_path}"
+
+          # Verify push in profile
+          decoded = `security cms -D -i "#{profile_path}" 2>/dev/null`
+          has_push = decoded.include?('aps-environment')
+          puts has_push ? "✅ Profile contains aps-environment (push)!" : "❌ Profile does NOT contain push!"
+
+          # ── 7. Export env vars for build step ────────────────────────────
+          env_file = ENV['GITHUB_ENV']
+          File.open(env_file, 'a') do |f|
+            f.puts "PROFILE_UUID=#{profile_uuid}"
+            f.puts "PROFILE_NAME=#{profile_name}"
+          end
+          puts "PROFILE_UUID=#{profile_uuid}"
           RUBYEOF
 
-      - name: Build & Archive with automatic signing + push entitlements
+      - name: Build & Archive (Manual signing with push profile)
         working-directory: glamora-salon/ios/App
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Delete cached managed profiles to force Xcode to create fresh one with push
-          rm -rf ~/Library/MobileDevice/Provisioning\ Profiles/ || true
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "Using profile: $PROFILE_NAME (UUID: $PROFILE_UUID)"
 
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath /tmp/App.xcarchive \
-            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "${ASC_KEY_ID}" \
-            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
-            -allowProvisioningUpdates \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=RTYG6CS9G2 \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            PROVISIONING_PROFILE="" \
-            CODE_SIGN_ENTITLEMENTS="App/App.entitlements"
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE="${PROFILE_UUID}" \
+            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
+            CODE_SIGN_ENTITLEMENTS="App/App.entitlements" \
+            OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
       - name: Export & Upload to TestFlight
         env:
@@ -183,7 +241,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           mkdir -p /tmp/build
-          cat > /tmp/ExportOptions.plist << 'EOF'
+          cat > /tmp/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -195,7 +253,12 @@ jobs:
             <key>teamID</key>
             <string>RTYG6CS9G2</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.glamora.salon</key>
+              <string>${PROFILE_UUID}</string>
+            </dict>
           </dict>
           </plist>
           EOF
@@ -203,20 +266,18 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath /tmp/App.xcarchive \
             -exportOptionsPlist /tmp/ExportOptions.plist \
-            -exportPath /tmp/build \
-            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "${ASC_KEY_ID}" \
-            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
-            -allowProvisioningUpdates
+            -exportPath /tmp/build
 
           # Verify push entitlement
           IPA=$(find /tmp/build -name "*.ipa" | head -1)
-          mkdir -p /tmp/ipa_check && cp "$IPA" /tmp/ipa_check/app.ipa
+          echo "IPA: $IPA"
+          mkdir -p /tmp/ipa_check
+          cp "$IPA" /tmp/ipa_check/app.ipa
           cd /tmp/ipa_check && unzip -q app.ipa
-          APP=$(find /tmp/ipa_check/Payload -name "*.app" | head -1)
-          echo "=== Entitlements ==="
+          APP=$(find Payload -name "*.app" | head -1)
+          echo "=== IPA Entitlements ==="
           codesign -d --entitlements :- "$APP" 2>/dev/null
-          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -i "aps-environment" && echo "✅ Push FOUND" || echo "❌ Push MISSING"
+          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -i "aps-environment" && echo "✅ Push FOUND IN IPA!" || echo "❌ Push MISSING FROM IPA"
 
           # Upload to TestFlight
           xcrun altool --upload-app --type ios --file "$IPA" \
