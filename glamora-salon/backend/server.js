@@ -93,6 +93,15 @@ app.post('/api/debug-log', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/debug-log', (req, res) => {
+  const fs = require('fs');
+  const logPath = require('path').join(__dirname, 'debug.log');
+  const content = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '(no logs yet)';
+  const lines = content.trim().split('\n').slice(-100).join('\n');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send(lines);
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });

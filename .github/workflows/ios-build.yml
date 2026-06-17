@@ -273,6 +273,9 @@ jobs:
           echo "Profile: $PROFILE_NAME (UUID: $PROFILE_UUID)"
           security unlock-keychain -p glamora123 build.keychain || true
 
+          BUILD_NUMBER=${{ github.run_number }}
+          echo "Build number: $BUILD_NUMBER"
+
           # project.pbxproj already updated with profile UUID/name for App target only
           # Pods have Automatic signing via Podfile post_install hook
           # Don't pass profile overrides on command line (would affect all targets)
@@ -282,7 +285,8 @@ jobs:
             -configuration Release \
             -archivePath /tmp/App.xcarchive \
             OTHER_CODE_SIGN_FLAGS="--keychain build.keychain" \
-            DEVELOPMENT_TEAM=RTYG6CS9G2
+            DEVELOPMENT_TEAM=RTYG6CS9G2 \
+            CURRENT_PROJECT_VERSION=$BUILD_NUMBER
 
       - name: Export & Upload to TestFlight
         env:
