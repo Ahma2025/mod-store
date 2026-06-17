@@ -153,14 +153,14 @@ jobs:
           system("openssl req -new -key /tmp/ci_dist.key -out /tmp/ci_dist.csr.der -outform DER -subj '/CN=Glamora CI Distribution/O=Glamora/C=US' 2>/dev/null")
           csr_b64 = Base64.strict_encode64(File.binread('/tmp/ci_dist.csr.der'))
 
-          # List all certs (for debug) and delete old CI certs to avoid the 3-cert limit
+          # List all certs and delete all IOS_DISTRIBUTION type (CI-created ones)
+          # We keep DISTRIBUTION type (user's Apple Distribution cert)
           certs = api(token, 'GET', '/v1/certificates?limit=20')
           puts "All certs: #{(certs['data'] || []).map { |c| "#{c['id']}:#{c.dig('attributes','certificateType')}:#{c.dig('attributes','name')}" }.join(' | ')}"
           (certs['data'] || []).each do |c|
-            name = c.dig('attributes', 'name').to_s
             type = c.dig('attributes', 'certificateType').to_s
-            if name.include?('Glamora CI') && type.include?('DISTRIBUTION')
-              puts "Deleting old CI cert: #{c['id']} #{name}"
+            if type == 'IOS_DISTRIBUTION'
+              puts "Deleting old IOS_DISTRIBUTION cert: #{c['id']} #{c.dig('attributes','name')}"
               api(token, 'DELETE', "/v1/certificates/#{c['id']}")
             end
           end
