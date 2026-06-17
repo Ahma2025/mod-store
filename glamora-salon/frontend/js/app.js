@@ -769,8 +769,8 @@ async function openChatWith(userId, userName) {
   const container = document.getElementById('chat-messages');
   container.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
   setTimeout(() => {
-    const screen = document.getElementById('screen-chat-conv');
-    if (screen) screen.scrollTop = screen.scrollHeight;
+    const container = document.getElementById('chat-messages');
+    if (container) container.scrollTop = container.scrollHeight;
   }, 100);
 }
 
@@ -787,8 +787,8 @@ function buildMsgHtml(msg) {
 function appendChatMessage(msg, isMe) {
   const container = document.getElementById('chat-messages');
   container.insertAdjacentHTML('beforeend', buildMsgHtml({ ...msg, sender_id: isMe ? currentUser?.id : msg.sender_id }));
-  const screen = document.getElementById('screen-chat-conv');
-  if (screen) screen.scrollTop = screen.scrollHeight;
+  const container2 = document.getElementById('chat-messages');
+  if (container2) container2.scrollTop = container2.scrollHeight;
 }
 
 function sendChatMessage() {
