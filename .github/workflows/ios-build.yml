@@ -66,7 +66,7 @@ jobs:
           BUNDLE_GEMFILE: ""
         run: pod install --repo-update
 
-      - name: Setup Push Provisioning Profile via ASC API
+      - name: Setup Signing Certificate + Push Profile via ASC API
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -140,28 +140,63 @@ jobs:
             puts "✅ Push already enabled"
           end
 
-          # ── 3. Find distribution certificate ─────────────────────────────
-          certs = api(token, 'GET', '/v1/certificates?limit=20')
-          puts "All certs: #{(certs['data'] || []).map { |c| "#{c['id']}:#{c.dig('attributes','certificateType')}" }.join(', ')}"
-          dist_cert = (certs['data'] || []).find { |c|
-            t = c.dig('attributes','certificateType').to_s
-            t.include?('DISTRIBUTION') && !t.include?('MAC') && !t.include?('INSTALLER')
-          }
-          abort "No distribution certificate found in portal! Available: #{(certs['data']||[]).map{|c|c.dig('attributes','certificateType')}.join(', ')}" unless dist_cert
-          cert_rid = dist_cert['id']
-          cert_content = dist_cert.dig('attributes', 'certificateContent')
-          puts "Cert rid: #{cert_rid}"
-
-          # Install the distribution cert in keychain
-          cert_data = Base64.decode64(cert_content)
-          cert_path = '/tmp/dist_cert.cer'
-          File.write(cert_path, cert_data)
+          # ── 3. Generate private key + CSR + create distribution certificate ─
           system("security create-keychain -p glamora123 build.keychain 2>/dev/null || true")
           system("security default-keychain -s build.keychain")
           system("security unlock-keychain -p glamora123 build.keychain")
           system("security set-keychain-settings -t 3600 build.keychain")
-          system("security import #{cert_path} -k build.keychain -T /usr/bin/codesign 2>/dev/null || true")
-          system("security set-key-partition-list -S apple-tool:,apple: -s -k glamora123 build.keychain 2>/dev/null || true")
+          system("security list-keychains -d user -s build.keychain login.keychain")
+
+          # Generate RSA private key
+          system("openssl genrsa -out /tmp/ci_dist.key 2048 2>/dev/null")
+          # Generate CSR
+          system("openssl req -new -key /tmp/ci_dist.key -out /tmp/ci_dist.csr -subj '/CN=Glamora CI Distribution/O=Glamora/C=US' 2>/dev/null")
+          csr_content = File.read('/tmp/ci_dist.csr')
+          csr_b64 = Base64.strict_encode64(csr_content)
+
+          # Delete old CI-created distribution certs to avoid limit
+          certs = api(token, 'GET', '/v1/certificates?limit=20')
+          puts "All certs: #{(certs['data'] || []).map { |c| "#{c['id']}:#{c.dig('attributes','certificateType')}:#{c.dig('attributes','name')}" }.join(' | ')}"
+          (certs['data'] || []).each do |c|
+            name = c.dig('attributes', 'name').to_s
+            type = c.dig('attributes', 'certificateType').to_s
+            if name.include?('Glamora CI') && type.include?('DISTRIBUTION')
+              puts "Deleting old CI cert: #{c['id']} #{name}"
+              api(token, 'DELETE', "/v1/certificates/#{c['id']}")
+            end
+          end
+
+          # Create new distribution certificate
+          cert_resp = api(token, 'POST', '/v1/certificates', {
+            data: {
+              type: 'certificates',
+              attributes: {
+                certificateType: 'IOS_DISTRIBUTION',
+                csrContent: csr_b64
+              }
+            }
+          })
+          unless cert_resp.dig('data', 'attributes', 'certificateContent')
+            abort "Certificate creation failed: #{cert_resp.inspect[0..500]}"
+          end
+          cert_content = cert_resp.dig('data', 'attributes', 'certificateContent')
+          cert_rid = cert_resp['data']['id']
+          puts "Created cert: #{cert_rid}"
+
+          # Import private key + certificate into keychain
+          cert_data = Base64.decode64(cert_content)
+          cert_path = '/tmp/ci_dist.cer'
+          File.write(cert_path, cert_data)
+          # Convert cert + key to P12
+          # First import the cert as DER, then create P12 from key+cert
+          system("openssl x509 -inform DER -in #{cert_path} -out /tmp/ci_dist_cert.pem 2>/dev/null")
+          system("openssl pkcs12 -export -inkey /tmp/ci_dist.key -in /tmp/ci_dist_cert.pem -out /tmp/ci_dist.p12 -passout pass:glamora123 2>/dev/null")
+          result = system("security import /tmp/ci_dist.p12 -k build.keychain -P glamora123 -T /usr/bin/codesign -A 2>/dev/null")
+          puts "P12 import: #{result ? 'OK' : 'FAILED'}"
+          system("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k glamora123 build.keychain 2>/dev/null || true")
+
+          # Verify identity available
+          system("security find-identity -v -p codesigning build.keychain | head -5")
 
           # ── 4. Delete old profiles for com.glamora.salon (App Store type) ─
           old_profiles = api(token, 'GET',
@@ -218,29 +253,25 @@ jobs:
           puts "PROFILE_UUID=#{profile_uuid}"
           RUBYEOF
 
-      - name: Build & Archive (Automatic signing - push enabled in App ID)
+      - name: Build & Archive (Manual signing with fresh cert + push profile)
         working-directory: glamora-salon/ios/App
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Clear cached profiles so Xcode creates fresh one WITH push (now enabled)
-          rm -rf ~/Library/MobileDevice/Provisioning\ Profiles/ || true
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "Profile: $PROFILE_NAME (UUID: $PROFILE_UUID)"
+          security unlock-keychain -p glamora123 build.keychain || true
 
-          # Copy profile downloaded via API (already in Provisioning Profiles dir)
-          # CODE_SIGN_ENTITLEMENTS comes from project.pbxproj - NOT command line (avoids Pods conflict)
+          # Use manual signing with our CI cert and push-enabled profile
+          # No CODE_SIGN_ENTITLEMENTS override — project.pbxproj has it for App target only
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath /tmp/App.xcarchive \
-            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "${ASC_KEY_ID}" \
-            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
-            -allowProvisioningUpdates \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=RTYG6CS9G2
+            OTHER_CODE_SIGN_FLAGS="--keychain build.keychain" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=RTYG6CS9G2 \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            PROVISIONING_PROFILE="${PROFILE_UUID}" \
+            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}"
 
       - name: Export & Upload to TestFlight
         env:
@@ -248,7 +279,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           mkdir -p /tmp/build
-          cat > /tmp/ExportOptions.plist << 'EOF'
+          cat > /tmp/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -260,7 +291,12 @@ jobs:
             <key>teamID</key>
             <string>RTYG6CS9G2</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.glamora.salon</key>
+              <string>${PROFILE_UUID}</string>
+            </dict>
           </dict>
           </plist>
           EOF
@@ -268,11 +304,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath /tmp/App.xcarchive \
             -exportOptionsPlist /tmp/ExportOptions.plist \
-            -exportPath /tmp/build \
-            -authenticationKeyPath ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "${ASC_KEY_ID}" \
-            -authenticationKeyIssuerID "${ASC_ISSUER_ID}" \
-            -allowProvisioningUpdates
+            -exportPath /tmp/build
 
           # Verify push entitlement
           IPA=$(find /tmp/build -name "*.ipa" | head -1)
