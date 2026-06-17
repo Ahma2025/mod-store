@@ -238,7 +238,27 @@ jobs:
           has_push = decoded.include?('aps-environment')
           puts has_push ? "✅ Profile contains aps-environment (push)!" : "❌ Profile does NOT contain push!"
 
-          # ── 7. Export env vars for build step ────────────────────────────
+          # ── 7. Inject profile UUID into project.pbxproj (App target only) ─
+          repo_root = File.expand_path('.')
+          pbxproj_path = "#{repo_root}/glamora-salon/ios/App/App.xcodeproj/project.pbxproj"
+          pbxproj = File.read(pbxproj_path)
+          # Update PROVISIONING_PROFILE_SPECIFIER for App target configs
+          updated = pbxproj.gsub(/PROVISIONING_PROFILE_SPECIFIER = "[^"]*";/) do
+            "PROVISIONING_PROFILE_SPECIFIER = \"#{profile_name}\";"
+          end
+          # Update PROVISIONING_PROFILE if present
+          updated = updated.gsub(/PROVISIONING_PROFILE = "[^"]*";/) do
+            "PROVISIONING_PROFILE = \"#{profile_uuid}\";"
+          end
+          # Ensure Manual signing
+          updated = updated.gsub(/CODE_SIGN_STYLE = Automatic;/, 'CODE_SIGN_STYLE = Manual;')
+          updated = updated.gsub(/CODE_SIGN_IDENTITY = "[^"]*";/) do
+            'CODE_SIGN_IDENTITY = "iPhone Distribution";'
+          end
+          File.write(pbxproj_path, updated)
+          puts "Updated project.pbxproj with profile: #{profile_name} (#{profile_uuid})"
+
+          # ── 8. Export env vars for build step ────────────────────────────
           env_file = ENV['GITHUB_ENV']
           File.open(env_file, 'a') do |f|
             f.puts "PROFILE_UUID=#{profile_uuid}"
@@ -253,19 +273,16 @@ jobs:
           echo "Profile: $PROFILE_NAME (UUID: $PROFILE_UUID)"
           security unlock-keychain -p glamora123 build.keychain || true
 
-          # Use manual signing with our CI cert and push-enabled profile
-          # No CODE_SIGN_ENTITLEMENTS override — project.pbxproj has it for App target only
+          # project.pbxproj already updated with profile UUID/name for App target only
+          # Pods have Automatic signing via Podfile post_install hook
+          # Don't pass profile overrides on command line (would affect all targets)
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath /tmp/App.xcarchive \
             OTHER_CODE_SIGN_FLAGS="--keychain build.keychain" \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=RTYG6CS9G2 \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE="${PROFILE_UUID}" \
-            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}"
+            DEVELOPMENT_TEAM=RTYG6CS9G2
 
       - name: Export & Upload to TestFlight
         env:
