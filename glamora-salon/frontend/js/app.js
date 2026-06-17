@@ -771,7 +771,7 @@ async function openChatWith(userId, userName) {
   setTimeout(() => {
     const screen = document.getElementById('screen-chat-conv');
     if (screen) screen.scrollTop = screen.scrollHeight;
-  }, 50);
+  }, 100);
 }
 
 function buildMsgHtml(msg) {
@@ -797,6 +797,7 @@ function sendChatMessage() {
   if (!content || !currentChatUserId) return;
 
   input.value = '';
+  input.focus();
   const fakeMsg = { content, sender_id: currentUser?.id, created_at: new Date().toISOString() };
   appendChatMessage(fakeMsg, true);
 
