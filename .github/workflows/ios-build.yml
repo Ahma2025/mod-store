@@ -141,9 +141,13 @@ jobs:
           end
 
           # ── 3. Find distribution certificate ─────────────────────────────
-          certs = api(token, 'GET', '/v1/certificates?filter[certificateType]=IOS_DISTRIBUTION&limit=10')
-          dist_cert = (certs['data'] || []).find { |c| c.dig('attributes','certificateType') == 'IOS_DISTRIBUTION' }
-          abort "No IOS_DISTRIBUTION certificate found in portal!" unless dist_cert
+          certs = api(token, 'GET', '/v1/certificates?limit=20')
+          puts "All certs: #{(certs['data'] || []).map { |c| "#{c['id']}:#{c.dig('attributes','certificateType')}" }.join(', ')}"
+          dist_cert = (certs['data'] || []).find { |c|
+            t = c.dig('attributes','certificateType').to_s
+            t.include?('DISTRIBUTION') && !t.include?('MAC') && !t.include?('INSTALLER')
+          }
+          abort "No distribution certificate found in portal! Available: #{(certs['data']||[]).map{|c|c.dig('attributes','certificateType')}.join(', ')}" unless dist_cert
           cert_rid = dist_cert['id']
           cert_content = dist_cert.dig('attributes', 'certificateContent')
           puts "Cert rid: #{cert_rid}"
