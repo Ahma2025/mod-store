@@ -68,90 +68,88 @@ jobs:
 
       - name: Enable Push Notifications capability via App Store Connect API
         env:
-          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Generate JWT for App Store Connect API
-          pip3 install PyJWT cryptography --quiet 2>/dev/null || true
-          python3 - <<'PYEOF'
-          import jwt, time, json, subprocess, os, sys
+          gem install jwt --no-document 2>/dev/null || true
 
-          key_id = os.environ['ASC_KEY_ID']
-          issuer_id = os.environ['ASC_ISSUER_ID']
-          key_path = os.path.expanduser(f"~/.private_keys/AuthKey_{key_id}.p8")
+          ruby - <<'RUBYEOF'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+          require 'net/http'
+          require 'uri'
+          require 'time'
 
-          with open(key_path, 'r') as f:
-              private_key = f.read()
+          key_id = ENV['ASC_KEY_ID']
+          issuer_id = ENV['ASC_ISSUER_ID']
+          key_path = File.expand_path("~/.private_keys/AuthKey_#{key_id}.p8")
 
-          payload = {
-              'iss': issuer_id,
-              'iat': int(time.time()),
-              'exp': int(time.time()) + 1200,
-              'aud': 'appstoreconnect-v1'
+          private_key = OpenSSL::PKey::EC.new(File.read(key_path))
+
+          def base64url(data)
+            Base64.strict_encode64(data).tr('+/', '-_').gsub('=', '')
+          end
+
+          header = base64url({ alg: 'ES256', kid: ENV['ASC_KEY_ID'], typ: 'JWT' }.to_json)
+          now = Time.now.to_i
+          payload = base64url({ iss: ENV['ASC_ISSUER_ID'], iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' }.to_json)
+          signing_input = "#{header}.#{payload}"
+          sig_der = private_key.sign(OpenSSL::Digest::SHA256.new, signing_input)
+          # Convert DER to raw r,s for JWT
+          asn1 = OpenSSL::ASN1.decode(sig_der)
+          r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
+          s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
+          signature = base64url(r + s)
+          token = "#{signing_input}.#{signature}"
+
+          def api_call(token, method, path, body = nil)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.use_ssl = true
+            req_class = { 'GET' => Net::HTTP::Get, 'POST' => Net::HTTP::Post }[method]
+            req = req_class.new(uri)
+            req['Authorization'] = "Bearer #{token}"
+            req['Content-Type'] = 'application/json'
+            req.body = body.to_json if body
+            JSON.parse(http.request(req).body)
+          end
+
+          # Find bundle ID
+          data = api_call(token, 'GET', '/v1/bundleIds?filter[identifier]=com.glamora.salon')
+          if data['data'].nil? || data['data'].empty?
+            puts "Bundle ID com.glamora.salon not found in portal: #{data.inspect[0..300]}"
+            exit 0
+          end
+          bundle_resource_id = data['data'][0]['id']
+          puts "Bundle ID resource: #{bundle_resource_id}"
+
+          # Check existing capabilities
+          caps = api_call(token, 'GET', "/v1/bundleIds/#{bundle_resource_id}/bundleIdCapabilities")
+          existing = (caps['data'] || []).map { |c| c.dig('attributes', 'capabilityType') }
+          puts "Existing capabilities: #{existing.join(', ')}"
+
+          if existing.include?('PUSH_NOTIFICATIONS')
+            puts "✅ Push Notifications already enabled!"
+            exit 0
+          end
+
+          # Enable Push Notifications
+          body = {
+            data: {
+              type: 'bundleIdCapabilities',
+              attributes: { capabilityType: 'PUSH_NOTIFICATIONS', settings: [] },
+              relationships: { bundleId: { data: { type: 'bundleIds', id: bundle_resource_id } } }
+            }
           }
-          token = jwt.encode(payload, private_key, algorithm='ES256', headers={'kid': key_id})
-
-          headers = f'Authorization: Bearer {token}'
-
-          # Step 1: Find the bundle ID resource
-          result = subprocess.run([
-              'curl', '-s', '-H', headers,
-              'https://api.appstoreconnect.apple.com/v1/bundleIds?filter[identifier]=com.glamora.salon'
-          ], capture_output=True, text=True)
-          data = json.loads(result.stdout)
-
-          if not data.get('data'):
-              print(f"Bundle ID not found: {result.stdout[:500]}")
-              sys.exit(0)
-
-          bundle_id = data['data'][0]['id']
-          print(f"Found bundle ID resource: {bundle_id}")
-
-          # Step 2: Check existing capabilities
-          caps_result = subprocess.run([
-              'curl', '-s', '-H', headers,
-              f'https://api.appstoreconnect.apple.com/v1/bundleIds/{bundle_id}/bundleIdCapabilities'
-          ], capture_output=True, text=True)
-          caps_data = json.loads(caps_result.stdout)
-
-          existing = [c['attributes']['capabilityType'] for c in caps_data.get('data', [])]
-          print(f"Existing capabilities: {existing}")
-
-          if 'PUSH_NOTIFICATIONS' in existing:
-              print("✅ Push Notifications already enabled!")
-              sys.exit(0)
-
-          # Step 3: Enable Push Notifications
-          enable_body = json.dumps({
-              'data': {
-                  'type': 'bundleIdCapabilities',
-                  'attributes': {
-                      'capabilityType': 'PUSH_NOTIFICATIONS',
-                      'settings': []
-                  },
-                  'relationships': {
-                      'bundleId': {
-                          'data': {'type': 'bundleIds', 'id': bundle_id}
-                      }
-                  }
-              }
-          })
-
-          enable_result = subprocess.run([
-              'curl', '-s', '-X', 'POST',
-              '-H', headers,
-              '-H', 'Content-Type: application/json',
-              '-d', enable_body,
-              'https://api.appstoreconnect.apple.com/v1/bundleIdCapabilities'
-          ], capture_output=True, text=True)
-
-          print(f"Enable push result: {enable_result.stdout[:500]}")
-          if '"capabilityType":"PUSH_NOTIFICATIONS"' in enable_result.stdout or '"PUSH_NOTIFICATIONS"' in enable_result.stdout:
-              print("✅ Push Notifications ENABLED successfully!")
-          else:
-              print("⚠️  Check response above for errors")
-          PYEOF
+          result = api_call(token, 'POST', '/v1/bundleIdCapabilities', body)
+          if result.dig('data', 'attributes', 'capabilityType') == 'PUSH_NOTIFICATIONS'
+            puts "✅ Push Notifications ENABLED successfully!"
+          else
+            puts "Response: #{result.inspect[0..500]}"
+            puts "⚠️ Check response - may already be enabled or needs manual portal action"
+          end
+          RUBYEOF
 
       - name: Build & Archive with automatic signing + push entitlements
         working-directory: glamora-salon/ios/App
