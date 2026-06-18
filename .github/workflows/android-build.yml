@@ -41,7 +41,8 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/velour-release.keystore
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/velour-release.keystore
+          ls -la /tmp/velour-release.keystore
 
       - name: Build Release AAB
         run: |
