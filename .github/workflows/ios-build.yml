@@ -119,7 +119,7 @@ jobs:
 
           token = make_token(key_id, issuer_id, private_key)
 
-          # â”€â”€ 1. Find or create bundle ID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 1. Find or create bundle ID ───────────────────────────────────
           data = api(token, 'GET', '/v1/bundleIds?filter[identifier]=com.velour.salon')
           if data['data'].nil? || data['data'].empty?
             puts "Bundle ID not found, creating com.velour.salon..."
@@ -141,7 +141,7 @@ jobs:
             puts "Found Bundle ID: #{bundle_rid}"
           end
 
-          # â”€â”€ 2. Ensure Push Notifications capability is enabled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 2. Ensure Push Notifications capability is enabled ────────────
           caps = api(token, 'GET', "/v1/bundleIds/#{bundle_rid}/bundleIdCapabilities")
           existing = (caps['data'] || []).map { |c| c.dig('attributes', 'capabilityType') }
           puts "Capabilities: #{existing.join(', ')}"
@@ -151,12 +151,12 @@ jobs:
                       attributes: { capabilityType: 'PUSH_NOTIFICATIONS', settings: [] },
                       relationships: { bundleId: { data: { type: 'bundleIds', id: bundle_rid } } } }
             })
-            puts "Enable push: #{r.dig('data','attributes','capabilityType') == 'PUSH_NOTIFICATIONS' ? 'âœ… enabled' : r.inspect[0..300]}"
+            puts "Enable push: #{r.dig('data','attributes','capabilityType') == 'PUSH_NOTIFICATIONS' ? '✅ enabled' : r.inspect[0..300]}"
           else
-            puts "âœ… Push already enabled"
+            puts "✅ Push already enabled"
           end
 
-          # â”€â”€ 3. Generate private key + CSR (DER format) + create dist cert â”€â”€
+          # ── 3. Generate private key + CSR (DER format) + create dist cert ──
           system("security create-keychain -p glamora123 build.keychain 2>/dev/null || true")
           system("security default-keychain -s build.keychain")
           system("security unlock-keychain -p glamora123 build.keychain")
@@ -208,7 +208,7 @@ jobs:
           system("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k glamora123 build.keychain 2>/dev/null || true")
           system("security find-identity -v -p codesigning build.keychain | head -5")
 
-          # â”€â”€ 4. Delete old profiles for com.velour.salon (App Store type) â”€
+          # ── 4. Delete old profiles for com.glamora.salon (App Store type) ─
           old_profiles = api(token, 'GET',
             "/v1/profiles?filter[bundleId]=#{bundle_rid}&filter[profileType]=IOS_APP_STORE&limit=10")
           (old_profiles['data'] || []).each do |p|
@@ -216,7 +216,7 @@ jobs:
             api(token, 'DELETE', "/v1/profiles/#{p['id']}")
           end
 
-          # â”€â”€ 5. Create fresh App Store profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 5. Create fresh App Store profile ────────────────────────────
           profile_body = {
             data: {
               type: 'profiles',
@@ -241,7 +241,7 @@ jobs:
           profile_name    = profile_resp.dig('data', 'attributes', 'name')
           puts "Created profile: #{profile_name} (UUID: #{profile_uuid})"
 
-          # â”€â”€ 6. Install profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 6. Install profile ────────────────────────────────────────────
           profile_data = Base64.decode64(profile_content)
           profiles_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
           FileUtils.mkdir_p(profiles_dir)
@@ -252,9 +252,9 @@ jobs:
           # Verify push in profile
           decoded = `security cms -D -i "#{profile_path}" 2>/dev/null`
           has_push = decoded.include?('aps-environment')
-          puts has_push ? "âœ… Profile contains aps-environment (push)!" : "âŒ Profile does NOT contain push!"
+          puts has_push ? "✅ Profile contains aps-environment (push)!" : "❌ Profile does NOT contain push!"
 
-          # â”€â”€ 7. Ensure App Store Connect app record exists â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 7. Ensure App Store Connect app record exists ────────────────
           apps = api(token, 'GET', '/v1/apps?filter[bundleId]=com.velour.salon')
           if apps['data'].nil? || apps['data'].empty?
             puts "App record not found, creating Velour in App Store Connect..."
@@ -278,7 +278,7 @@ jobs:
             puts "App Store Connect record found: #{apps['data'][0]['id']}"
           end
 
-          # â”€â”€ 8. Inject profile UUID into project.pbxproj (App target only) â”€
+          # ── 8. Inject profile UUID into project.pbxproj (App target only) ─
           repo_root = File.expand_path('.')
           pbxproj_path = "#{repo_root}/glamora-salon/ios/App/App.xcodeproj/project.pbxproj"
           pbxproj = File.read(pbxproj_path)
@@ -298,7 +298,7 @@ jobs:
           File.write(pbxproj_path, updated)
           puts "Updated project.pbxproj with profile: #{profile_name} (#{profile_uuid})"
 
-          # â”€â”€ 9. Export env vars for build step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          # ── 9. Export env vars for build step ────────────────────────────
           env_file = ENV['GITHUB_ENV']
           File.open(env_file, 'a') do |f|
             f.puts "PROFILE_UUID=#{profile_uuid}"
@@ -371,7 +371,7 @@ jobs:
             --apiIssuer "${ASC_ISSUER_ID}" \
             --private-key-path ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
             --verbose
-          echo "âœ… Upload done"
+          echo "✅ Upload done"
 
       - name: Save IPA as artifact
         if: always()
@@ -381,4 +381,3 @@ jobs:
           path: /tmp/build/*.ipa
           if-no-files-found: ignore
           retention-days: 30
-
