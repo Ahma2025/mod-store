@@ -119,11 +119,27 @@ jobs:
 
           token = make_token(key_id, issuer_id, private_key)
 
-          # ── 1. Find bundle ID ─────────────────────────────────────────────
+          # ── 1. Find or create bundle ID ───────────────────────────────────
           data = api(token, 'GET', '/v1/bundleIds?filter[identifier]=com.velour.salon')
-          abort "Bundle ID not found: #{data.inspect[0..400]}" if data['data'].nil? || data['data'].empty?
-          bundle_rid = data['data'][0]['id']
-          puts "Bundle ID rid: #{bundle_rid}"
+          if data['data'].nil? || data['data'].empty?
+            puts "Bundle ID not found, creating com.velour.salon..."
+            create_resp = api(token, 'POST', '/v1/bundleIds', {
+              data: {
+                type: 'bundleIds',
+                attributes: {
+                  identifier: 'com.velour.salon',
+                  name: 'Velour Salon',
+                  platform: 'IOS'
+                }
+              }
+            })
+            abort "Failed to create Bundle ID: #{create_resp.inspect[0..400]}" if create_resp['data'].nil?
+            bundle_rid = create_resp['data']['id']
+            puts "Created Bundle ID: #{bundle_rid}"
+          else
+            bundle_rid = data['data'][0]['id']
+            puts "Found Bundle ID: #{bundle_rid}"
+          end
 
           # ── 2. Ensure Push Notifications capability is enabled ────────────
           caps = api(token, 'GET', "/v1/bundleIds/#{bundle_rid}/bundleIdCapabilities")
