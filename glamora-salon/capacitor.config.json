@@ -1,6 +1,6 @@
 {
-  "appId": "com.glamora.salon",
-  "appName": "Glamora",
+  "appId": "com.velour.salon",
+  "appName": "Velour",
   "webDir": "frontend",
   "bundledWebRuntime": false,
   "server": {
