@@ -39,19 +39,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Decode Keystore
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > /tmp/velour-release.keystore
-          ls -la /tmp/velour-release.keystore
-
       - name: Build Release AAB
         run: |
           cd glamora-salon/android
           chmod +x gradlew
           ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file=/tmp/velour-release.keystore \
+            -Pandroid.injected.signing.store.file="${GITHUB_WORKSPACE}/glamora-salon/android/app/keystore/velour-release.keystore" \
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
