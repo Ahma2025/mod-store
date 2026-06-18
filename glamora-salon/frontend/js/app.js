@@ -142,7 +142,6 @@ async function loadHome() {
   try {
     const salons = await Api.salons.list();
     renderFeaturedSalons(salons);
-    renderTopStylists(salons);
     renderSalonsList(salons);
     loadNotifBadge();
   } catch (e) {
@@ -173,20 +172,6 @@ function renderFeaturedSalons(salons) {
   document.getElementById('featured-salons').innerHTML = html;
 }
 
-function renderTopStylists(salons) {
-  const stylists = [];
-  salons.forEach(s => {
-    if (s.stylists) s.stylists.forEach(st => stylists.push({ ...st, salon_name: s.name }));
-  });
-  const top = stylists.sort((a, b) => b.rating - a.rating).slice(0, 6);
-  document.getElementById('top-stylists').innerHTML = top.map(st => `
-    <div class="stylist-mini-card" onclick="openStylistBooking(${st.id})">
-      <div class="stylist-avatar">${(st.name || '؟')[0]}</div>
-      <h4>${(st.name || '').split(' ')[0]}</h4>
-      <div class="stylist-rating">⭐ ${st.rating || '4.8'}</div>
-    </div>
-  `).join('');
-}
 
 function renderSalonsList(salons) {
   document.getElementById('salons-list').innerHTML = salons.map(s => {
@@ -245,7 +230,7 @@ async function openSalon(id) {
       cats.map(c => `<div class="svc-filter-chip" onclick="filterSalonServices(this, '${c}')">${categoryIcon(c)} ${c}</div>`).join('');
     document.getElementById('services-filter').innerHTML = filterHtml;
   } catch (e) {
-    showToast('⚠️ خطأ في تحميل بيانات الصالون');
+    showToast('خطأ في تحميل بيانات الصالون');
   }
 }
 
@@ -645,14 +630,14 @@ async function confirmBooking() {
     });
 
     document.getElementById('success-msg').textContent = `${s.service.name_ar || s.service.name} · ${formatDateAr(s.date)} · ${s.time}`;
-    document.getElementById('success-points').textContent = `⏳ بانتظار موافقة الكوفيرة - ستصلك إشعار عند التأكيد`;
+    document.getElementById('success-points').textContent = `بانتظار موافقة الكوفيرة - ستصلك إشعار عند التأكيد`;
     document.getElementById('modal-success').classList.remove('hidden');
 
     wizardState = { step: 1, service: null, stylist: null, date: null, time: null, salonId: null };
   } catch (e) {
     showToast('⚠️ ' + e.message);
   } finally {
-    btn.textContent = 'تأكيد الحجز 🎉';
+    btn.textContent = 'تأكيد الحجز';
     btn.disabled = false;
   }
 }
@@ -723,7 +708,7 @@ function writeReview(id) {
   const comment = prompt('اكتبي تعليقك (اختياري):');
   if (rating) {
     Api.bookings.review(id, parseInt(rating), comment).then(() => {
-      showToast('شكراً على تقييمك! ⭐');
+      showToast('شكراً على تقييمك!');
       loadMyBookings();
     }).catch(e => showToast('⚠️ ' + e.message));
   }
@@ -844,7 +829,7 @@ async function loadProfile() {
       document.getElementById('loyalty-current-tier').textContent = tier.name;
     } else {
       document.getElementById('loyalty-bar').style.width = '100%';
-      document.getElementById('loyalty-next-info').textContent = 'أعلى مستوى! 🏆';
+      document.getElementById('loyalty-next-info').textContent = 'أعلى مستوى ✦';
     }
   } catch (e) {}
 }
@@ -868,11 +853,11 @@ async function showColorHistory() {
           </div>
         </div>
         <div class="color-card-body">
-          <div class="formula-code">🧪 ${f.formula}</div>
+          <div class="formula-code">${f.formula}</div>
           ${f.notes ? `<div class="color-notes">📝 ${f.notes}</div>` : ''}
           <div class="color-meta">
             <span>📅 ${formatDateAr(f.visit_date)}</span>
-            <span>✂️ ${f.stylist_name}</span>
+            <span>${f.stylist_name}</span>
           </div>
         </div>
       </div>
@@ -885,7 +870,7 @@ async function showLoyaltyHistory() {
     const { transactions } = await Api.users.loyalty();
     const html = transactions.map(t => `
       <div class="notif-item">
-        <div class="notif-icon">${t.points > 0 ? '⬆️' : '⬇️'}</div>
+        <div class="notif-icon">${t.points > 0 ? '▴' : '▾'}</div>
         <div>
           <div class="notif-title" style="color:${t.points > 0 ? 'var(--success)' : 'var(--rose)'}">${t.points > 0 ? '+' : ''}${t.points} نقطة</div>
           <div class="notif-body">${t.description}</div>
@@ -895,13 +880,13 @@ async function showLoyaltyHistory() {
     `).join('');
     document.getElementById('notifs-list').innerHTML = html;
     showScreen('notifications');
-    document.querySelector('#screen-notifications h2').textContent = 'سجل النقاط ⭐';
+    document.querySelector('#screen-notifications h2').textContent = 'سجل النقاط';
   } catch (e) {}
 }
 
 async function showNotifications() {
   showScreen('notifications');
-  document.querySelector('#screen-notifications h2').textContent = 'الإشعارات 🔔';
+  document.querySelector('#screen-notifications h2').textContent = 'الإشعارات';
   // Hide both badges
   document.getElementById('notif-badge')?.classList.add('hidden');
   document.getElementById('st-notif-badge')?.classList.add('hidden');
