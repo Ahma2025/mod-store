@@ -295,14 +295,15 @@ async function loadSalonGallery(salonId) {
 
     const strip = document.getElementById('salon-gallery-strip');
     if (!strip) return;
-    if (!media.length) { strip.classList.add('hidden'); return; }
+    const galleryMedia = media.filter(m => !m.is_cover);
+    if (!galleryMedia.length) { strip.classList.add('hidden'); return; }
 
     strip.classList.remove('hidden');
-    strip.innerHTML = media.map(m => {
+    strip.innerHTML = galleryMedia.map(m => {
       if (m.type === 'video') {
         return `<div class="gallery-item" onclick="openMediaViewer('${m.url}','video')"><video src="${m.url}" class="gallery-thumb" muted></video><div class="gallery-play">▶</div></div>`;
       }
-      return `<div class="gallery-item ${m.is_cover ? 'gallery-cover' : ''}" onclick="openMediaViewer('${m.url}','photo')"><img src="${m.url}" class="gallery-thumb">${m.is_cover ? '<div class="gallery-cover-badge">غلاف</div>' : ''}</div>`;
+      return `<div class="gallery-item" onclick="openMediaViewer('${m.url}','photo')"><img src="${m.url}" class="gallery-thumb"></div>`;
     }).join('');
   } catch (e) {}
 }
