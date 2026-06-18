@@ -333,7 +333,10 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Upload directly via xcodebuild (destination: upload) — avoids altool issues
+          # Copy API key to location xcodebuild expects
+          mkdir -p ~/.appstoreconnect/private_keys
+          cp ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
           cat > /tmp/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
