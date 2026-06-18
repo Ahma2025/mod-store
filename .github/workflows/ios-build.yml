@@ -254,7 +254,31 @@ jobs:
           has_push = decoded.include?('aps-environment')
           puts has_push ? "✅ Profile contains aps-environment (push)!" : "❌ Profile does NOT contain push!"
 
-          # ── 7. Inject profile UUID into project.pbxproj (App target only) ─
+          # ── 7. Ensure App Store Connect app record exists ────────────────
+          apps = api(token, 'GET', '/v1/apps?filter[bundleId]=com.velour.salon')
+          if apps['data'].nil? || apps['data'].empty?
+            puts "App record not found, creating Velour in App Store Connect..."
+            app_resp = api(token, 'POST', '/v1/apps', {
+              data: {
+                type: 'apps',
+                attributes: {
+                  bundleId: 'com.velour.salon',
+                  name: 'Velour',
+                  primaryLocale: 'ar-SA',
+                  sku: 'velour-salon-001'
+                }
+              }
+            })
+            if app_resp['data']
+              puts "Created App Store Connect record: #{app_resp['data']['id']}"
+            else
+              puts "App creation response: #{app_resp.inspect[0..400]}"
+            end
+          else
+            puts "App Store Connect record found: #{apps['data'][0]['id']}"
+          end
+
+          # ── 8. Inject profile UUID into project.pbxproj (App target only) ─
           repo_root = File.expand_path('.')
           pbxproj_path = "#{repo_root}/glamora-salon/ios/App/App.xcodeproj/project.pbxproj"
           pbxproj = File.read(pbxproj_path)
@@ -274,7 +298,7 @@ jobs:
           File.write(pbxproj_path, updated)
           puts "Updated project.pbxproj with profile: #{profile_name} (#{profile_uuid})"
 
-          # ── 8. Export env vars for build step ────────────────────────────
+          # ── 9. Export env vars for build step ────────────────────────────
           env_file = ENV['GITHUB_ENV']
           File.open(env_file, 'a') do |f|
             f.puts "PROFILE_UUID=#{profile_uuid}"
