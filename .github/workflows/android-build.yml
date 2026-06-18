@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd glamora-salon
-          npm install
+          npm install --legacy-peer-deps
 
       - name: Sync Capacitor
         run: |
