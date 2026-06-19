@@ -190,6 +190,21 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+async function filterTopRated(el) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  try {
+    const salons = allSalonsCache || await Api.salons.list();
+    allSalonsCache = salons;
+    const sorted = [...salons].sort((a, b) => {
+      const scoreA = a.rating * Math.log(a.reviews_count + 1);
+      const scoreB = b.rating * Math.log(b.reviews_count + 1);
+      return scoreB - scoreA;
+    });
+    renderSalonsList(sorted);
+  } catch(e) { showToast('خطأ في تحميل الصالونات'); }
+}
+
 async function openNearestScreen() {
   showScreen('nearest');
   document.getElementById('nearest-loading').style.display = 'block';
