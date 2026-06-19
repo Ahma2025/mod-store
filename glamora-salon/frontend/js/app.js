@@ -215,13 +215,13 @@ async function openSalon(id) {
     currentSalonData = data;
 
     document.getElementById('salon-detail-name').textContent = data.name;
-    document.getElementById('salon-detail-rating').textContent = data.rating;
-    document.getElementById('salon-detail-reviews').textContent = data.reviews_count;
+    document.getElementById('salon-detail-rating').textContent = data.rating || '0';
+    document.getElementById('salon-detail-reviews').textContent = data.reviews_count || 0;
     document.getElementById('salon-detail-city').textContent = data.city;
 
     renderSalonServices(data.services);
     renderSalonStylists(data.stylists);
-    renderSalonReviews(data.reviews);
+    renderSalonRatings(data);
     renderSalonInfo(data);
     loadSalonGallery(id);
 
@@ -264,6 +264,78 @@ function renderSalonStylists(stylists) {
       </div>
     </div>`;
   }).join('');
+}
+
+let selectedRating = 0;
+
+function renderSalonRatings(data) {
+  const ratings = data.salon_ratings || [];
+  const avg = data.rating || 0;
+  const count = data.reviews_count || 0;
+
+  document.getElementById('rw-avg').textContent = avg > 0 ? avg.toFixed(1) : '0';
+  document.getElementById('rw-stars-display').textContent = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '☆☆☆☆☆';
+  document.getElementById('rw-count').textContent = count > 0 ? `${count} تقييم` : 'لا توجد تقييمات بعد';
+
+  // Load user's existing rating if logged in
+  selectedRating = 0;
+  if (currentUser && currentSalonData) {
+    Api.salons.myRating(currentSalonData.id).then(r => {
+      if (r.stars) { selectedRating = r.stars; updateStarInput(r.stars); }
+    }).catch(() => {});
+  }
+
+  // Render reviews list
+  if (!ratings.length) {
+    document.getElementById('salon-reviews-list').innerHTML = '<div class="empty-state" style="padding:20px 16px"><div class="empty-icon">⭐</div><h3>كوني أول من يقيّم!</h3></div>';
+    return;
+  }
+  document.getElementById('salon-reviews-list').innerHTML = ratings.map(r => `
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-avatar">${(r.client_name || '؟')[0]}</div>
+        <div>
+          <div class="review-name">${r.client_name || 'زبونة'}</div>
+          <div class="review-date">${new Date(r.created_at).toLocaleDateString('ar-SA')}</div>
+        </div>
+      </div>
+      <div class="review-stars-row">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</div>
+      ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function updateStarInput(val) {
+  document.querySelectorAll('.star-btn').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.v) <= val);
+  });
+}
+
+function setSalonRating(val) {
+  selectedRating = val;
+  updateStarInput(val);
+}
+
+async function submitSalonRating() {
+  if (!currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+  if (!selectedRating) { showToast('اختاري عدد النجوم أولاً'); return; }
+  if (!currentSalonData) return;
+  const comment = document.getElementById('rating-comment').value.trim();
+  try {
+    const result = await Api.salons.rate(currentSalonData.id, selectedRating, comment);
+    document.getElementById('salon-detail-rating').textContent = result.rating;
+    document.getElementById('salon-detail-reviews').textContent = result.reviews_count;
+    document.getElementById('rw-avg').textContent = result.rating.toFixed(1);
+    document.getElementById('rw-count').textContent = `${result.reviews_count} تقييم`;
+    document.getElementById('rw-stars-display').textContent = '★'.repeat(Math.round(result.rating)) + '☆'.repeat(5 - Math.round(result.rating));
+    document.getElementById('rating-comment').value = '';
+    // Refresh the reviews list
+    const data = await Api.salons.get(currentSalonData.id);
+    currentSalonData = data;
+    document.getElementById('salon-reviews-list').innerHTML = '';
+    renderSalonRatings(data);
+    showToast('✅ شكراً على تقييمك!');
+  } catch (e) { showToast(e.message); }
 }
 
 function renderSalonReviews(reviews) {

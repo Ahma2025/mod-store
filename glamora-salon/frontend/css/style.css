@@ -721,3 +721,26 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 }
 .stat-num { font-size: 26px; font-weight: 800; color: var(--rose); }
 .stat-label { font-size: 12px; color: var(--gray); margin-top: 4px; }
+
+
+/* ===== SALON RATING WIDGET ===== */
+.rating-widget { background: var(--white); border-radius: var(--radius); padding: 20px; margin: 16px; box-shadow: var(--shadow); }
+.rating-summary { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--gray-light); }
+.rating-big-number { font-size: 52px; font-weight: 700; color: var(--rose-dark); line-height: 1; }
+.rating-stars-display { font-size: 22px; color: #FFB800; letter-spacing: 2px; }
+.rating-count { font-size: 13px; color: var(--gray); margin-top: 4px; }
+.rating-prompt { text-align: center; font-size: 15px; color: var(--dark); font-weight: 600; margin-bottom: 12px; }
+.star-input { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; direction: ltr; }
+.star-btn { font-size: 40px; color: var(--gray-light); cursor: pointer; transition: color 0.15s, transform 0.1s; line-height: 1; }
+.star-btn.active { color: #FFB800; transform: scale(1.15); }
+.star-btn:hover { color: #FFB800; transform: scale(1.1); }
+.rating-comment-input { width: 100%; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); padding: 10px 14px; font-family: inherit; font-size: 14px; resize: none; outline: none; box-sizing: border-box; }
+.rating-comment-input:focus { border-color: var(--rose); }
+.rating-submit-btn { width: 100%; margin-top: 12px; padding: 14px; font-size: 15px; }
+.review-card { background: var(--white); border-radius: var(--radius-sm); padding: 14px 16px; margin: 8px 16px; box-shadow: var(--shadow); }
+.review-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.review-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--rose-dark); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.review-name { font-weight: 600; font-size: 14px; }
+.review-date { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.review-stars-row { color: #FFB800; font-size: 16px; margin-bottom: 6px; letter-spacing: 1px; }
+.review-comment { font-size: 14px; color: var(--dark2); line-height: 1.6; }

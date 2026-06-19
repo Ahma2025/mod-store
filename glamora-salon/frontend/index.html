@@ -345,6 +345,28 @@
       <div id="salon-stylists-list" class="salon-stylists"></div>
     </div>
     <div id="salon-tab-reviews" class="salon-tab-content">
+      <!-- Rating Widget -->
+      <div id="salon-rating-widget" class="rating-widget">
+        <div class="rating-summary">
+          <div class="rating-big-number" id="rw-avg">0</div>
+          <div>
+            <div class="rating-stars-display" id="rw-stars-display"></div>
+            <div class="rating-count" id="rw-count">لا توجد تقييمات بعد</div>
+          </div>
+        </div>
+        <div class="rating-input-section">
+          <p class="rating-prompt">قيّمي هذا الصالون</p>
+          <div class="star-input" id="star-input">
+            <span class="star-btn" data-v="1" onclick="setSalonRating(1)">★</span>
+            <span class="star-btn" data-v="2" onclick="setSalonRating(2)">★</span>
+            <span class="star-btn" data-v="3" onclick="setSalonRating(3)">★</span>
+            <span class="star-btn" data-v="4" onclick="setSalonRating(4)">★</span>
+            <span class="star-btn" data-v="5" onclick="setSalonRating(5)">★</span>
+          </div>
+          <textarea id="rating-comment" placeholder="اكتبي تعليقك (اختياري)..." rows="2" class="rating-comment-input"></textarea>
+          <button class="btn-primary rating-submit-btn" onclick="submitSalonRating()">إرسال التقييم</button>
+        </div>
+      </div>
       <div id="salon-reviews-list"></div>
     </div>
     <div id="salon-tab-info" class="salon-tab-content">
