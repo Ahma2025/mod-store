@@ -422,10 +422,8 @@ async function deleteService(id) {
 function showAddStylistForm() {
   document.getElementById('stf-name').value = '';
   document.getElementById('stf-phone').value = '';
-  document.getElementById('stf-email').value = '';
   document.getElementById('stf-exp').value = '';
   document.getElementById('stf-bio').value = '';
-  document.querySelectorAll('.spec-chip').forEach(c => c.classList.remove('selected'));
   document.getElementById('modal-stylist-form').classList.remove('hidden');
 }
 
@@ -437,16 +435,14 @@ async function saveStylist() {
   if (!stSalonData) { showToast('يجب إنشاء الصالون أولاً'); return; }
   const name = document.getElementById('stf-name').value.trim();
   const phone = document.getElementById('stf-phone').value.trim();
-  const email = document.getElementById('stf-email').value.trim();
   const experience_years = parseInt(document.getElementById('stf-exp').value) || 1;
   const bio = document.getElementById('stf-bio').value.trim();
-  const specialties = [...document.querySelectorAll('.spec-chip.selected')].map(c => c.textContent.trim());
   if (!name || !phone) { showToast('الاسم والهاتف مطلوبان'); return; }
 
   const btn = document.querySelector('#modal-stylist-form .btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'جاري الإضافة...'; }
   try {
-    await Api.stylistDash.addStylist(stSalonData.id, { name, phone, email, bio, specialties, experience_years });
+    await Api.stylistDash.addStylist(stSalonData.id, { name, phone, bio, experience_years });
     showToast('تمت إضافة الكوفيرة - كلمة مرورها الافتراضية: 123456');
     closeModalById('modal-stylist-form');
     await loadStylistDashboard();
