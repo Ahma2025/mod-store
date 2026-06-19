@@ -296,12 +296,18 @@ async function saveSalon() {
   if (!name || !city || !address) { showToast('الاسم والمدينة والعنوان مطلوبة'); return; }
 
   try {
+    let salonId = stEditingSalonId;
     if (stEditingSalonId) {
       await Api.stylistDash.updateSalon(stEditingSalonId, { name, city, address, phone, description, cover_emoji: stSelectedEmoji });
       showToast('تم تحديث الصالون');
     } else {
-      await Api.stylistDash.createSalon({ name, city, address, phone, description, cover_emoji: stSelectedEmoji });
+      const created = await Api.stylistDash.createSalon({ name, city, address, phone, description, cover_emoji: stSelectedEmoji });
+      salonId = created?.id;
       showToast('تم إنشاء الصالون');
+    }
+    if (typeof pendingSalonLocation !== 'undefined' && pendingSalonLocation && salonId) {
+      await Api.salons.updateLocation(salonId, pendingSalonLocation.lat, pendingSalonLocation.lng);
+      pendingSalonLocation = null;
     }
     closeModalById('modal-salon-form');
     await loadStylistDashboard();

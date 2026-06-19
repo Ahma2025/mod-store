@@ -1,5 +1,5 @@
 const express = require('express');
-const { DB } = require('../database');
+const { DB, db } = require('../database');
 const { authenticate } = require('./auth');
 
 const router = express.Router();
@@ -32,6 +32,16 @@ router.get('/', (req, res) => {
   enriched.sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count);
 
   res.json(enriched);
+});
+
+// GET /api/salons/all-locations — قبل /:id لتجنب التعارض
+router.get('/all-locations', (req, res) => {
+  const salons = DB.salons.find(s => s.is_active === 1).map(s => ({
+    id: s.id, name: s.name, city: s.city, rating: s.rating,
+    latitude: s.latitude || null, longitude: s.longitude || null,
+    cover_emoji: s.cover_emoji || '💅'
+  })).filter(s => s.latitude && s.longitude);
+  res.json(salons);
 });
 
 router.get('/:id', (req, res) => {
@@ -87,6 +97,17 @@ router.get('/:id/my-rating', (req, res) => {
   if (!clientId) return res.json({ stars: 0 });
   const r = DB.salon_ratings.findOne(r => r.salon_id === salonId && r.client_id === clientId);
   res.json({ stars: r?.stars || 0 });
+});
+
+// PUT /api/salons/:id/location — تحديث موقع الصالون (صاحب الصالون فقط)
+router.put('/:id/location', authenticate, (req, res) => {
+  const salonId = parseInt(req.params.id);
+  const { latitude, longitude } = req.body;
+  if (!latitude || !longitude) return res.status(400).json({ error: 'الموقع مطلوب' });
+  const salon = DB.salons.findOne(s => s.id === salonId);
+  if (!salon) return res.status(404).json({ error: 'الصالون غير موجود' });
+  db.get('salons').find(s => s.id === salonId).assign({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) }).write();
+  res.json({ success: true });
 });
 
 router.get('/:id/services', (req, res) => {

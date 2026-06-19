@@ -117,6 +117,7 @@ function enterApp(user) {
   if (typeof initFirebaseNotifications === 'function') {
     initFirebaseNotifications();
   }
+  requestLocationPermission();
   if (user.role === 'stylist' || user.role === 'salon_owner') {
     enterStylistDashboard(user);
     return;
@@ -125,6 +126,140 @@ function enterApp(user) {
   document.getElementById('home-user-name').textContent = user.name.split(' ')[0];
   loadHome();
   loadChatBadge();
+}
+
+// ===== SALON LOCATION PICKER =====
+let pickerMap = null;
+let pickerMarker = null;
+let pendingSalonLocation = null;
+
+function openSalonLocationPicker() {
+  document.getElementById('modal-location-picker').classList.remove('hidden');
+  setTimeout(() => {
+    if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null; }
+    const center = pendingSalonLocation || userLocation || { lat: 32.0, lng: 35.2 };
+    pickerMap = L.map('location-picker-map').setView([center.lat, center.lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(pickerMap);
+    if (pendingSalonLocation) {
+      pickerMarker = L.marker([pendingSalonLocation.lat, pendingSalonLocation.lng], { draggable: true }).addTo(pickerMap);
+    }
+    pickerMap.on('click', (e) => {
+      if (pickerMarker) pickerMarker.remove();
+      pickerMarker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true }).addTo(pickerMap);
+      pickerMarker.on('dragend', () => {
+        const pos = pickerMarker.getLatLng();
+        pendingSalonLocation = { lat: pos.lat, lng: pos.lng };
+      });
+      pendingSalonLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+    });
+  }, 200);
+}
+
+function confirmSalonLocation() {
+  if (!pendingSalonLocation) { showToast('اضغطي على الخريطة لتحديد الموقع'); return; }
+  closeModalById('modal-location-picker');
+  const status = document.getElementById('sf-location-status');
+  if (status) status.textContent = `✅ تم تحديد الموقع (${pendingSalonLocation.lat.toFixed(4)}, ${pendingSalonLocation.lng.toFixed(4)})`;
+}
+
+// ===== LOCATION =====
+let userLocation = null;
+let allSalonsCache = null;
+let leafletMap = null;
+
+function requestLocationPermission() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      localStorage.setItem('velour_location', JSON.stringify(userLocation));
+    },
+    () => {
+      const cached = localStorage.getItem('velour_location');
+      if (cached) userLocation = JSON.parse(cached);
+    },
+    { timeout: 10000 }
+  );
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function filterNearest(el) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+
+  if (!userLocation) {
+    showToast('جاري تحديد موقعك...');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        localStorage.setItem('velour_location', JSON.stringify(userLocation));
+        filterNearest(el);
+      },
+      () => showToast('تعذّر تحديد موقعك، يرجى السماح بالوصول للموقع')
+    );
+    return;
+  }
+
+  try {
+    const salons = allSalonsCache || await Api.salons.list();
+    allSalonsCache = salons;
+    const withDist = salons
+      .filter(s => s.latitude && s.longitude)
+      .map(s => ({ ...s, _dist: haversineKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) }))
+      .sort((a, b) => a._dist - b._dist);
+    const withoutDist = salons.filter(s => !s.latitude || !s.longitude);
+    renderSalonsList([...withDist, ...withoutDist], true);
+    if (!withDist.length) showToast('لا توجد صالونات بمواقع محددة بعد');
+  } catch (e) { showToast('خطأ في تحميل الصالونات'); }
+}
+
+async function openMapScreen() {
+  showScreen('map');
+  await new Promise(r => setTimeout(r, 100));
+
+  if (!userLocation) {
+    showToast('جاري تحديد موقعك...');
+    await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(); },
+        () => resolve(),
+        { timeout: 8000 }
+      );
+    });
+  }
+
+  const center = userLocation || { lat: 32.0, lng: 35.2 };
+
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+  leafletMap = L.map('map-container').setView([center.lat, center.lng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(leafletMap);
+
+  if (userLocation) {
+    const userIcon = L.divIcon({ html: '<div style="background:#C9728A;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>', iconSize:[22,22], iconAnchor:[11,11], className:'' });
+    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
+      .addTo(leafletMap)
+      .bindPopup('📍 موقعك الحالي');
+  }
+
+  try {
+    const salons = await Api.salons.allLocations();
+    salons.forEach(s => {
+      const salonIcon = L.divIcon({ html: `<div style="background:#1A0A0F;color:white;padding:4px 8px;border-radius:20px;font-size:11px;white-space:nowrap;border:2px solid #C9728A;font-family:Tajawal">✂️ ${s.name}</div>`, iconSize:[null,null], iconAnchor:[0,20], className:'' });
+      L.marker([s.latitude, s.longitude], { icon: salonIcon })
+        .addTo(leafletMap)
+        .bindPopup(`<b>${s.name}</b><br>⭐ ${s.rating}<br>📍 ${s.city}<br><a href="#" onclick="openSalon(${s.id});return false;" style="color:#C9728A">عرض الصالون</a>`);
+    });
+    if (!salons.length) showToast('لا توجد صالونات بمواقع محددة بعد');
+  } catch(e) { showToast('خطأ في تحميل مواقع الصالونات'); }
 }
 
 function selectRole(role) {
@@ -142,6 +277,7 @@ function togglePass(id) {
 async function loadHome() {
   try {
     const salons = await Api.salons.list();
+    allSalonsCache = salons;
     renderFeaturedSalons(salons);
     renderSalonsList(salons);
     loadNotifBadge();
@@ -174,11 +310,14 @@ function renderFeaturedSalons(salons) {
 }
 
 
-function renderSalonsList(salons) {
+function renderSalonsList(salons, showDistance = false) {
   document.getElementById('salons-list').innerHTML = salons.map(s => {
     const thumb = s.cover_url
       ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
       : (s.cover_emoji || '💅');
+    const distBadge = showDistance && s._dist != null
+      ? `<span style="color:#C9728A;font-size:12px">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
+      : `<span>📍 ${s.city}</span>`;
     return `
     <div class="salon-card" onclick="openSalon(${s.id})">
       <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
@@ -186,7 +325,7 @@ function renderSalonsList(salons) {
         <h4>${s.name}</h4>
         <div class="salon-card-meta">
           <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
-          <span>📍 ${s.city}</span>
+          ${distBadge}
         </div>
         <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60) + '...' : ''}</p>
       </div>
@@ -201,9 +340,15 @@ async function searchSalons(q) {
   } catch (e) {}
 }
 
-function filterCategory(el, cat) {
+async function filterCategory(el, cat) {
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
+  try {
+    const salons = allSalonsCache || await Api.salons.list();
+    allSalonsCache = salons;
+    const filtered = cat ? salons.filter(s => (s.services || []).some(sv => sv.category === cat)) : salons;
+    renderSalonsList(cat ? filtered : salons);
+  } catch(e) {}
 }
 
 // ===== SALON DETAIL =====

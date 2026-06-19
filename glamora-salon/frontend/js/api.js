@@ -53,6 +53,8 @@ const Api = {
     media: (id) => apiCall('GET', `/media/salon/${id}/media`),
     rate: (id, stars, comment = '') => apiCall('POST', `/salons/${id}/rate`, { stars, comment }),
     myRating: (id) => apiCall('GET', `/salons/${id}/my-rating`),
+    updateLocation: (id, latitude, longitude) => apiCall('PUT', `/salons/${id}/location`, { latitude, longitude }),
+    allLocations: () => apiCall('GET', '/salons/all-locations'),
   },
   bookings: {
     my: () => apiCall('GET', '/bookings/my'),
