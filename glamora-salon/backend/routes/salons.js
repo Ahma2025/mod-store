@@ -1,5 +1,6 @@
 const express = require('express');
 const { DB } = require('../database');
+const { authenticate } = require('./auth');
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/salons/:id/rate — تقييم الصالون (نجمة 1-5)
-router.post('/:id/rate', (req, res) => {
+router.post('/:id/rate', authenticate, (req, res) => {
   const salonId = parseInt(req.params.id);
   const clientId = req.user?.id;
   if (!clientId) return res.status(401).json({ error: 'يجب تسجيل الدخول أولاً' });
