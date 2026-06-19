@@ -36,7 +36,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .splash-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, #5C1A30 0%, #1A0A0F 60%); }
 .splash-content { position: relative; text-align: center; }
 .splash-logo { margin-bottom: 60px; }
-.logo-icon { font-size: 48px; color: var(--gold); margin-bottom: 12px; animation: pulse 2s infinite; }
+.logo-icon { width: 100px; height: 100px; border-radius: 22px; margin-bottom: 16px; animation: pulse 2s infinite; object-fit: cover; }
 .logo-text { font-family: 'Playfair Display', serif; font-size: 52px; color: var(--white); letter-spacing: 4px; }
 .logo-tagline { color: var(--rose-light); font-size: 16px; margin-top: 8px; font-weight: 300; letter-spacing: 2px; }
 .splash-loader { width: 200px; }
