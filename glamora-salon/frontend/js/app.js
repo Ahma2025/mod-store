@@ -319,8 +319,10 @@ function setSalonRating(val) {
 async function submitSalonRating() {
   if (!currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
   if (!selectedRating) { showToast('اختاري عدد النجوم أولاً'); return; }
-  if (!currentSalonData) return;
+  if (!currentSalonData) { showToast('خطأ: بيانات الصالون غير محملة'); return; }
+  const btn = document.querySelector('.rating-submit-btn');
   const comment = document.getElementById('rating-comment').value.trim();
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
   try {
     const result = await Api.salons.rate(currentSalonData.id, selectedRating, comment);
     document.getElementById('salon-detail-rating').textContent = result.rating;
@@ -329,13 +331,16 @@ async function submitSalonRating() {
     document.getElementById('rw-count').textContent = `${result.reviews_count} تقييم`;
     document.getElementById('rw-stars-display').textContent = '★'.repeat(Math.round(result.rating)) + '☆'.repeat(5 - Math.round(result.rating));
     document.getElementById('rating-comment').value = '';
-    // Refresh the reviews list
     const data = await Api.salons.get(currentSalonData.id);
     currentSalonData = data;
     document.getElementById('salon-reviews-list').innerHTML = '';
     renderSalonRatings(data);
     showToast('✅ شكراً على تقييمك!');
-  } catch (e) { showToast(e.message); }
+  } catch (e) {
+    showToast('خطأ: ' + (e.message || 'فشل الاتصال بالسيرفر'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'إرسال التقييم'; }
+  }
 }
 
 function renderSalonReviews(reviews) {
