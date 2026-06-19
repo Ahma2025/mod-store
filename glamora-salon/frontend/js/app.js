@@ -56,8 +56,9 @@ function closeModal() {
 function showToast(msg, duration = 3000) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.classList.remove('hidden');
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), duration);
+  setTimeout(() => { t.classList.remove('show'); t.classList.add('hidden'); }, duration);
 }
 
 // ===== AUTH =====
