@@ -333,21 +333,20 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          python3 -c "
-import os, plistlib
-opts = {
-    'method': 'app-store-connect',
-    'destination': 'upload',
-    'teamID': 'RTYG6CS9G2',
-    'signingStyle': 'manual',
-    'provisioningProfiles': {
-        'com.velour.salon': os.environ['PROFILE_UUID']
-    }
-}
-with open('/tmp/ExportOptions.plist', 'wb') as f:
-    plistlib.dump(opts, f)
-print('ExportOptions written')
-"
+          cat > /tmp/ExportOptions.plist << PEOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>RTYG6CS9G2</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict><key>com.velour.salon</key><string>${PROFILE_UUID}</string></dict>
+          </dict></plist>
+          PEOF
+          echo "ExportOptions written"
+          cat /tmp/ExportOptions.plist
           mkdir -p /tmp/build
           xcodebuild -exportArchive \
             -archivePath /tmp/App.xcarchive \
@@ -357,7 +356,7 @@ print('ExportOptions written')
             -authenticationKeyPath "$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8" \
             -authenticationKeyID "${ASC_KEY_ID}" \
             -authenticationKeyIssuerID "${ASC_ISSUER_ID}"
-          echo "✅ Uploaded to TestFlight"
+          echo "Upload complete"
 
       - name: Save IPA as artifact
         if: always()
