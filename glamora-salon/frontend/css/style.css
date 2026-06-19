@@ -2,9 +2,9 @@
 input, button, textarea, select { font-family: inherit; }
 
 :root {
-  --rose: #C9728A;
-  --rose-light: #F2B8C6;
-  --rose-dark: #8B3A52;
+  --rose: #9B1B3B;
+  --rose-light: #C4567A;
+  --rose-dark: #6B0F2B;
   --gold: #C9A96E;
   --gold-light: #EDD9A3;
   --cream: #FFF5F7;
