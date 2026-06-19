@@ -184,8 +184,7 @@
         <div class="section">
           <div class="cats-scroll">
             <div class="cat-chip active" onclick="filterCategory(this, '')">الكل</div>
-            <div class="cat-chip" onclick="filterNearest(this)">📍 الأقرب إليك</div>
-            <div class="cat-chip" onclick="openMapScreen()">🗺️ الخريطة</div>
+            <div class="cat-chip" onclick="openNearestScreen()">📍 الأقرب إليك</div>
             <div class="cat-chip" onclick="filterCategory(this, 'صبغ الشعر')">🎨 صبغ</div>
             <div class="cat-chip" onclick="filterCategory(this, 'قص')">✂️ قص</div>
             <div class="cat-chip" onclick="filterCategory(this, 'علاجات')">💆 علاجات</div>
@@ -834,6 +833,17 @@
     </div>
   </div>
 
+</div>
+
+<!-- ======= NEAREST SCREEN ======= -->
+<div id="screen-nearest" class="screen slide-up">
+  <div class="screen-header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h2>📍 الأقرب إليك</h2>
+    <button onclick="openMapScreen()" style="background:var(--primary);color:white;border:none;border-radius:20px;padding:6px 14px;font-family:Tajawal;font-size:13px;cursor:pointer">🗺️ الخريطة</button>
+  </div>
+  <div id="nearest-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري تحديد موقعك...</div>
+  <div id="nearest-list" class="salons-list" style="padding:12px"></div>
 </div>
 
 <!-- ======= MAP SCREEN ======= -->

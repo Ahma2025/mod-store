@@ -190,33 +190,65 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-async function filterNearest(el) {
-  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+async function openNearestScreen() {
+  showScreen('nearest');
+  document.getElementById('nearest-loading').style.display = 'block';
+  document.getElementById('nearest-list').innerHTML = '';
 
   if (!userLocation) {
-    showToast('جاري تحديد موقعك...');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        localStorage.setItem('velour_location', JSON.stringify(userLocation));
-        filterNearest(el);
-      },
-      () => showToast('تعذّر تحديد موقعك، يرجى السماح بالوصول للموقع')
-    );
-    return;
+    await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          localStorage.setItem('velour_location', JSON.stringify(userLocation));
+          resolve();
+        },
+        () => resolve(),
+        { timeout: 8000 }
+      );
+    });
   }
+
+  document.getElementById('nearest-loading').style.display = 'none';
 
   try {
     const salons = allSalonsCache || await Api.salons.list();
     allSalonsCache = salons;
+
+    if (!userLocation) {
+      document.getElementById('nearest-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)">⚠️ تعذّر تحديد موقعك<br>يرجى السماح بالوصول للموقع من إعدادات المتصفح</div>';
+      return;
+    }
+
     const withDist = salons
       .filter(s => s.latitude && s.longitude)
       .map(s => ({ ...s, _dist: haversineKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) }))
       .sort((a, b) => a._dist - b._dist);
     const withoutDist = salons.filter(s => !s.latitude || !s.longitude);
-    renderSalonsList([...withDist, ...withoutDist], true);
-    if (!withDist.length) showToast('لا توجد صالونات بمواقع محددة بعد');
+    const sorted = [...withDist, ...withoutDist];
+
+    document.getElementById('nearest-list').innerHTML = sorted.map(s => {
+      const thumb = s.cover_url
+        ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'">`
+        : (s.cover_emoji || '💅');
+      const distBadge = s._dist != null
+        ? `<span style="color:#C9728A;font-size:12px;font-weight:600">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
+        : `<span>📍 ${s.city}</span>`;
+      return `
+      <div class="salon-card" onclick="openSalon(${s.id})">
+        <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
+        <div class="salon-card-info">
+          <h4>${s.name}</h4>
+          <div class="salon-card-meta">
+            <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
+            ${distBadge}
+          </div>
+          <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60)+'...' : ''}</p>
+        </div>
+      </div>`;
+    }).join('');
+
+    if (!withDist.length) showToast('لا توجد صالونات بمواقع محددة بعد — أضيفي موقع صالونك من الداشبورد');
   } catch (e) { showToast('خطأ في تحميل الصالونات'); }
 }
 
