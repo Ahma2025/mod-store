@@ -28,7 +28,13 @@ async function apiCall(method, path, body = null) {
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(API + path, opts);
+  const url = API + path;
+  let res;
+  try {
+    res = await fetch(url, opts);
+  } catch (fetchErr) {
+    throw new Error(`[${method} ${url}] ${fetchErr.message}`);
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'حدث خطأ ما');
   return data;
