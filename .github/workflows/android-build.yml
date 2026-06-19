@@ -45,11 +45,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Release AAB
+      - name: Build Release AAB and APK
         run: |
           cd glamora-salon/android
           chmod +x gradlew
-          ./gradlew bundleRelease \
+          ./gradlew bundleRelease assembleRelease \
             -Pandroid.injected.signing.store.file="${GITHUB_WORKSPACE}/glamora-salon/android/app/keystore/velour-release.keystore" \
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
@@ -60,4 +60,11 @@ jobs:
         with:
           name: velour-release-aab
           path: glamora-salon/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: velour-release-apk
+          path: glamora-salon/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
