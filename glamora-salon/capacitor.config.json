@@ -38,8 +38,8 @@
       "importance": "high"
     },
     "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_sample",
-      "iconColor": "#C9728A",
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#6B0F2B",
       "sound": "beep.wav"
     }
   }
