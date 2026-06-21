@@ -524,6 +524,15 @@
             <button class="btn-icon-edit" onclick="showEditSalonForm()">✏️</button>
           </div>
 
+          <!-- Salon Location -->
+          <div class="mgmt-section">
+            <div class="mgmt-section-header">
+              <h4>موقع الصالون على الخريطة</h4>
+              <button class="btn-sm btn-sm-primary" onclick="openSalonLocationPicker()">تحديد الموقع</button>
+            </div>
+            <div id="st-location-status" style="font-size:13px;color:var(--gray);padding:4px 0">لم يتم تحديد الموقع بعد</div>
+          </div>
+
           <!-- Hours -->
           <div class="mgmt-section">
             <div class="mgmt-section-header">
@@ -838,10 +847,10 @@
 
 <!-- ======= NEAREST SCREEN ======= -->
 <div id="screen-nearest" class="screen slide-up">
-  <div class="screen-header">
-    <button class="back-btn" onclick="goBack()">←</button>
-    <h2>📍 الأقرب إليك</h2>
-    <button onclick="openMapScreen()" style="background:var(--primary);color:white;border:none;border-radius:20px;padding:6px 14px;font-family:Tajawal;font-size:13px;cursor:pointer">🗺️ الخريطة</button>
+  <div class="screen-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--cream2)">
+    <button onclick="goBack()" style="background:none;border:none;font-size:15px;color:var(--dark);cursor:pointer;padding:4px 8px;border-radius:8px;display:flex;align-items:center;gap:4px;font-family:Tajawal">→ رجوع</button>
+    <h2 style="margin:0;font-size:17px">📍 الأقرب إليك</h2>
+    <button onclick="openMapScreen()" style="background:var(--primary);color:white;border:none;border-radius:20px;padding:7px 16px;font-family:Tajawal;font-size:13px;cursor:pointer;font-weight:600">الخريطة</button>
   </div>
   <div id="nearest-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري تحديد موقعك...</div>
   <div id="nearest-list" class="salons-list" style="padding:12px"></div>

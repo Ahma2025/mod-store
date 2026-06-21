@@ -69,6 +69,12 @@ function renderSalonHeader() {
   document.getElementById('st-scity').textContent = stSalonData.city;
   document.getElementById('st-saddress').textContent = stSalonData.address;
   document.getElementById('st-salon-name').textContent = stSalonData.name;
+  const locEl = document.getElementById('st-location-status');
+  if (locEl) {
+    locEl.textContent = (stSalonData.latitude && stSalonData.longitude)
+      ? `✅ الموقع محدد على الخريطة`
+      : '⚠️ لم يتم تحديد الموقع بعد — اضغطي على "تحديد الموقع"';
+  }
 }
 
 // ===== HOURS =====

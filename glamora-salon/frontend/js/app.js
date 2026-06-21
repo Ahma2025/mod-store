@@ -155,11 +155,27 @@ function openSalonLocationPicker() {
   }, 200);
 }
 
-function confirmSalonLocation() {
+async function confirmSalonLocation() {
   if (!pendingSalonLocation) { showToast('اضغطي على الخريطة لتحديد الموقع'); return; }
   closeModalById('modal-location-picker');
+
+  // حفظ مباشر إذا الصالون موجود (من داشبورد الكوفيرة)
+  const salonId = (typeof stSalonData !== 'undefined' && stSalonData?.id) ? stSalonData.id :
+                  (typeof stEditingSalonId !== 'undefined' ? stEditingSalonId : null);
+  if (salonId) {
+    try {
+      await Api.salons.updateLocation(salonId, pendingSalonLocation.lat, pendingSalonLocation.lng);
+      showToast('✅ تم حفظ موقع الصالون على الخريطة');
+      const locEl = document.getElementById('st-location-status');
+      if (locEl) locEl.textContent = '✅ الموقع محدد على الخريطة';
+      pendingSalonLocation = null;
+      return;
+    } catch(e) { showToast('خطأ في حفظ الموقع'); }
+  }
+
+  // من داخل فورم الصالون الجديد — نخزن مؤقتاً
   const status = document.getElementById('sf-location-status');
-  if (status) status.textContent = `✅ تم تحديد الموقع (${pendingSalonLocation.lat.toFixed(4)}, ${pendingSalonLocation.lng.toFixed(4)})`;
+  if (status) status.textContent = `✅ تم تحديد الموقع`;
 }
 
 // ===== LOCATION =====
@@ -167,19 +183,35 @@ let userLocation = null;
 let allSalonsCache = null;
 let leafletMap = null;
 
-function requestLocationPermission() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      localStorage.setItem('velour_location', JSON.stringify(userLocation));
-    },
-    () => {
-      const cached = localStorage.getItem('velour_location');
-      if (cached) userLocation = JSON.parse(cached);
-    },
-    { timeout: 10000 }
-  );
+async function getLocation() {
+  // Capacitor native (iOS/Android) — proper permission dialog
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
+    try {
+      await window.Capacitor.Plugins.Geolocation.requestPermissions();
+      const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({ timeout: 10000, enableHighAccuracy: false });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch(e) {}
+  }
+  // Web fallback
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('no geolocation')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      reject,
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  });
+}
+
+async function requestLocationPermission() {
+  try {
+    const loc = await getLocation();
+    userLocation = loc;
+    localStorage.setItem('velour_location', JSON.stringify(loc));
+  } catch {
+    const cached = localStorage.getItem('velour_location');
+    if (cached) userLocation = JSON.parse(cached);
+  }
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -211,17 +243,10 @@ async function openNearestScreen() {
   document.getElementById('nearest-list').innerHTML = '';
 
   if (!userLocation) {
-    await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          localStorage.setItem('velour_location', JSON.stringify(userLocation));
-          resolve();
-        },
-        () => resolve(),
-        { timeout: 8000 }
-      );
-    });
+    try {
+      userLocation = await getLocation();
+      localStorage.setItem('velour_location', JSON.stringify(userLocation));
+    } catch {}
   }
 
   document.getElementById('nearest-loading').style.display = 'none';
@@ -231,7 +256,13 @@ async function openNearestScreen() {
     allSalonsCache = salons;
 
     if (!userLocation) {
-      document.getElementById('nearest-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)">⚠️ تعذّر تحديد موقعك<br>يرجى السماح بالوصول للموقع من إعدادات المتصفح</div>';
+      document.getElementById('nearest-list').innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--gray)">
+          <div style="font-size:40px;margin-bottom:12px">📍</div>
+          <div style="font-size:15px;margin-bottom:8px">يرجى السماح بالوصول للموقع</div>
+          <div style="font-size:12px;color:var(--gray)">اذهبي لإعدادات الجهاز وافتحي صلاحية الموقع للتطبيق</div>
+          <button onclick="retryLocation()" style="margin-top:16px;background:var(--primary);color:white;border:none;border-radius:20px;padding:10px 24px;font-family:Tajawal;font-size:14px;cursor:pointer">إعادة المحاولة</button>
+        </div>`;
       return;
     }
 
@@ -267,43 +298,45 @@ async function openNearestScreen() {
   } catch (e) { showToast('خطأ في تحميل الصالونات'); }
 }
 
+async function retryLocation() {
+  document.getElementById('nearest-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)">جاري تحديد موقعك...</div>';
+  try {
+    userLocation = await getLocation();
+    localStorage.setItem('velour_location', JSON.stringify(userLocation));
+  } catch {}
+  openNearestScreen();
+}
+
 async function openMapScreen() {
   showScreen('map');
   await new Promise(r => setTimeout(r, 100));
 
   if (!userLocation) {
-    showToast('جاري تحديد موقعك...');
-    await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(); },
-        () => resolve(),
-        { timeout: 8000 }
-      );
-    });
+    try { userLocation = await getLocation(); localStorage.setItem('velour_location', JSON.stringify(userLocation)); } catch {}
   }
 
   const center = userLocation || { lat: 32.0, lng: 35.2 };
 
   if (leafletMap) { leafletMap.remove(); leafletMap = null; }
-  leafletMap = L.map('map-container').setView([center.lat, center.lng], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(leafletMap);
+  leafletMap = L.map('map-container').setView([center.lat, center.lng], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(leafletMap);
 
   if (userLocation) {
-    const userIcon = L.divIcon({ html: '<div style="background:#C9728A;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>', iconSize:[22,22], iconAnchor:[11,11], className:'' });
-    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
-      .addTo(leafletMap)
-      .bindPopup('📍 موقعك الحالي');
+    const userIcon = L.divIcon({ html: '<div style="background:#C9728A;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5)"></div>', iconSize:[20,20], iconAnchor:[10,10], className:'' });
+    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(leafletMap).bindPopup('<b>موقعك الحالي</b>');
   }
 
   try {
     const salons = await Api.salons.allLocations();
     salons.forEach(s => {
-      const salonIcon = L.divIcon({ html: `<div style="background:#1A0A0F;color:white;padding:4px 8px;border-radius:20px;font-size:11px;white-space:nowrap;border:2px solid #C9728A;font-family:Tajawal">✂️ ${s.name}</div>`, iconSize:[null,null], iconAnchor:[0,20], className:'' });
+      const emoji = s.cover_emoji || '✂️';
+      const salonIcon = L.divIcon({
+        html: `<div style="background:white;border:2px solid #C9728A;border-radius:12px;padding:5px 10px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:Tajawal;font-weight:700;color:#1A0A0F;display:flex;align-items:center;gap:4px"><span>${emoji}</span><span>${s.name}</span></div>`,
+        iconAnchor:[0, 40], className:''
+      });
       L.marker([s.latitude, s.longitude], { icon: salonIcon })
         .addTo(leafletMap)
-        .bindPopup(`<b>${s.name}</b><br>⭐ ${s.rating}<br>📍 ${s.city}<br><a href="#" onclick="openSalon(${s.id});return false;" style="color:#C9728A">عرض الصالون</a>`);
+        .bindPopup(`<div style="font-family:Tajawal;text-align:right"><b>${s.name}</b><br>⭐ ${s.rating} · ${s.city}<br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A">عرض الصالون ←</a></div>`);
     });
     if (!salons.length) showToast('لا توجد صالونات بمواقع محددة بعد');
   } catch(e) { showToast('خطأ في تحميل مواقع الصالونات'); }
