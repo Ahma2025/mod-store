@@ -847,10 +847,12 @@
 
 <!-- ======= NEAREST SCREEN ======= -->
 <div id="screen-nearest" class="screen slide-up">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:white;border-bottom:1px solid #f0e8ed;position:sticky;top:0;z-index:10">
-    <button onclick="goBack()" style="background:#f5eef2;border:none;border-radius:10px;padding:8px 14px;font-family:Tajawal;font-size:14px;font-weight:600;color:#1A0A0F;cursor:pointer">← رجوع</button>
-    <span style="font-family:Tajawal;font-size:16px;font-weight:700">📍 الأقرب إليك</span>
-    <button onclick="openMapScreen()" style="background:#6B0F2B;color:white;border:none;border-radius:10px;padding:8px 14px;font-family:Tajawal;font-size:14px;font-weight:600;cursor:pointer">الخريطة</button>
+  <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F">📍 الأقرب إليك</span>
+      <button onclick="openMapScreen()" style="background:#6B0F2B;color:white;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;cursor:pointer">الخريطة</button>
+    </div>
   </div>
   <div id="nearest-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري تحديد موقعك...</div>
   <div id="nearest-list" class="salons-list" style="padding:12px"></div>
