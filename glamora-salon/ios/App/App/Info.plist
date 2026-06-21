@@ -59,5 +59,9 @@
 	</dict>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج موقعك لعرض أقرب الصالونات إليك</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>نحتاج موقعك لعرض أقرب الصالونات إليك</string>
 </dict>
 </plist>
