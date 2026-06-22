@@ -242,12 +242,10 @@ async function openNearestScreen() {
   document.getElementById('nearest-loading').style.display = 'block';
   document.getElementById('nearest-list').innerHTML = '';
 
-  if (!userLocation) {
-    try {
-      userLocation = await getLocation();
-      localStorage.setItem('velour_location', JSON.stringify(userLocation));
-    } catch {}
-  }
+  try {
+    userLocation = await getLocation();
+    localStorage.setItem('velour_location', JSON.stringify(userLocation));
+  } catch {}
 
   document.getElementById('nearest-loading').style.display = 'none';
 
