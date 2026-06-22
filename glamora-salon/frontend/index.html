@@ -860,11 +860,14 @@
 
 <!-- ======= MAP SCREEN ======= -->
 <div id="screen-map" class="screen slide-up">
-  <div class="screen-header">
-    <button class="back-btn" onclick="goBack()">←</button>
-    <h2>خريطة الصالونات</h2>
+  <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F">خريطة الصالونات</span>
+      <div style="width:80px"></div>
+    </div>
   </div>
-  <div id="map-container" style="width:100%;height:calc(100vh - 60px);"></div>
+  <div id="map-container" style="width:100%;height:calc(100vh - 70px);"></div>
 </div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
