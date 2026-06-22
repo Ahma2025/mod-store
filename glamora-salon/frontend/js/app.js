@@ -398,7 +398,7 @@ function renderFeaturedSalons(salons) {
       ? `background:url('${s.cover_url}') center/cover no-repeat`
       : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
     return `
-    <div class="fslide" data-idx="${i}" onclick="openSalon(${s.id})" style="position:absolute;inset:0;${bg};transition:opacity 0.6s ease;opacity:${i===0?1:0};display:flex;flex-direction:column;justify-content:flex-end">
+    <div class="fslide" data-id="${s.id}" style="position:absolute;inset:0;${bg};transition:opacity 0.5s ease;opacity:${i===0?1:0};pointer-events:${i===0?'auto':'none'};display:flex;flex-direction:column;justify-content:flex-end">
       <div style="background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 100%);padding:16px 14px 14px;border-radius:0 0 18px 18px">
         ${!s.cover_url ? `<div style="font-size:42px;text-align:center;margin-bottom:6px">${s.cover_emoji||'💅'}</div>` : ''}
         <div style="font-family:Tajawal;font-size:18px;font-weight:800;color:white">${s.name}</div>
@@ -408,10 +408,27 @@ function renderFeaturedSalons(salons) {
   }).join('');
 
   const dots = top.map((_, i) =>
-    `<div class="fdot" data-idx="${i}" onclick="event.stopPropagation();goFeaturedSlide(${i})" style="width:${i===0?'20px':'7px'};height:7px;border-radius:4px;background:${i===0?'white':'rgba(255,255,255,0.45)'};transition:all 0.3s;cursor:pointer"></div>`
+    `<div class="fdot" onclick="event.stopPropagation();goFeaturedSlide(${i})" style="width:${i===0?'20px':'7px'};height:7px;border-radius:4px;background:${i===0?'white':'rgba(255,255,255,0.45)'};transition:all 0.3s;cursor:pointer"></div>`
   ).join('');
 
-  container.innerHTML = slides + `<div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center">${dots}</div>`;
+  container.innerHTML = slides + `<div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center;z-index:5">${dots}</div>`;
+
+  // Click to open salon
+  container.onclick = () => {
+    const active = container.querySelector('.fslide[style*="pointer-events: auto"], .fslide[style*="pointer-events:auto"]');
+    const id = active ? parseInt(active.dataset.id) : null;
+    if (id) openSalon(id);
+  };
+
+  // Swipe support
+  let touchStartX = 0;
+  container.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  container.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) goFeaturedSlide(diff > 0
+      ? (featuredSliderIndex + 1) % top.length
+      : (featuredSliderIndex - 1 + top.length) % top.length);
+  }, { passive: true });
 
   if (featuredSliderTimer) clearInterval(featuredSliderTimer);
   featuredSliderIndex = 0;
@@ -422,7 +439,10 @@ function goFeaturedSlide(idx) {
   const slides = document.querySelectorAll('.fslide');
   const dots = document.querySelectorAll('.fdot');
   if (!slides.length) return;
-  slides.forEach((s, i) => s.style.opacity = i === idx ? 1 : 0);
+  slides.forEach((s, i) => {
+    s.style.opacity = i === idx ? 1 : 0;
+    s.style.pointerEvents = i === idx ? 'auto' : 'none';
+  });
   dots.forEach((d, i) => {
     d.style.width = i === idx ? '20px' : '7px';
     d.style.background = i === idx ? 'white' : 'rgba(255,255,255,0.45)';
