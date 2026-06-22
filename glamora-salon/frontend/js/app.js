@@ -184,21 +184,26 @@ let allSalonsCache = null;
 let leafletMap = null;
 
 async function getLocation() {
-  // Capacitor native (iOS/Android) — proper permission dialog
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
+  const Geo = window.Capacitor?.Plugins?.Geolocation;
+  if (Geo) {
+    const perm = await Geo.requestPermissions().catch(() => ({ location: 'prompt' }));
+    const status = perm?.location || perm?.coarseLocation;
+    if (status === 'denied') throw new Error('permission_denied');
+    // Try network location first (fast), then GPS
     try {
-      await window.Capacitor.Plugins.Geolocation.requestPermissions();
-      const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({ timeout: 10000, enableHighAccuracy: false });
+      const pos = await Geo.getCurrentPosition({ timeout: 20000, enableHighAccuracy: false });
       return { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    } catch(e) {}
+    } catch {
+      const pos = await Geo.getCurrentPosition({ timeout: 30000, enableHighAccuracy: true });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    }
   }
-  // Web fallback
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) { reject(new Error('no geolocation')); return; }
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       reject,
-      { timeout: 10000, enableHighAccuracy: false }
+      { timeout: 20000, enableHighAccuracy: false, maximumAge: 60000 }
     );
   });
 }
@@ -242,10 +247,11 @@ async function openNearestScreen() {
   document.getElementById('nearest-loading').style.display = 'block';
   document.getElementById('nearest-list').innerHTML = '';
 
+  let locationError = '';
   try {
     userLocation = await getLocation();
     localStorage.setItem('velour_location', JSON.stringify(userLocation));
-  } catch {}
+  } catch(e) { locationError = e.message || String(e); }
 
   document.getElementById('nearest-loading').style.display = 'none';
 
@@ -258,7 +264,8 @@ async function openNearestScreen() {
         <div style="text-align:center;padding:40px;color:var(--gray)">
           <div style="font-size:40px;margin-bottom:12px">📍</div>
           <div style="font-size:15px;margin-bottom:8px">يرجى السماح بالوصول للموقع</div>
-          <div style="font-size:12px;color:var(--gray)">اذهبي لإعدادات الجهاز وافتحي صلاحية الموقع للتطبيق</div>
+          <div style="font-size:11px;color:#C9728A;margin-bottom:4px">${locationError}</div>
+          <div style="font-size:12px;color:var(--gray)">تأكدي إن خدمات الموقع مفعّلة بالإعدادات</div>
           <button onclick="retryLocation()" style="margin-top:16px;background:var(--primary);color:white;border:none;border-radius:20px;padding:10px 24px;font-family:Tajawal;font-size:14px;cursor:pointer">إعادة المحاولة</button>
         </div>`;
       return;
@@ -271,24 +278,32 @@ async function openNearestScreen() {
     const withoutDist = salons.filter(s => !s.latitude || !s.longitude);
     const sorted = [...withDist, ...withoutDist];
 
-    document.getElementById('nearest-list').innerHTML = sorted.map(s => {
-      const thumb = s.cover_url
-        ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'">`
-        : (s.cover_emoji || '💅');
-      const distBadge = s._dist != null
-        ? `<span style="color:#C9728A;font-size:12px;font-weight:600">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
-        : `<span>📍 ${s.city}</span>`;
+    document.getElementById('nearest-list').innerHTML = sorted.map((s, i) => {
+      const isFav = getFavorites().includes(s.id);
+      const bg = s.cover_url
+        ? `background:url('${s.cover_url}') center/cover no-repeat`
+        : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
+      const dist = s._dist != null
+        ? (s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم')
+        : s.city;
+      const rank = i < 3 ? ['🥇','🥈','🥉'][i] : '';
       return `
-      <div class="salon-card" onclick="openSalon(${s.id})">
-        <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
-        <div class="salon-card-info">
-          <h4>${s.name}</h4>
-          <div class="salon-card-meta">
-            <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
-            ${distBadge}
-          </div>
-          <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60)+'...' : ''}</p>
+      <div onclick="openSalon(${s.id})" style="margin:0 12px 12px;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);background:white;cursor:pointer;display:flex;align-items:stretch;min-height:90px;position:relative">
+        <div style="width:90px;min-width:90px;${bg};display:flex;align-items:center;justify-content:center;font-size:36px">
+          ${!s.cover_url ? (s.cover_emoji||'💅') : ''}
         </div>
+        <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px">
+            ${rank ? `<span style="font-size:16px">${rank}</span>` : ''}
+            <span style="font-family:Tajawal;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
+            <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${dist}</span>
+          </div>
+          <div style="font-family:Tajawal;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : s.city}</div>
+        </div>
+        <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav?'⭐':'☆'}</button>
       </div>`;
     }).join('');
 
@@ -329,12 +344,16 @@ async function openMapScreen() {
     salons.forEach(s => {
       const emoji = s.cover_emoji || '✂️';
       const salonIcon = L.divIcon({
-        html: `<div style="background:white;border:2px solid #C9728A;border-radius:12px;padding:5px 10px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:Tajawal;font-weight:700;color:#1A0A0F;display:flex;align-items:center;gap:4px"><span>${emoji}</span><span>${s.name}</span></div>`,
-        iconAnchor:[0, 40], className:''
+        html: `<div style="background:#6B0F2B;border-radius:20px;padding:6px 10px;font-size:13px;white-space:nowrap;box-shadow:0 3px 10px rgba(107,15,43,0.4);font-family:Tajawal;font-weight:700;color:white;display:flex;align-items:center;gap:5px;position:relative">
+          <span style="font-size:15px">${emoji}</span>
+          <span>${s.name}</span>
+          <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid #6B0F2B"></div>
+        </div>`,
+        iconAnchor:[40, 37], className:''
       });
       L.marker([s.latitude, s.longitude], { icon: salonIcon })
         .addTo(leafletMap)
-        .bindPopup(`<div style="font-family:Tajawal;text-align:right"><b>${s.name}</b><br>⭐ ${s.rating} · ${s.city}<br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A">عرض الصالون ←</a></div>`);
+        .bindPopup(`<div style="font-family:Tajawal;text-align:right;min-width:140px"><b style="font-size:14px">${s.name}</b><br><span style="color:#888;font-size:12px">⭐ ${s.rating} · ${s.city}</span><br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A;font-size:13px;font-weight:700">عرض الصالون ←</a></div>`);
     });
     if (!salons.length) showToast('لا توجد صالونات بمواقع محددة بعد');
   } catch(e) { showToast('خطأ في تحميل مواقع الصالونات'); }
@@ -357,47 +376,95 @@ async function loadHome() {
     const salons = await Api.salons.list();
     allSalonsCache = salons;
     renderFeaturedSalons(salons);
-    renderSalonsList(salons);
+    renderSalonsList([...salons].sort((a,b) => b.id - a.id));
     loadNotifBadge();
   } catch (e) {
     console.error(e);
   }
 }
 
+let featuredSliderTimer = null;
+let featuredSliderIndex = 0;
+
 function renderFeaturedSalons(salons) {
-  const html = salons.slice(0, 5).map(s => {
-    const coverContent = s.cover_url
-      ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.parentElement.innerHTML='${s.cover_emoji || '💅'}<div class=featured-badge>⭐ ${s.rating}</div>'">`
-      : (s.cover_emoji || '💅');
+  const sorted = [...salons].sort((a,b) => (b.rating * Math.log(b.reviews_count+1)) - (a.rating * Math.log(a.reviews_count+1)));
+  const top = sorted.slice(0, 8);
+  const container = document.getElementById('featured-salons');
+
+  container.style.cssText = 'position:relative;overflow:hidden;border-radius:18px;height:200px;background:#1A0A0F;cursor:pointer';
+
+  const slides = top.map((s, i) => {
+    const bg = s.cover_url
+      ? `background:url('${s.cover_url}') center/cover no-repeat`
+      : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
     return `
-    <div class="featured-card" onclick="openSalon(${s.id})">
-      <div class="featured-cover" style="${s.cover_url ? 'padding:0;overflow:hidden' : ''}">
-        ${coverContent}
-        <div class="featured-badge">⭐ ${s.rating}</div>
-      </div>
-      <div class="featured-info">
-        <h4>${s.name}</h4>
-        <div class="featured-meta">
-          <span class="featured-rating">⭐ ${s.rating}</span>
-          <span>📍 ${s.city}</span>
-        </div>
+    <div class="fslide" data-idx="${i}" onclick="openSalon(${s.id})" style="position:absolute;inset:0;${bg};transition:opacity 0.6s ease;opacity:${i===0?1:0};display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 100%);padding:16px 14px 14px;border-radius:0 0 18px 18px">
+        ${!s.cover_url ? `<div style="font-size:42px;text-align:center;margin-bottom:6px">${s.cover_emoji||'💅'}</div>` : ''}
+        <div style="font-family:Tajawal;font-size:18px;font-weight:800;color:white">${s.name}</div>
+        <div style="font-family:Tajawal;font-size:13px;color:rgba(255,255,255,0.8);margin-top:2px">📍 ${s.city} · ⭐ ${s.rating}</div>
       </div>
     </div>`;
   }).join('');
-  document.getElementById('featured-salons').innerHTML = html;
+
+  const dots = top.map((_, i) =>
+    `<div class="fdot" data-idx="${i}" onclick="event.stopPropagation();goFeaturedSlide(${i})" style="width:${i===0?'20px':'7px'};height:7px;border-radius:4px;background:${i===0?'white':'rgba(255,255,255,0.45)'};transition:all 0.3s;cursor:pointer"></div>`
+  ).join('');
+
+  container.innerHTML = slides + `<div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center">${dots}</div>`;
+
+  if (featuredSliderTimer) clearInterval(featuredSliderTimer);
+  featuredSliderIndex = 0;
+  featuredSliderTimer = setInterval(() => goFeaturedSlide((featuredSliderIndex + 1) % top.length), 3000);
+}
+
+function goFeaturedSlide(idx) {
+  const slides = document.querySelectorAll('.fslide');
+  const dots = document.querySelectorAll('.fdot');
+  if (!slides.length) return;
+  slides.forEach((s, i) => s.style.opacity = i === idx ? 1 : 0);
+  dots.forEach((d, i) => {
+    d.style.width = i === idx ? '20px' : '7px';
+    d.style.background = i === idx ? 'white' : 'rgba(255,255,255,0.45)';
+  });
+  featuredSliderIndex = idx;
 }
 
 
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('velour_favs') || '[]'); } catch { return []; }
+}
+function toggleFavorite(id, e) {
+  e.stopPropagation();
+  let favs = getFavorites();
+  if (favs.includes(id)) { favs = favs.filter(f => f !== id); }
+  else { favs.unshift(id); }
+  localStorage.setItem('velour_favs', JSON.stringify(favs));
+  const allSalons = allSalonsCache || [];
+  renderSalonsList(allSalons);
+}
+
 function renderSalonsList(salons, showDistance = false) {
-  document.getElementById('salons-list').innerHTML = salons.map(s => {
+  const favs = getFavorites();
+  // Sort: favorites first, then by newest (highest id)
+  const sorted = [...salons].sort((a, b) => {
+    const aFav = favs.includes(a.id) ? 1 : 0;
+    const bFav = favs.includes(b.id) ? 1 : 0;
+    if (bFav !== aFav) return bFav - aFav;
+    return b.id - a.id;
+  });
+
+  document.getElementById('salons-list').innerHTML = sorted.map(s => {
+    const isFav = favs.includes(s.id);
     const thumb = s.cover_url
       ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
       : (s.cover_emoji || '💅');
     const distBadge = showDistance && s._dist != null
-      ? `<span style="color:#C9728A;font-size:12px">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
-      : `<span>📍 ${s.city}</span>`;
+      ? `<span style="color:#C9728A;font-size:12px;font-weight:600">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
+      : `<span style="color:#888;font-size:12px">📍 ${s.city}</span>`;
     return `
-    <div class="salon-card" onclick="openSalon(${s.id})">
+    <div class="salon-card" onclick="openSalon(${s.id})" style="position:relative">
+      <button onclick="toggleFavorite(${s.id}, event)" style="position:absolute;top:10px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;z-index:2;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav ? '⭐' : '☆'}</button>
       <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
       <div class="salon-card-info">
         <h4>${s.name}</h4>
