@@ -1,0 +1,65 @@
+name: Build iOS & Upload to TestFlight
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: List and select latest Xcode
+        run: |
+          echo "=== Available Xcodes ==="
+          ls /Applications/ | grep -i xcode || true
+          LATEST=$(ls /Applications/ | grep "^Xcode" | sort -V | tail -1)
+          echo "Selecting: $LATEST"
+          sudo xcode-select -s /Applications/$LATEST/Contents/Developer
+          xcodebuild -version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Install Fastlane & CocoaPods
+        run: sudo gem install fastlane cocoapods --no-document
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build & Upload to TestFlight
+        working-directory: ios/App
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: fastlane beta
+
+      - name: Save IPA as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Glamora-Salon-IPA
+          path: ios/App/App.ipa
+          if-no-files-found: ignore
+          retention-days: 30
