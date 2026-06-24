@@ -1431,13 +1431,17 @@ function formatTime(dateStr) {
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-  if (authToken && currentUser) {
-    initSocket();
-    enterApp(currentUser);
-  } else {
-    showScreen('onboard');
-  }
   if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
     try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
+  }
+  try {
+    if (authToken && currentUser) {
+      enterApp(currentUser);
+      setTimeout(() => { try { initSocket(); } catch(e) {} }, 500);
+    } else {
+      showScreen('onboard');
+    }
+  } catch(e) {
+    showScreen('onboard');
   }
 });
