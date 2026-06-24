@@ -79,6 +79,9 @@ async function doLogin() {
     const { token, user } = await Api.auth.login(phone, pass);
     setAuth(token, user);
     initSocket();
+    // Save FCM token now that user is logged in
+    const cachedFcm = localStorage.getItem('glamora_fcm_token');
+    if (cachedFcm) saveFCMToken(cachedFcm, (typeof Capacitor !== 'undefined' ? Capacitor.getPlatform() : 'web')).catch(()=>{});
     enterApp(user);
   } catch (e) {
     showError(errEl, e.message);
@@ -102,6 +105,9 @@ async function doRegister() {
     const { token, user } = await Api.auth.register({ name, phone, email, password: pass, role: selectedRole });
     setAuth(token, user);
     initSocket();
+    // Save FCM token now that user is logged in
+    const cachedFcmR = localStorage.getItem('glamora_fcm_token');
+    if (cachedFcmR) saveFCMToken(cachedFcmR, (typeof Capacitor !== 'undefined' ? Capacitor.getPlatform() : 'web')).catch(()=>{});
     enterApp(user);
   } catch (e) {
     showError(errEl, e.message);
@@ -281,7 +287,7 @@ async function openNearestScreen() {
     document.getElementById('nearest-list').innerHTML = sorted.map((s, i) => {
       const isFav = getFavorites().includes(s.id);
       const bg = s.cover_url
-        ? `background:url('${s.cover_url}') center/cover no-repeat`
+        ? `background:url('${mediaUrl(s.cover_url)}') center/cover no-repeat`
         : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
       const dist = s._dist != null
         ? (s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم')
@@ -395,7 +401,7 @@ function renderFeaturedSalons(salons) {
 
   const slides = top.map((s, i) => {
     const bg = s.cover_url
-      ? `background:url('${s.cover_url}') center/cover no-repeat`
+      ? `background:url('${mediaUrl(s.cover_url)}') center/cover no-repeat`
       : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
     return `
     <div class="fslide" data-id="${s.id}" style="position:absolute;inset:0;${bg};transition:opacity 0.5s ease;opacity:${i===0?1:0};pointer-events:${i===0?'auto':'none'};display:flex;flex-direction:column;justify-content:flex-end">
@@ -477,7 +483,7 @@ function renderSalonsList(salons, showDistance = false) {
   document.getElementById('salons-list').innerHTML = sorted.map(s => {
     const isFav = favs.includes(s.id);
     const thumb = s.cover_url
-      ? `<img src="${s.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
+      ? `<img src="${mediaUrl(s.cover_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
       : (s.cover_emoji || '💅');
     const distBadge = showDistance && s._dist != null
       ? `<span style="color:#C9728A;font-size:12px;font-weight:600">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
@@ -677,7 +683,7 @@ async function loadSalonGallery(salonId) {
     const cover = media.find(m => m.is_cover && m.type === 'photo');
     const coverEl = document.getElementById('salon-cover-media');
     if (cover && coverEl) {
-      coverEl.style.backgroundImage = `url(${cover.url})`;
+      coverEl.style.backgroundImage = `url(${mediaUrl(cover.url)})`;
       coverEl.style.opacity = '1';
     }
 
@@ -688,10 +694,11 @@ async function loadSalonGallery(salonId) {
 
     strip.classList.remove('hidden');
     strip.innerHTML = galleryMedia.map(m => {
+      const mUrl = mediaUrl(m.url);
       if (m.type === 'video') {
-        return `<div class="gallery-item" onclick="openMediaViewer('${m.url}','video')"><video src="${m.url}" class="gallery-thumb" muted></video><div class="gallery-play">▶</div></div>`;
+        return `<div class="gallery-item" onclick="openMediaViewer('${mUrl}','video')"><video src="${mUrl}" class="gallery-thumb" muted></video><div class="gallery-play">▶</div></div>`;
       }
-      return `<div class="gallery-item" onclick="openMediaViewer('${m.url}','photo')"><img src="${m.url}" class="gallery-thumb"></div>`;
+      return `<div class="gallery-item" onclick="openMediaViewer('${mUrl}','photo')"><img src="${mUrl}" class="gallery-thumb"></div>`;
     }).join('');
   } catch (e) {}
 }
@@ -1424,12 +1431,13 @@ function formatTime(dateStr) {
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    if (authToken && currentUser) {
-      initSocket();
-      enterApp(currentUser);
-    } else {
-      showScreen('onboard');
-    }
-  }, 2200);
+  if (authToken && currentUser) {
+    initSocket();
+    enterApp(currentUser);
+  } else {
+    showScreen('onboard');
+  }
+  if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+    try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
+  }
 });
