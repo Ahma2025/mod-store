@@ -33,6 +33,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 
 /* ===== SPLASH ===== */
 #screen-splash { background: var(--dark2); display: flex; align-items: center; justify-content: center; z-index: 100; }
+#screen-splash.active { display: flex; }
 .splash-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, #5C1A30 0%, #1A0A0F 60%); }
 .splash-content { position: relative; text-align: center; }
 .splash-logo { margin-bottom: 60px; }
