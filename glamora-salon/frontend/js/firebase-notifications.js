@@ -169,6 +169,25 @@ async function initNativeNotifications() {
       });
     }
 
+    // Create notification channel for Android 8+
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id: 'glamora_bookings_v3',
+          name: 'حجوزات فيلور',
+          description: 'إشعارات الحجوزات والرسائل',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true,
+          lightColor: '#C9728A'
+        });
+        debugLog('notification channel created: glamora_bookings_v2');
+      } catch(e) {
+        debugLog('createChannel error: ' + e.message);
+      }
+    }
+
     debugLog('calling PushNotifications.register()...');
     await PushNotifications.register();
     debugLog('register() returned');
@@ -208,7 +227,7 @@ async function saveFCMToken(token, platform = 'web') {
     const stored = localStorage.getItem('glamora_token');
     if (!stored) return;
     // Use BASE from api.js if available, otherwise auto-detect
-    const base = (typeof BASE !== 'undefined') ? BASE : (window.location.hostname === 'localhost' ? 'http://localhost:3000' : `http://${window.location.hostname}:3000`);
+    const base = (typeof BASE !== 'undefined') ? BASE : ((typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) ? 'https://glamora-salon-production.up.railway.app' : (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://glamora-salon-production.up.railway.app'));
     await fetch(base + '/api/users/fcm-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored}` },

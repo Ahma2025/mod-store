@@ -1,5 +1,13 @@
-const BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : `http://${window.location.hostname}:3000`;
+const BASE = (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform())
+  ? 'https://glamora-salon-production.up.railway.app'
+  : (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://glamora-salon-production.up.railway.app');
 const API = BASE + '/api';
+
+function mediaUrl(url) {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return BASE + url;
+}
 let authToken = localStorage.getItem('glamora_token');
 let currentUser = JSON.parse(localStorage.getItem('glamora_user') || 'null');
 let socket = null;
