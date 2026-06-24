@@ -1431,19 +1431,23 @@ function formatTime(dateStr) {
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-  try {
-    if (authToken && currentUser) {
-      enterApp(currentUser);
-      setTimeout(() => { try { initSocket(); } catch(e) {} }, 500);
-    } else {
+  // Hide native splash immediately - HTML splash takes over
+  if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+    try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
+  }
+  // Show HTML splash with logo + animation
+  showScreen('splash');
+  // After animation, navigate to real screen
+  setTimeout(() => {
+    try {
+      if (authToken && currentUser) {
+        enterApp(currentUser);
+        setTimeout(() => { try { initSocket(); } catch(e) {} }, 500);
+      } else {
+        showScreen('onboard');
+      }
+    } catch(e) {
       showScreen('onboard');
     }
-  } catch(e) {
-    showScreen('onboard');
-  }
-  setTimeout(() => {
-    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-      try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
-    }
-  }, 300);
+  }, 2500);
 });
