@@ -1431,9 +1431,6 @@ function formatTime(dateStr) {
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-  if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-    try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
-  }
   try {
     if (authToken && currentUser) {
       enterApp(currentUser);
@@ -1444,4 +1441,9 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {
     showScreen('onboard');
   }
+  setTimeout(() => {
+    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+      try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
+    }
+  }, 300);
 });
