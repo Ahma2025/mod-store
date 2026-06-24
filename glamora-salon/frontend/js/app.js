@@ -236,6 +236,9 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 async function filterTopRated(el) {
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
+  showScreen('top-rated');
+  document.getElementById('top-rated-loading').style.display = 'block';
+  document.getElementById('top-rated-list').innerHTML = '';
   try {
     const salons = allSalonsCache || await Api.salons.list();
     allSalonsCache = salons;
@@ -244,8 +247,26 @@ async function filterTopRated(el) {
       const scoreB = b.rating * Math.log(b.reviews_count + 1);
       return scoreB - scoreA;
     });
-    renderSalonsList(sorted);
-  } catch(e) { showToast('خطأ في تحميل الصالونات'); }
+    document.getElementById('top-rated-loading').style.display = 'none';
+    const isFav = id => (JSON.parse(localStorage.getItem('velour_favs') || '[]')).includes(id);
+    document.getElementById('top-rated-list').innerHTML = sorted.map((s, i) => {
+      const cover = mediaUrl(s.cover_url) || 'icons/velour-icon.png';
+      return `<div class="salon-card" onclick="openSalon(${s.id})" style="position:relative">
+        <img src="${cover}" class="salon-card-img" onerror="this.src='icons/velour-icon.png'">
+        <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav(s.id)?'⭐':'☆'}</button>
+        <div class="salon-card-info">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span class="salon-card-name">${s.name}</span>
+            <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">#${i+1} ⭐ ${s.rating}</span>
+          </div>
+          <div class="salon-card-city">📍 ${s.city}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('top-rated-loading').style.display = 'none';
+    showToast('خطأ في تحميل الصالونات');
+  }
 }
 
 async function openNearestScreen() {
