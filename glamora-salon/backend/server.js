@@ -40,6 +40,34 @@ app.use('/api/blocked-slots', require('./routes/blocked-slots'));
 app.use('/api/bookings', (req, res, next) => { req.io = io; next(); }, require('./routes/bookings'));
 app.use('/api/messages', (req, res, next) => { req.io = io; next(); }, require('./routes/messages'));
 
+// TEMP cleanup endpoint - remove after use
+app.post('/api/admin/cleanup-velour-2025', (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    // Keep only salon فيونكا (id=4) and its stylists
+    const fionka = db.get('salons').find({ id: 4 }).value();
+    const fionkaStylists = db.get('stylists').filter({ salon_id: 4 }).value();
+    const fionkaUserIds = fionkaStylists.map(s => s.user_id).filter(Boolean);
+    const fionkaUsers = db.get('users').filter(u => fionkaUserIds.includes(u.id)).value();
+    // Create new customer
+    const hash = bcrypt.hashSync('velour123', 10);
+    const newCustomer = { id: 999, created_at: new Date().toISOString(), loyalty_points: 0, avatar: null, name: 'زبونة تيست', phone: '0599000001', email: 'test@velour.app', password: hash, role: 'user' };
+    // Reset everything
+    db.set('salons', [fionka]).write();
+    db.set('stylists', fionkaStylists).write();
+    db.set('users', [...fionkaUsers, newCustomer]).write();
+    db.set('bookings', []).write();
+    db.set('reviews', []).write();
+    db.set('messages', []).write();
+    db.set('notifications', []).write();
+    db.set('salon_media', []).write();
+    db.set('services', db.get('services').filter({ salon_id: 4 }).value()).write();
+    db.set('salon_hours', db.get('salon_hours').filter({ salon_id: 4 }).value()).write();
+    db.set('salon_ratings', []).write();
+    res.json({ ok: true, salon: fionka, stylists: fionkaStylists, users: [...fionkaUsers, newCustomer], customer: { phone: '0599000001', password: 'velour123' } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) return next(new Error('غير مصرح'));
