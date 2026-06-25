@@ -248,19 +248,29 @@ async function filterTopRated(el) {
       return scoreB - scoreA;
     });
     document.getElementById('top-rated-loading').style.display = 'none';
-    const isFav = id => (JSON.parse(localStorage.getItem('velour_favs') || '[]')).includes(id);
+    const medals = ['🥇','🥈','🥉'];
     document.getElementById('top-rated-list').innerHTML = sorted.map((s, i) => {
-      const cover = mediaUrl(s.cover_url) || 'icons/velour-icon.png';
-      return `<div class="salon-card" onclick="openSalon(${s.id})" style="position:relative">
-        <img src="${cover}" class="salon-card-img" onerror="this.src='icons/velour-icon.png'">
-        <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav(s.id)?'⭐':'☆'}</button>
-        <div class="salon-card-info">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span class="salon-card-name">${s.name}</span>
-            <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">#${i+1} ⭐ ${s.rating}</span>
-          </div>
-          <div class="salon-card-city">📍 ${s.city}</div>
+      const isFav = getFavorites().includes(s.id);
+      const bg = s.cover_url
+        ? `background:url('${mediaUrl(s.cover_url)}') center/cover no-repeat`
+        : `background:linear-gradient(135deg,#6B0F2B,#C9728A)`;
+      const medal = i < 3 ? medals[i] : `#${i+1}`;
+      return `<div onclick="openSalon(${s.id})" style="margin:0 12px 12px;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);background:white;cursor:pointer;display:flex;align-items:stretch;min-height:90px;position:relative">
+        <div style="width:90px;min-width:90px;${bg};display:flex;align-items:center;justify-content:center;font-size:36px">
+          ${!s.cover_url ? (s.cover_emoji||'💅') : ''}
         </div>
+        <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:16px">${medal}</span>
+            <span style="font-family:Tajawal;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
+            <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${s.city}</span>
+          </div>
+          <div style="font-family:Tajawal;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : ''}</div>
+        </div>
+        <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav?'⭐':'☆'}</button>
       </div>`;
     }).join('');
   } catch(e) {
