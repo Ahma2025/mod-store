@@ -533,10 +533,10 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .modal-actions .btn-secondary { background: var(--gray-light); color: var(--dark); border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--gray); margin-bottom: 6px; }
-.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light); border-radius: 12px; font-size: 15px; font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--dark); outline: none; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light); border-radius: 12px; font-size: 15px; font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--dark); outline: none; box-sizing: border-box; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--rose); }
 .form-row { display: flex; gap: 10px; }
-.form-row .form-group { flex: 1; }
+.form-row .form-group { flex: 1; min-width: 0; overflow: hidden; }
 
 .emoji-picker { display: flex; gap: 10px; flex-wrap: wrap; }
 .ep-item { font-size: 28px; cursor: pointer; padding: 6px; border-radius: 10px; border: 2px solid transparent; }
