@@ -7,10 +7,10 @@ const fs = require('fs');
 
 const PROJECT_ID = 'glamora-salon-app';
 
-// VAPID Keys (generated - used for Web Push PWA)
-const VAPID_PUBLIC_KEY  = 'BF6qEhfWlrvgJWK2hDzSeuGV18uZMIL1heQEQLkdyM1FpiL6I_OjDGEfAAaKMYTJMx9B-ZlPq-v1gLbvKxiIA54';
-const VAPID_PRIVATE_KEY = '-5MdkSSl7rcllT7YKeSuEttPHyjPQRvddxf_ru_CbWA';
-const VAPID_SUBJECT     = 'mailto:engahmadjamall00@gmail.com';
+// VAPID Keys — private key must be set as environment variable
+const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || 'BF6qEhfWlrvgJWK2hDzSeuGV18uZMIL1heQEQLkdyM1FpiL6I_OjDGEfAAaKMYTJMx9B-ZlPq-v1gLbvKxiIA54';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '-5MdkSSl7rcllT7YKeSuEttPHyjPQRvddxf_ru_CbWA';
+const VAPID_SUBJECT     = process.env.VAPID_SUBJECT     || 'mailto:engahmadjamall00@gmail.com';
 
 // Service Account key
 const SERVICE_ACCOUNT_PATH = path.join(__dirname, 'firebase-service-account.json');
@@ -63,7 +63,7 @@ async function sendPushNotification(fcmToken, title, body, data = {}) {
           priority: 'high',
           notification: {
             sound: 'default',
-            channel_id: 'glamora_bookings',
+            channel_id: 'glamora_bookings_v3',
             color: '#C9728A'
           }
         },

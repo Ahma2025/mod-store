@@ -63,5 +63,13 @@
 	<string>نحتاج موقعك لعرض أقرب الصالونات إليك</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>نحتاج موقعك لعرض أقرب الصالونات إليك</string>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج الكاميرا لالتقاط صور لصالونك وخدماتك</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول لمكتبة الصور لرفع صور لصالونك</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>نحتاج الإذن لحفظ الصور في مكتبتك</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج الميكروفون لتسجيل مقاطع الفيديو</string>
 </dict>
 </plist>

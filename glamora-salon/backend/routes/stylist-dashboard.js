@@ -1,0 +1,300 @@
+const express = require('express');
+const { DB, query } = require('../database');
+const { authenticate } = require('./auth');
+
+const router = express.Router();
+
+router.get('/my-salon', authenticate, async (req, res) => {
+  try {
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id);
+    if (!stylist) return res.json({ salon: null, stylist: null });
+
+    const salon = await DB.salons.findOne(s => s.id === stylist.salon_id);
+    if (!salon) return res.json({ salon: null, stylist });
+
+    const hours = (await DB.salon_hours.find(h => h.salon_id === salon.id)).sort((a, b) => a.day_of_week - b.day_of_week);
+    const rawStylists = await DB.stylists.find(st => st.salon_id === salon.id && st.is_active === 1);
+    const stylists = await Promise.all(rawStylists.map(async st => {
+      const user = st.user_id ? await DB.users.findOne(u => u.id === st.user_id) : null;
+      const availability = (await DB.stylist_availability.find(a => a.stylist_id === st.id)).sort((a, b) => a.day_of_week - b.day_of_week);
+      return { ...st, name: user?.name || st.name, phone: user?.phone || st.phone, email: user?.email || st.email, availability };
+    }));
+    const services = (await DB.services.find(s => s.salon_id === salon.id && s.is_active === 1)).sort((a, b) => a.price - b.price);
+
+    res.json({ salon: { ...salon, hours, services }, stylists, my_stylist: stylist });
+  } catch (e) {
+    console.error('GET /my-salon error:', e);
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.post('/salon', authenticate, async (req, res) => {
+  try {
+    const { name, description, address, city, phone, cover_emoji } = req.body;
+    if (!name || !address || !city) return res.status(400).json({ error: 'الاسم والعنوان والمدينة مطلوبة' });
+
+    const existingStylist = await DB.stylists.findOne(st => st.user_id === req.user.id);
+    if (existingStylist?.salon_id) {
+      const existing = await DB.salons.findOne(s => s.id === existingStylist.salon_id);
+      if (existing) return res.status(409).json({ error: 'لديك صالون مسجل بالفعل' });
+    }
+
+    const salon = await DB.salons.insert({ name, description: description || '', address, city, phone: phone || '', cover_emoji: cover_emoji || '💅', rating: 0, reviews_count: 0 });
+
+    let stylist = existingStylist;
+    if (!stylist) {
+      stylist = await DB.stylists.insert({ user_id: req.user.id, salon_id: salon.id, bio: '', specialties: '[]', experience_years: 1, rating: 0, reviews_count: 0 });
+    } else {
+      await DB.stylists.update(st => st.id === stylist.id, { salon_id: salon.id });
+    }
+
+    res.status(201).json({ salon, stylist });
+  } catch (e) {
+    console.error('POST /salon error:', e);
+    res.status(500).json({ error: 'خطأ في إنشاء الصالون' });
+  }
+});
+
+router.put('/salon/:id', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === salonId);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+
+    const { name, description, address, city, phone, cover_emoji } = req.body;
+    const salon = await DB.salons.findOne(s => s.id === salonId);
+    if (!salon) return res.status(404).json({ error: 'الصالون غير موجود' });
+
+    const updates = {
+      name: name || salon.name,
+      description: description !== undefined ? description : salon.description,
+      address: address || salon.address,
+      city: city || salon.city,
+      phone: phone !== undefined ? phone : salon.phone,
+      cover_emoji: cover_emoji || salon.cover_emoji
+    };
+    await DB.salons.update(s => s.id === salonId, updates);
+    const updated = await DB.salons.findOne(s => s.id === salonId);
+    res.json({ salon: updated });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.post('/salon/:id/hours', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === salonId);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+
+    const { hours } = req.body;
+    if (!Array.isArray(hours)) return res.status(400).json({ error: 'hours يجب أن يكون مصفوفة' });
+
+    for (const h of hours) {
+      await query(
+        `INSERT INTO salon_hours (salon_id, day_of_week, open_time, close_time, is_closed)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT DO NOTHING`,
+        [salonId, h.day_of_week, h.open_time || '09:00', h.close_time || '20:00', h.is_closed ? 1 : 0]
+      );
+      await query(
+        `UPDATE salon_hours SET open_time=$3, close_time=$4, is_closed=$5 WHERE salon_id=$1 AND day_of_week=$2`,
+        [salonId, h.day_of_week, h.open_time || '09:00', h.close_time || '20:00', h.is_closed ? 1 : 0]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.post('/salon/:id/services', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === salonId);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+
+    const { name_ar, name, category, price, duration_minutes, description } = req.body;
+    if (!name_ar || !category || !price || !duration_minutes)
+      return res.status(400).json({ error: 'بيانات الخدمة ناقصة' });
+
+    const service = await DB.services.insert({
+      salon_id: salonId,
+      stylist_id: stylist.id,
+      name: name || name_ar,
+      name_ar,
+      category,
+      price: parseFloat(price),
+      duration_minutes: parseInt(duration_minutes),
+      description: description || ''
+    });
+
+    res.status(201).json({ service });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.put('/services/:id', authenticate, async (req, res) => {
+  try {
+    const serviceId = parseInt(req.params.id);
+    const service = await DB.services.findOne(s => s.id === serviceId);
+    if (!service) return res.status(404).json({ error: 'الخدمة غير موجودة' });
+
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === service.salon_id);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+
+    const { name_ar, name, category, price, duration_minutes, description } = req.body;
+    const updates = {
+      name_ar: name_ar || service.name_ar,
+      name: name || name_ar || service.name,
+      category: category || service.category,
+      price: price ? parseFloat(price) : service.price,
+      duration_minutes: duration_minutes ? parseInt(duration_minutes) : service.duration_minutes,
+      description: description !== undefined ? description : service.description
+    };
+    await DB.services.update(s => s.id === serviceId, updates);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.delete('/services/:id', authenticate, async (req, res) => {
+  try {
+    const serviceId = parseInt(req.params.id);
+    const service = await DB.services.findOne(s => s.id === serviceId);
+    if (!service) return res.status(404).json({ error: 'الخدمة غير موجودة' });
+
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === service.salon_id);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+
+    await DB.services.update(s => s.id === serviceId, { is_active: 0 });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.post('/salon/:id/stylists', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const owner = await DB.stylists.findOne(st => st.user_id == req.user.id && st.salon_id == salonId);
+    if (!owner) return res.status(403).json({ error: 'غير مصرح - أنت لا تملك هذا الصالون' });
+
+    const { name, phone, bio, specialties, experience_years } = req.body;
+    if (!name) return res.status(400).json({ error: 'اسم الكوفيرة مطلوب' });
+
+    const existingSt = await DB.stylists.findOne(st => st.salon_id === salonId && st.name === name && st.user_id === null);
+    if (existingSt) return res.status(409).json({ error: 'هذه الكوفيرة مضافة بالفعل' });
+
+    const stylist = await DB.stylists.insert({
+      user_id: null,
+      salon_id: salonId,
+      name,
+      phone: phone || '',
+      bio: bio || '',
+      specialties: JSON.stringify(specialties || []),
+      experience_years: parseInt(experience_years) || 1,
+      rating: 0,
+      reviews_count: 0
+    });
+
+    res.status(201).json({ stylist });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.post('/stylist/:id/availability', authenticate, async (req, res) => {
+  try {
+    const stylistId = parseInt(req.params.id);
+    const st = await DB.stylists.findOne(s => s.id === stylistId);
+    if (!st) return res.status(404).json({ error: 'الكوفيرة غير موجودة' });
+
+    const owner = await DB.stylists.findOne(s => s.user_id === req.user.id && s.salon_id === st.salon_id);
+    const isSelf = st.user_id === req.user.id;
+    if (!owner && !isSelf) return res.status(403).json({ error: 'غير مصرح' });
+
+    const { availability } = req.body;
+    if (!Array.isArray(availability)) return res.status(400).json({ error: 'availability يجب أن يكون مصفوفة' });
+
+    for (const a of availability) {
+      await DB.stylist_availability.insert({
+        stylist_id: stylistId,
+        day_of_week: a.day_of_week,
+        is_off: a.is_off ? 1 : 0,
+        start_time: a.start_time || '09:00',
+        end_time: a.end_time || '17:00',
+        shift2_enabled: a.shift2_enabled ? 1 : 0,
+        shift2_start: a.shift2_start || null,
+        shift2_end: a.shift2_end || null
+      });
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+router.get('/bookings', authenticate, async (req, res) => {
+  try {
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id);
+    if (!stylist) return res.json([]);
+
+    const { filter } = req.query;
+    const allSalonStylists = await DB.stylists.find(st => st.salon_id === stylist.salon_id);
+    const salonStylistIds = allSalonStylists.map(s => s.id);
+
+    let bookings;
+    if (filter === 'mine') {
+      bookings = await DB.bookings.find(b => b.stylist_id === stylist.id);
+    } else if (filter === 'pending') {
+      bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id) && b.status === 'pending');
+    } else if (filter === 'confirmed') {
+      bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id) && b.status === 'confirmed');
+    } else {
+      bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id));
+    }
+
+    bookings.sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (b.status === 'pending' && a.status !== 'pending') return 1;
+      return new Date(b.booking_date + 'T' + b.booking_time) - new Date(a.booking_date + 'T' + a.booking_time);
+    });
+
+    // ✅ SECURITY: client_phone and client_email are private — only expose to the assigned stylist or salon owner
+    const currentStylist = await DB.stylists.findOne(st => st.user_id === req.user.id);
+    const isOwner = currentStylist && await DB.stylists.findOne(s => s.salon_id === currentStylist.salon_id && s.user_id === req.user.id && s.id === currentStylist.id);
+
+    const result = await Promise.all(bookings.map(async b => {
+      const client = await DB.users.findOne(u => u.id === b.client_id);
+      const service = await DB.services.findOne(s => s.id === b.service_id);
+      const bStylist = await DB.stylists.findOne(s => s.id === b.stylist_id);
+      const bStylistUser = bStylist?.user_id ? await DB.users.findOne(u => u.id === bStylist.user_id) : null;
+      const bStylistName = bStylist?.user_id ? bStylistUser?.name : bStylist?.name;
+      const isAssignedStylist = bStylist?.user_id === req.user.id;
+      const canSeeContact = isAssignedStylist || isOwner;
+      return {
+        ...b,
+        client_name: client?.name,
+        client_phone: canSeeContact ? client?.phone : undefined,
+        client_email: canSeeContact ? client?.email : undefined,
+        service_name: service?.name_ar || service?.name,
+        service_category: service?.category,
+        service_price: service?.price,
+        stylist_name: bStylistName,
+        duration_minutes: service?.duration_minutes
+      };
+    }));
+
+    res.json(result);
+  } catch (e) {
+    console.error('GET /stylist/bookings error:', e);
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+module.exports = router;

@@ -1,0 +1,9 @@
+node_modules/
+debug.log
+requests.log
+firebase-service-account.json
+glamora.json
+glamora_backup.json
+*.backup.json
+uploads/
+.env
