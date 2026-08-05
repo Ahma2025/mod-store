@@ -413,11 +413,73 @@ async function loadHome() {
     const salons = await Api.salons.list();
     allSalonsCache = salons;
     renderFeaturedSalons(salons);
+    renderHomeTopRated(salons);
     renderSalonsList([...salons].sort((a,b) => b.id - a.id));
     loadNotifBadge();
+    loadHomeNearYou(salons);
   } catch (e) {
     console.error(e);
   }
+}
+
+function renderHomeTopRated(salons) {
+  const sorted = [...salons].sort((a,b) => b.rating - a.rating || b.reviews_count - a.reviews_count).slice(0, 8);
+  const el = document.getElementById('home-top-rated-list');
+  if (!el) return;
+  el.innerHTML = sorted.map(s => homeSalonCard(s)).join('');
+}
+
+function homeSalonCard(s, distText) {
+  const thumb = s.cover_url
+    ? `<img src="${mediaUrl(s.cover_url)}" onerror="this.style.display='none'">`
+    : s.cover_emoji || '💅';
+  const meta = distText
+    ? `<div class="hsc-dist">📍 ${distText}</div>`
+    : `<div class="hsc-meta">⭐ ${s.rating} · ${s.city}</div>`;
+  return `<div class="home-salon-card" onclick="openSalon(${s.id})">
+    <div class="hsc-thumb">${thumb}</div>
+    <div class="hsc-info">
+      <div class="hsc-name">${s.name}</div>
+      ${meta}
+    </div>
+  </div>`;
+}
+
+async function loadHomeNearYou(salons) {
+  try {
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout:5000}));
+    const { latitude: lat, longitude: lon } = pos.coords;
+    function dist(s) {
+      if (!s.latitude || !s.longitude) return Infinity;
+      const R = 6371;
+      const dLat = (s.latitude - lat) * Math.PI / 180;
+      const dLon = (s.longitude - lon) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180)*Math.cos(s.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    const withDist = salons.map(s => ({...s, _dist: dist(s)})).filter(s => s._dist < Infinity).sort((a,b) => a._dist - b._dist).slice(0, 5);
+    if (!withDist.length) return;
+    const section = document.getElementById('section-near-you');
+    const el = document.getElementById('home-near-list');
+    if (!section || !el) return;
+    section.style.display = '';
+    el.innerHTML = withDist.map(s => {
+      const d = s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم';
+      return homeSalonCard(s, d);
+    }).join('');
+  } catch {}
+}
+
+async function filterByService(serviceName) {
+  try {
+    const salons = await Api.salons.list();
+    const filtered = salons.filter(s =>
+      s.services?.some(sv => sv.category?.includes(serviceName) || sv.name?.includes(serviceName)) ||
+      s.stylists?.some(st => st.specialties?.includes(serviceName))
+    );
+    document.getElementById('section-all-salons').scrollIntoView({behavior:'smooth'});
+    renderSalonsList(filtered.length ? filtered : salons);
+  } catch(e) {}
 }
 
 let featuredSliderTimer = null;

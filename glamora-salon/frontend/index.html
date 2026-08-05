@@ -195,16 +195,64 @@
           </div>
         </div>
 
-        <!-- Featured -->
-        <div class="section">
-          <div class="section-header">
-            <h3>صالونات مميزة</h3>
-          </div>
+        <!-- Featured Slider -->
+        <div class="section" id="section-featured">
           <div class="featured-scroll" id="featured-salons"></div>
         </div>
 
-        <!-- All Salons -->
+        <!-- Near You -->
+        <div class="section" id="section-near-you" style="display:none">
+          <div class="section-header">
+            <h3>📍 الأقرب إليك</h3>
+            <button class="see-more-btn" onclick="openNearestScreen()">مشاهدة المزيد ←</button>
+          </div>
+          <div id="home-near-list" class="home-h-scroll"></div>
+        </div>
+
+        <!-- Popular Services -->
         <div class="section">
+          <div class="section-header">
+            <h3>🌸 الخدمات الشائعة</h3>
+          </div>
+          <div class="services-grid">
+            <div class="service-cat-card" onclick="filterByService('مكياج')">
+              <div class="scc-icon">💄</div>
+              <div class="scc-name">مكياج</div>
+            </div>
+            <div class="service-cat-card" onclick="filterByService('أظافر')">
+              <div class="scc-icon">💅</div>
+              <div class="scc-name">أظافر</div>
+            </div>
+            <div class="service-cat-card" onclick="filterByService('شعر')">
+              <div class="scc-icon">💇</div>
+              <div class="scc-name">شعر</div>
+            </div>
+            <div class="service-cat-card" onclick="filterByService('بشرة')">
+              <div class="scc-icon">✨</div>
+              <div class="scc-name">بشرة</div>
+            </div>
+            <div class="service-cat-card" onclick="filterByService('تصفيف')">
+              <div class="scc-icon">👑</div>
+              <div class="scc-name">تصفيف</div>
+            </div>
+            <div class="service-cat-card" onclick="filterByService('علاجات')">
+              <div class="scc-icon">💆</div>
+              <div class="scc-name">علاجات</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Rated -->
+        <div class="section">
+          <div class="section-header">
+            <h3>⭐ الأعلى تقييماً</h3>
+            <button class="see-more-btn" onclick="filterTopRated(null)">مشاهدة المزيد ←</button>
+          </div>
+          <div id="home-top-rated-list" class="home-h-scroll"></div>
+        </div>
+
+        <!-- All Salons -->
+        <div class="section" id="section-all-salons">
           <div class="section-header">
             <h3>جميع الصالونات</h3>
           </div>
