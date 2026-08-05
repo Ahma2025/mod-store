@@ -708,6 +708,8 @@ function renderSalonReviews(reviews) {
   `).join('');
 }
 
+let _sliderState = null;
+
 async function loadSalonGallery(salonId) {
   try {
     const media = await Api.salons.media(salonId);
@@ -724,24 +726,74 @@ async function loadSalonGallery(salonId) {
     if (!galleryMedia.length) { strip.classList.add('hidden'); return; }
 
     strip.classList.remove('hidden');
-    strip.innerHTML = galleryMedia.map(m => {
-      const mUrl = mediaUrl(m.url);
-      if (m.type === 'video') {
-        return `<div class="gallery-item" onclick="openMediaViewer('${mUrl}','video')"><video src="${mUrl}" class="gallery-thumb" muted></video><div class="gallery-play">▶</div></div>`;
-      }
-      return `<div class="gallery-item" onclick="openMediaViewer('${mUrl}','photo')"><img src="${mUrl}" class="gallery-thumb"></div>`;
-    }).join('');
+    buildSlider(strip, galleryMedia);
   } catch (e) {}
+}
+
+function buildSlider(container, items) {
+  if (_sliderState && _sliderState.timer) clearInterval(_sliderState.timer);
+
+  const slides = items.map((m, i) => {
+    const mUrl = mediaUrl(m.url);
+    if (m.type === 'video') {
+      return `<div class="slider-slide" data-idx="${i}" data-type="video" data-url="${mUrl}">
+        <video src="${mUrl}" class="slider-video" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block"></video>
+        <div class="slider-video-overlay" onclick="openMediaViewer('${mUrl}','video')">
+          <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="30" cy="30" r="29" fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
+            <polygon points="24,18 46,30 24,42" fill="white"/>
+          </svg>
+        </div>
+      </div>`;
+    }
+    return `<div class="slider-slide" data-idx="${i}" data-type="photo" data-url="${mUrl}" onclick="openMediaViewer('${mUrl}','photo')">
+      <img src="${mUrl}" alt="" draggable="false">
+    </div>`;
+  }).join('');
+
+  const dots = items.map((_, i) => `<span class="slider-dot${i===0?' active':''}" onclick="sliderGoTo(${i})"></span>`).join('');
+
+  container.innerHTML = `
+    <div class="slider-track" id="sliderTrack">${slides}</div>
+    <div class="slider-dots">${dots}</div>
+    <div class="slider-count"><span id="sliderCur">1</span> / ${items.length}</div>
+  `;
+
+  _sliderState = { cur: 0, total: items.length, timer: null };
+  _sliderState.timer = setInterval(() => sliderGoTo((_sliderState.cur + 1) % _sliderState.total), 3000);
+
+  // touch/swipe
+  let startX = 0, dragging = false;
+  const track = container.querySelector('.slider-track');
+  track.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, {passive:true});
+  track.addEventListener('touchend', e => {
+    if (!dragging) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) sliderGoTo(dx < 0 ? (_sliderState.cur+1) % _sliderState.total : (_sliderState.cur-1+_sliderState.total) % _sliderState.total);
+    dragging = false;
+  }, {passive:true});
+}
+
+function sliderGoTo(idx) {
+  if (!_sliderState) return;
+  _sliderState.cur = idx;
+  const track = document.getElementById('sliderTrack');
+  if (track) track.style.transform = `translateX(-${idx * 100}%)`;
+  document.querySelectorAll('.slider-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  const cur = document.getElementById('sliderCur');
+  if (cur) cur.textContent = idx + 1;
+  if (_sliderState.timer) { clearInterval(_sliderState.timer); _sliderState.timer = setInterval(() => sliderGoTo((_sliderState.cur+1) % _sliderState.total), 3000); }
 }
 
 function openMediaViewer(url, type) {
   const overlay = document.createElement('div');
   overlay.className = 'media-viewer-overlay';
-  overlay.onclick = () => overlay.remove();
+  const closeBtn = `<div class="media-viewer-close" onclick="this.parentElement.remove()">✕</div>`;
   if (type === 'video') {
-    overlay.innerHTML = `<video src="${url}" controls autoplay style="max-width:95%;max-height:90vh;border-radius:12px"></video>`;
+    overlay.innerHTML = closeBtn + `<video src="${url}" controls autoplay playsinline style="max-width:100%;max-height:85vh;border-radius:10px;background:#000"></video>`;
   } else {
-    overlay.innerHTML = `<img src="${url}" style="max-width:95%;max-height:90vh;border-radius:12px;object-fit:contain">`;
+    overlay.innerHTML = closeBtn + `<img src="${url}" style="max-width:100%;max-height:85vh;border-radius:10px;object-fit:contain">`;
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   }
   document.body.appendChild(overlay);
 }

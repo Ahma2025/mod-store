@@ -625,18 +625,33 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .media-add-slot:hover { border-color: var(--rose); color: var(--rose); }
 .media-video-slot { border-color: var(--gold-light); color: var(--gold); }
 
-/* Gallery client view */
+/* Gallery client view - SLIDER */
 .salon-cover-media-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.5s; }
-.salon-gallery-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: white; border-bottom: 1px solid var(--gray-light); }
-.salon-gallery-strip::-webkit-scrollbar { display: none; }
-.gallery-item { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer; }
-.gallery-item:first-child { grid-column: span 3; aspect-ratio: 16/9; }
-.gallery-thumb { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
-.gallery-item:active .gallery-thumb { transform: scale(0.97); }
-.gallery-cover { outline: 2px solid var(--rose); outline-offset: -2px; }
-.gallery-cover-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(201,114,138,0.8); color: white; font-size: 10px; text-align: center; padding: 2px; }
-.gallery-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: white; font-size: 24px; }
-.media-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+
+/* Slider container */
+.salon-gallery-strip { position: relative; width: 100%; background: #111; overflow: hidden; border-bottom: 1px solid var(--gray-light); }
+.salon-gallery-strip.hidden { display: none; }
+.slider-track { display: flex; transition: transform 0.45s cubic-bezier(.4,0,.2,1); will-change: transform; }
+.slider-slide { flex: 0 0 100%; width: 100%; position: relative; aspect-ratio: 16/9; overflow: hidden; background: #111; }
+.slider-slide img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; pointer-events: none; }
+.slider-slide video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slider-video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; transition: opacity 0.2s; }
+.slider-video-overlay svg { width: 52px; height: 52px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+.slider-video-overlay.hidden { opacity: 0; pointer-events: none; }
+
+/* Dots */
+.slider-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 3; }
+.slider-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: all 0.25s; cursor: pointer; }
+.slider-dot.active { background: #fff; width: 18px; border-radius: 3px; }
+
+/* Count badge */
+.slider-count { position: absolute; top: 10px; right: 12px; background: rgba(0,0,0,0.55); color: #fff; font-size: 12px; padding: 3px 9px; border-radius: 20px; z-index: 3; font-weight: 600; letter-spacing: 0.5px; }
+
+/* Media viewer overlay */
+.media-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: zoom-out; }
+.media-viewer-overlay img { max-width: 100%; max-height: 85vh; border-radius: 10px; object-fit: contain; }
+.media-viewer-overlay video { max-width: 100%; max-height: 85vh; border-radius: 10px; background: #000; }
+.media-viewer-close { position: absolute; top: 16px; left: 16px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1; }
 
 /* Blocked slots */
 .blocked-slot-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #FFF8F8; border: 1px solid var(--gray-light); border-radius: 10px; margin-bottom: 8px; }
