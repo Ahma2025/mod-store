@@ -471,15 +471,53 @@ async function loadHomeNearYou(salons) {
 }
 
 async function filterByService(serviceName) {
+  showScreen('service-filter');
+  document.getElementById('service-filter-title').textContent = serviceName;
+  document.getElementById('service-filter-loading').style.display = 'block';
+  document.getElementById('service-filter-empty').style.display = 'none';
+  document.getElementById('service-filter-list').innerHTML = '';
+
   try {
-    const salons = await Api.salons.list();
+    const salons = allSalonsCache || await Api.salons.list();
+    allSalonsCache = salons;
+
     const filtered = salons.filter(s =>
-      s.services?.some(sv => sv.category?.includes(serviceName) || sv.name?.includes(serviceName)) ||
-      s.stylists?.some(st => st.specialties?.includes(serviceName))
+      s.services?.some(sv =>
+        sv.category?.includes(serviceName) || sv.name?.includes(serviceName)
+      ) || s.stylists?.some(st => st.specialties?.includes(serviceName))
     );
-    document.getElementById('section-all-salons').scrollIntoView({behavior:'smooth'});
-    renderSalonsList(filtered.length ? filtered : salons);
-  } catch(e) {}
+
+    document.getElementById('service-filter-loading').style.display = 'none';
+
+    const list = filtered.length ? filtered : salons;
+    if (!filtered.length) {
+      document.getElementById('service-filter-empty').style.display = 'block';
+      return;
+    }
+
+    const favs = getFavorites();
+    document.getElementById('service-filter-list').innerHTML = list.map(s => {
+      const isFav = favs.includes(s.id);
+      const thumb = s.cover_url
+        ? `<img src="${mediaUrl(s.cover_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='${s.cover_emoji||'💅'}'"`+'>'
+        : (s.cover_emoji || '💅');
+      return `
+      <div class="salon-card" onclick="openSalon(${s.id})" style="position:relative">
+        <button onclick="toggleFavorite(${s.id}, event)" style="position:absolute;top:10px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;z-index:2;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav ? '⭐' : '☆'}</button>
+        <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
+        <div class="salon-card-info">
+          <h4>${s.name}</h4>
+          <div class="salon-card-meta">
+            <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
+            <span style="color:#888;font-size:12px">📍 ${s.city}</span>
+          </div>
+          <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60)+'...' : ''}</p>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('service-filter-loading').style.display = 'none';
+  }
 }
 
 let featuredSliderTimer = null;

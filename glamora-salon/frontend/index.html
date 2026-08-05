@@ -223,7 +223,7 @@
               <div class="scc-name">بشرة</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('تصفيف')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1560066984-138daaa3d35d?auto=format&fit=crop&w=300&h=200&q=80" alt="تصفيف" onerror="this.style.display='none'">
+              <img class="scc-img" src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=300&h=200&q=80" alt="تصفيف" onerror="this.style.display='none'">
               <div class="scc-overlay"></div>
               <div class="scc-name">تصفيف</div>
             </div>
@@ -891,6 +891,22 @@
 </div>
 
 <!-- ======= NEAREST SCREEN ======= -->
+<div id="screen-service-filter" class="screen slide-up">
+  <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span id="service-filter-title" style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F"></span>
+      <div style="width:80px"></div>
+    </div>
+  </div>
+  <div id="service-filter-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري التحميل...</div>
+  <div id="service-filter-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--gray)">
+    <div style="font-size:48px;margin-bottom:12px">🔍</div>
+    <p style="font-family:Tajawal;font-size:16px;font-weight:600">لا توجد صالونات تقدم هذه الخدمة حالياً</p>
+  </div>
+  <div id="service-filter-list" class="salons-list" style="padding:12px"></div>
+</div>
+
 <div id="screen-top-rated" class="screen slide-up">
   <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
