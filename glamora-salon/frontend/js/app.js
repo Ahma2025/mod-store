@@ -709,25 +709,80 @@ function renderSalonReviews(reviews) {
 }
 
 let _sliderState = null;
+let _coverSliderState = null;
 
 async function loadSalonGallery(salonId) {
   try {
     const media = await Api.salons.media(salonId);
-    const cover = media.find(m => m.is_cover && m.type === 'photo');
-    const coverEl = document.getElementById('salon-cover-media');
-    if (cover && coverEl) {
-      coverEl.style.backgroundImage = `url(${mediaUrl(cover.url)})`;
-      coverEl.style.opacity = '1';
-    }
 
+    // Build cover slider from ALL media (photos + videos)
+    const allMedia = media.filter(m => m.url);
+    buildCoverSlider(allMedia);
+
+    // Hide old gallery strip (no longer needed)
     const strip = document.getElementById('salon-gallery-strip');
-    if (!strip) return;
-    const galleryMedia = media.filter(m => !m.is_cover);
-    if (!galleryMedia.length) { strip.classList.add('hidden'); return; }
-
-    strip.classList.remove('hidden');
-    buildSlider(strip, galleryMedia);
+    if (strip) strip.classList.add('hidden');
   } catch (e) {}
+}
+
+function buildCoverSlider(items) {
+  if (_coverSliderState && _coverSliderState.timer) clearInterval(_coverSliderState.timer);
+  const track = document.getElementById('cover-slider-track');
+  const dotsEl = document.getElementById('cover-dots');
+  if (!track || !dotsEl) return;
+
+  if (!items.length) {
+    track.innerHTML = '';
+    dotsEl.innerHTML = '';
+    return;
+  }
+
+  track.innerHTML = items.map((m) => {
+    const url = mediaUrl(m.url);
+    if (m.type === 'video') {
+      return `<div class="cover-slide" style="flex:0 0 100%;position:relative;">
+        <video src="${url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openMediaViewer('${url}','video')">
+          <svg viewBox="0 0 60 60" width="52" height="52" fill="none">
+            <circle cx="30" cy="30" r="29" fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
+            <polygon points="24,18 46,30 24,42" fill="white"/>
+          </svg>
+        </div>
+      </div>`;
+    }
+    return `<div class="cover-slide" style="flex:0 0 100%;">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" draggable="false">
+    </div>`;
+  }).join('');
+
+  dotsEl.innerHTML = items.map((_, i) =>
+    `<span class="cover-dot${i===0?' active':''}" onclick="coverSliderGoTo(${i})"></span>`
+  ).join('');
+
+  _coverSliderState = { cur: 0, total: items.length, timer: null };
+  if (items.length > 1) {
+    _coverSliderState.timer = setInterval(() => {
+      coverSliderGoTo((_coverSliderState.cur + 1) % _coverSliderState.total);
+    }, 3000);
+  }
+
+  // swipe support
+  let startX = 0;
+  track.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive:true});
+  track.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) coverSliderGoTo(dx < 0
+      ? (_coverSliderState.cur + 1) % _coverSliderState.total
+      : (_coverSliderState.cur - 1 + _coverSliderState.total) % _coverSliderState.total);
+  }, {passive:true});
+}
+
+function coverSliderGoTo(idx) {
+  if (!_coverSliderState) return;
+  _coverSliderState.cur = idx;
+  const track = document.getElementById('cover-slider-track');
+  if (track) track.style.transform = `translateX(${idx * 100}%)`;
+  document.querySelectorAll('.cover-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
 
 function buildSlider(container, items) {

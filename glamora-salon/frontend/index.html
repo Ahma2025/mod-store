@@ -321,8 +321,12 @@
   <div id="screen-salon" class="screen slide-up">
     <div class="salon-cover" id="salon-cover">
       <button class="back-float" onclick="goBack()">←</button>
+      <!-- Cover Slider -->
+      <div class="cover-slider" id="cover-slider">
+        <div class="cover-slider-track" id="cover-slider-track"></div>
+        <div class="cover-dots" id="cover-dots"></div>
+      </div>
       <div class="salon-cover-overlay"></div>
-      <div id="salon-cover-media" class="salon-cover-media-bg"></div>
       <div class="salon-cover-info">
         <h2 id="salon-detail-name">صالون غلامورا</h2>
         <div class="salon-meta">
@@ -332,8 +336,6 @@
         </div>
       </div>
     </div>
-    <!-- Photo Gallery Strip -->
-    <div id="salon-gallery-strip" class="salon-gallery-strip hidden"></div>
     <div class="salon-tabs">
       <button class="stab active" onclick="switchSalonTab('services', this)">الخدمات</button>
       <button class="stab" onclick="switchSalonTab('stylists', this)">الكوفيرات</button>
