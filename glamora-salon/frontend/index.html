@@ -173,6 +173,7 @@
             <span id="notif-badge" class="badge hidden">3</span>
           </button>
         </div>
+        <p class="search-tagline">أوجدي صالونك المفضل واحجزي لحظتك الخاصة ✨</p>
         <div class="search-bar" onclick="focusSearch()">
           <span class="search-icon">🔍</span>
           <input type="text" id="search-input" placeholder="ابحثي عن صالون أو خدمة..." oninput="searchSalons(this.value)">
@@ -180,20 +181,6 @@
       </div>
 
       <div class="home-content" id="home-scroll">
-        <!-- Categories -->
-        <div class="section">
-          <div class="cats-scroll">
-            <div class="cat-chip active" onclick="filterCategory(this, '')">الكل</div>
-            <div class="cat-chip" onclick="openNearestScreen()">📍 الأقرب إليك</div>
-            <div class="cat-chip" onclick="filterTopRated(this)">⭐ الأعلى تقييماً</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'صبغ الشعر')">🎨 صبغ</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'قص')">✂️ قص</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'علاجات')">💆 علاجات</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'مكياج')">💄 مكياج</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'أظافر')">💅 أظافر</div>
-            <div class="cat-chip" onclick="filterCategory(this, 'تصفيف')">👑 تصفيف</div>
-          </div>
-        </div>
 
         <!-- Featured Slider -->
         <div class="section" id="section-featured">
@@ -216,27 +203,33 @@
           </div>
           <div class="services-grid">
             <div class="service-cat-card" onclick="filterByService('مكياج')">
-              <div class="scc-icon">💄</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=300&h=200&q=80" alt="مكياج" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">مكياج</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('أظافر')">
-              <div class="scc-icon">💅</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=300&h=200&q=80" alt="أظافر" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">أظافر</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('شعر')">
-              <div class="scc-icon">💇</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=300&h=200&q=80" alt="شعر" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">شعر</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('بشرة')">
-              <div class="scc-icon">✨</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=300&h=200&q=80" alt="بشرة" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">بشرة</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('تصفيف')">
-              <div class="scc-icon">👑</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1560066984-138daaa3d35d?auto=format&fit=crop&w=300&h=200&q=80" alt="تصفيف" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">تصفيف</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('علاجات')">
-              <div class="scc-icon">💆</div>
+              <img class="scc-img" src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=300&h=200&q=80" alt="علاجات" onerror="this.style.display='none'">
+              <div class="scc-overlay"></div>
               <div class="scc-name">علاجات</div>
             </div>
           </div>
