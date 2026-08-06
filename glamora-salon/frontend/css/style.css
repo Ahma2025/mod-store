@@ -21,7 +21,7 @@ input, button, textarea, select { font-family: inherit; }
   --shadow-lg: 0 8px 40px rgba(140,50,70,0.18);
 }
 
-html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--dark); overflow: hidden; }
+html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: var(--cream); color: var(--dark); overflow: hidden; }
 
 #app { width: 100%; max-width: 430px; margin: 0 auto; height: 100%; height: 100dvh; position: relative; overflow: hidden; background: var(--cream); }
 
@@ -76,7 +76,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--dark2); margin-bottom: 8px; }
 .form-group input, .form-group textarea, .form-group select {
   width: 100%; padding: 14px 16px; border: 1.5px solid var(--gray-light);
-  border-radius: var(--radius-sm); font-family: 'Tajawal', sans-serif;
+  border-radius: var(--radius-sm); font-family: 'El Messiri', sans-serif;
   font-size: 15px; background: var(--white); color: var(--dark);
   transition: border-color 0.2s, box-shadow 0.2s; outline: none;
 }
@@ -102,7 +102,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .btn-primary {
   background: linear-gradient(135deg, var(--rose), var(--rose-dark));
   color: white; border: none; border-radius: var(--radius-sm);
-  padding: 15px 24px; font-family: 'Tajawal', sans-serif;
+  padding: 15px 24px; font-family: 'El Messiri', sans-serif;
   font-size: 16px; font-weight: 700; cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s;
   box-shadow: 0 4px 16px rgba(139,58,82,0.3);
@@ -112,7 +112,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .btn-ghost {
   background: transparent; color: var(--rose-dark);
   border: 1.5px solid var(--rose-light); border-radius: var(--radius-sm);
-  padding: 15px 24px; font-family: 'Tajawal', sans-serif;
+  padding: 15px 24px; font-family: 'El Messiri', sans-serif;
   font-size: 16px; font-weight: 700; cursor: pointer;
   transition: background 0.2s;
 }
@@ -134,16 +134,16 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .header-top h2 { color: white; font-size: 24px; font-weight: 800; }
 .notif-btn { background: rgba(255,255,255,0.12); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 18px; cursor: pointer; position: relative; }
 .badge { position: absolute; top: -4px; right: -4px; background: var(--gold); color: var(--dark); font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.search-tagline { color: rgba(255,255,255,0.82); font-size: 13px; font-weight: 400; font-family: 'Tajawal', sans-serif; margin-bottom: 10px; letter-spacing: 0.2px; }
+.search-tagline { color: rgba(255,255,255,0.82); font-size: 13px; font-weight: 400; font-family: 'El Messiri', sans-serif; margin-bottom: 10px; letter-spacing: 0.2px; }
 .search-bar { background: var(--white); border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
 .search-icon { font-size: 18px; }
-.search-bar input { border: none; outline: none; font-family: 'Tajawal', sans-serif; font-size: 14px; color: var(--dark); width: 100%; background: transparent; }
+.search-bar input { border: none; outline: none; font-family: 'El Messiri', sans-serif; font-size: 14px; color: var(--dark); width: 100%; background: transparent; }
 
 .section { padding: 20px 16px 0; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .section-header h3 { font-size: 17px; font-weight: 800; color: var(--dark); }
 .section-header a { font-size: 13px; color: var(--rose); cursor: pointer; font-weight: 600; }
-.see-more-btn { background: none; border: none; font-size: 13px; color: var(--rose); font-weight: 700; font-family: 'Tajawal', sans-serif; cursor: pointer; padding: 0; }
+.see-more-btn { background: none; border: none; font-size: 13px; color: var(--rose); font-weight: 700; font-family: 'El Messiri', sans-serif; cursor: pointer; padding: 0; }
 
 /* Horizontal scroll list for home sections */
 .home-h-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
@@ -162,7 +162,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .service-cat-card:active { transform: scale(0.95); }
 .scc-img { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; }
 .scc-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 60%, transparent 100%); }
-.scc-name { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px; font-size: 14px; font-weight: 800; color: #fff; font-family: 'Tajawal', sans-serif; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+.scc-name { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px; font-size: 14px; font-weight: 800; color: #fff; font-family: 'El Messiri', sans-serif; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 
 .cats-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .cats-scroll::-webkit-scrollbar { display: none; }
@@ -202,7 +202,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .page-header { padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 16px; background: var(--white); border-bottom: 1px solid var(--gray-light); display: flex; flex-direction: row; align-items: center; gap: 12px; }
 .page-header h2 { font-size: 22px; font-weight: 800; flex: 1; }
 .booking-tabs { display: flex; gap: 4px; background: var(--cream2); padding: 4px; border-radius: 10px; width: fit-content; }
-.btab { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; transition: all 0.2s; }
+.btab { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; font-family: 'El Messiri', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; transition: all 0.2s; }
 .btab.active { background: var(--white); color: var(--rose-dark); box-shadow: 0 1px 8px rgba(0,0,0,0.08); }
 
 /* ===== BOOKINGS ===== */
@@ -219,7 +219,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .booking-detail { display: flex; gap: 16px; flex-wrap: wrap; }
 .booking-detail span { font-size: 13px; color: var(--gray); }
 .booking-actions { margin-top: 14px; display: flex; gap: 10px; }
-.btn-sm { padding: 8px 16px; border-radius: 8px; font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+.btn-sm { padding: 8px 16px; border-radius: 8px; font-family: 'El Messiri', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
 .btn-sm-primary { background: var(--rose); color: white; }
 .btn-sm-ghost { background: transparent; border: 1.5px solid var(--gray-light); color: var(--gray); }
 .btn-sm-danger { background: transparent; border: 1.5px solid #FCA5A5; color: #B91C1C; }
@@ -266,7 +266,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 
 /* ===== BOTTOM NAV ===== */
 .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: var(--white); border-top: 1px solid var(--gray-light); display: flex; align-items: center; justify-content: space-around; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); }
-.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; padding: 4px 0; color: var(--gray); font-family: 'Tajawal', sans-serif; font-size: 11px; transition: color 0.2s; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; padding: 4px 0; color: var(--gray); font-family: 'El Messiri', sans-serif; font-size: 11px; transition: color 0.2s; }
 .nav-btn.active { color: var(--rose); }
 .nav-icon { font-size: 22px; }
 .nav-center-btn { flex: 0.8; }
@@ -291,7 +291,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .cover-dot.active { background: #fff; width: 16px; border-radius: 3px; }
 
 .salon-tabs { display: flex; background: var(--white); border-bottom: 1px solid var(--gray-light); position: sticky; top: 0; z-index: 10; }
-.stab { flex: 1; padding: 14px 4px; border: none; background: none; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.stab { flex: 1; padding: 14px 4px; border: none; background: none; font-family: 'El Messiri', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
 .stab.active { color: var(--rose); border-color: var(--rose); }
 
 .salon-tab-content { display: none; padding: 16px; }
@@ -384,7 +384,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .cal-day:not(.past):not(:empty):hover { background: var(--cream2); }
 
 .time-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.slot-btn { padding: 10px 4px; border-radius: 10px; border: 1.5px solid var(--gray-light); background: var(--white); font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--dark); }
+.slot-btn { padding: 10px 4px; border-radius: 10px; border: 1.5px solid var(--gray-light); background: var(--white); font-family: 'El Messiri', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--dark); }
 .slot-btn.available:hover { border-color: var(--rose); color: var(--rose); }
 .slot-btn.selected { background: var(--rose); border-color: var(--rose); color: white; }
 .slot-btn.unavailable { background: var(--gray-light); color: var(--gray); cursor: not-allowed; opacity: 0.5; }
@@ -419,7 +419,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
 .chat-input-bar { flex-shrink: 0; background: var(--white); padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--gray-light); display: flex; gap: 10px; align-items: center; }
-.chat-input-bar input { flex: 1; padding: 12px 16px; border-radius: 99px; border: 1.5px solid var(--gray-light); font-family: 'Tajawal', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+.chat-input-bar input { flex: 1; padding: 12px 16px; border-radius: 99px; border: 1.5px solid var(--gray-light); font-family: 'El Messiri', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
 .chat-input-bar input:focus { border-color: var(--rose); }
 .send-btn { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--rose), var(--rose-dark)); border: none; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
@@ -563,7 +563,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .modal-actions .btn-secondary { background: var(--gray-light); color: var(--dark); border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--gray); margin-bottom: 6px; }
-.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light); border-radius: 12px; font-size: 15px; font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--dark); outline: none; box-sizing: border-box; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light); border-radius: 12px; font-size: 15px; font-family: 'El Messiri', sans-serif; background: var(--cream); color: var(--dark); outline: none; box-sizing: border-box; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--rose); }
 .form-row { display: flex; gap: 10px; }
 .form-row .form-group { flex: 1; min-width: 0; overflow: hidden; }
@@ -584,7 +584,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 
 /* ===== BOOKING CARD - NEW DESIGN ===== */
 .st-booking-filter-bar { display: flex; gap: 8px; padding: 12px 16px 0; overflow-x: auto; }
-.st-booking-filter-bar .btab { white-space: nowrap; font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--gray-light); background: var(--white); color: var(--gray); font-family: 'Tajawal',sans-serif; font-weight: 600; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.st-booking-filter-bar .btab { white-space: nowrap; font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--gray-light); background: var(--white); color: var(--gray); font-family: 'El Messiri',sans-serif; font-weight: 600; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 .st-booking-filter-bar .btab.active { background: var(--rose); color: white; border-color: var(--rose); }
 
 .booking-pending-highlight { border: 2px solid #f39c12 !important; background: #FFFDF5 !important; }
@@ -608,10 +608,10 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .st-bk-svc-meta { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .st-bk-notes { background: var(--cream2); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--gray); margin-top: 4px; line-height: 1.5; }
 .st-bk-actions { display: flex; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--gray-light); background: var(--cream); }
-.btn-accept { flex: 2; background: linear-gradient(135deg, #4CAF7D, #2E9E5F); color: white; border: none; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Tajawal',sans-serif; transition: opacity 0.2s; }
-.btn-reject { flex: 1; background: #FFF0F0; color: #e74c3c; border: 1.5px solid #FFCDD2; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Tajawal',sans-serif; transition: opacity 0.2s; }
+.btn-accept { flex: 2; background: linear-gradient(135deg, #4CAF7D, #2E9E5F); color: white; border: none; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'El Messiri',sans-serif; transition: opacity 0.2s; }
+.btn-reject { flex: 1; background: #FFF0F0; color: #e74c3c; border: 1.5px solid #FFCDD2; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'El Messiri',sans-serif; transition: opacity 0.2s; }
 .btn-accept:active, .btn-reject:active { opacity: 0.7; }
-.btn-chat-sm { flex: 1; background: var(--cream2); color: var(--rose-dark); border: 1.5px solid var(--rose-light); border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Tajawal',sans-serif; }
+.btn-chat-sm { flex: 1; background: var(--cream2); color: var(--rose-dark); border: 1.5px solid var(--rose-light); border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'El Messiri',sans-serif; }
 
 /* ===== CLIENT BOOKING CARD - STATUS STYLES ===== */
 .booking-item.pending-card { border-right: 4px solid #f39c12 !important; background: #FFFEF5 !important; }
@@ -633,7 +633,7 @@ html, body { height: 100%; font-family: 'Tajawal', sans-serif; background: var(-
 .avail-shift-row { display: flex; align-items: center; gap: 10px; }
 .shift-label { font-size: 12px; font-weight: 600; color: var(--gray); width: 64px; flex-shrink: 0; }
 .shift-times { display: flex; align-items: center; gap: 6px; flex: 1; }
-.shift-times input[type=time] { flex: 1; padding: 7px 8px; border: 1.5px solid var(--gray-light); border-radius: 8px; font-size: 13px; font-family: 'Tajawal',sans-serif; min-width: 0; }
+.shift-times input[type=time] { flex: 1; padding: 7px 8px; border: 1.5px solid var(--gray-light); border-radius: 8px; font-size: 13px; font-family: 'El Messiri',sans-serif; min-width: 0; }
 .shift-times span { font-size: 12px; color: var(--gray); }
 .avail-shift2-toggle { padding: 4px 0; }
 

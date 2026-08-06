@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;500;600;700&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
@@ -894,15 +894,15 @@
 <div id="screen-service-filter" class="screen slide-up">
   <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
-      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
-      <span id="service-filter-title" style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F"></span>
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:El Messiri;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span id="service-filter-title" style="font-family:El Messiri;font-size:17px;font-weight:700;color:#1A0A0F"></span>
       <div style="width:80px"></div>
     </div>
   </div>
   <div id="service-filter-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري التحميل...</div>
   <div id="service-filter-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--gray)">
     <div style="font-size:48px;margin-bottom:12px">🔍</div>
-    <p style="font-family:Tajawal;font-size:16px;font-weight:600">لا توجد صالونات تقدم هذه الخدمة حالياً</p>
+    <p style="font-family:El Messiri;font-size:16px;font-weight:600">لا توجد صالونات تقدم هذه الخدمة حالياً</p>
   </div>
   <div id="service-filter-list" class="salons-list" style="padding:12px"></div>
 </div>
@@ -910,8 +910,8 @@
 <div id="screen-top-rated" class="screen slide-up">
   <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
-      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
-      <span style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F">⭐ الأعلى تقييماً</span>
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:El Messiri;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span style="font-family:El Messiri;font-size:17px;font-weight:700;color:#1A0A0F">⭐ الأعلى تقييماً</span>
       <div style="width:80px"></div>
     </div>
   </div>
@@ -922,9 +922,9 @@
 <div id="screen-nearest" class="screen slide-up">
   <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
-      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
-      <span style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F">📍 الأقرب إليك</span>
-      <button onclick="openMapScreen()" style="background:#6B0F2B;color:white;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;cursor:pointer">الخريطة</button>
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:El Messiri;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span style="font-family:El Messiri;font-size:17px;font-weight:700;color:#1A0A0F">📍 الأقرب إليك</span>
+      <button onclick="openMapScreen()" style="background:#6B0F2B;color:white;border:none;border-radius:12px;padding:11px 20px;font-family:El Messiri;font-size:15px;font-weight:700;cursor:pointer">الخريطة</button>
     </div>
   </div>
   <div id="nearest-loading" style="text-align:center;padding:40px;color:var(--gray)">جاري تحديد موقعك...</div>
@@ -935,8 +935,8 @@
 <div id="screen-map" class="screen slide-up">
   <div style="padding-top:env(safe-area-inset-top,0px);background:white;position:sticky;top:0;z-index:10;border-bottom:2px solid #f0e8ed">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 16px">
-      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:Tajawal;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
-      <span style="font-family:Tajawal;font-size:17px;font-weight:700;color:#1A0A0F">خريطة الصالونات</span>
+      <button onclick="goBack()" style="background:#f0e8ed;border:none;border-radius:12px;padding:11px 20px;font-family:El Messiri;font-size:15px;font-weight:700;color:#1A0A0F;cursor:pointer">← رجوع</button>
+      <span style="font-family:El Messiri;font-size:17px;font-weight:700;color:#1A0A0F">خريطة الصالونات</span>
       <div style="width:80px"></div>
     </div>
   </div>

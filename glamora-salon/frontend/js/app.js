@@ -262,13 +262,13 @@ async function filterTopRated(el) {
         <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-size:16px">${medal}</span>
-            <span style="font-family:Tajawal;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
             <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${s.city}</span>
           </div>
-          <div style="font-family:Tajawal;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : ''}</div>
+          <div style="font-family:El Messiri;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : ''}</div>
         </div>
         <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav?'⭐':'☆'}</button>
       </div>`;
@@ -303,7 +303,7 @@ async function openNearestScreen() {
           <div style="font-size:15px;margin-bottom:8px">يرجى السماح بالوصول للموقع</div>
           <div style="font-size:11px;color:#C9728A;margin-bottom:4px">${locationError}</div>
           <div style="font-size:12px;color:var(--gray)">تأكدي إن خدمات الموقع مفعّلة بالإعدادات</div>
-          <button onclick="retryLocation()" style="margin-top:16px;background:var(--primary);color:white;border:none;border-radius:20px;padding:10px 24px;font-family:Tajawal;font-size:14px;cursor:pointer">إعادة المحاولة</button>
+          <button onclick="retryLocation()" style="margin-top:16px;background:var(--primary);color:white;border:none;border-radius:20px;padding:10px 24px;font-family:El Messiri;font-size:14px;cursor:pointer">إعادة المحاولة</button>
         </div>`;
       return;
     }
@@ -332,13 +332,13 @@ async function openNearestScreen() {
         <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
           <div style="display:flex;align-items:center;gap:6px">
             ${rank ? `<span style="font-size:16px">${rank}</span>` : ''}
-            <span style="font-family:Tajawal;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
             <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${dist}</span>
           </div>
-          <div style="font-family:Tajawal;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : s.city}</div>
+          <div style="font-family:El Messiri;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : s.city}</div>
         </div>
         <button onclick="toggleFavorite(${s.id},event)" style="position:absolute;top:8px;left:8px;background:none;border:none;font-size:18px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav?'⭐':'☆'}</button>
       </div>`;
@@ -381,7 +381,7 @@ async function openMapScreen() {
     salons.forEach(s => {
       const emoji = s.cover_emoji || '✂️';
       const salonIcon = L.divIcon({
-        html: `<div style="background:#6B0F2B;border-radius:20px;padding:6px 10px;font-size:13px;white-space:nowrap;box-shadow:0 3px 10px rgba(107,15,43,0.4);font-family:Tajawal;font-weight:700;color:white;display:flex;align-items:center;gap:5px;position:relative">
+        html: `<div style="background:#6B0F2B;border-radius:20px;padding:6px 10px;font-size:13px;white-space:nowrap;box-shadow:0 3px 10px rgba(107,15,43,0.4);font-family:El Messiri;font-weight:700;color:white;display:flex;align-items:center;gap:5px;position:relative">
           <span style="font-size:15px">${emoji}</span>
           <span>${s.name}</span>
           <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid #6B0F2B"></div>
@@ -390,7 +390,7 @@ async function openMapScreen() {
       });
       L.marker([s.latitude, s.longitude], { icon: salonIcon })
         .addTo(leafletMap)
-        .bindPopup(`<div style="font-family:Tajawal;text-align:right;min-width:140px"><b style="font-size:14px">${s.name}</b><br><span style="color:#888;font-size:12px">⭐ ${s.rating} · ${s.city}</span><br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A;font-size:13px;font-weight:700">عرض الصالون ←</a></div>`);
+        .bindPopup(`<div style="font-family:El Messiri;text-align:right;min-width:140px"><b style="font-size:14px">${s.name}</b><br><span style="color:#888;font-size:12px">⭐ ${s.rating} · ${s.city}</span><br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A;font-size:13px;font-weight:700">عرض الصالون ←</a></div>`);
     });
     if (!salons.length) showToast('لا توجد صالونات بمواقع محددة بعد');
   } catch(e) { showToast('خطأ في تحميل مواقع الصالونات'); }
@@ -538,8 +538,8 @@ function renderFeaturedSalons(salons) {
     <div class="fslide" data-id="${s.id}" style="position:absolute;inset:0;${bg};transition:opacity 0.5s ease;opacity:${i===0?1:0};pointer-events:${i===0?'auto':'none'};display:flex;flex-direction:column;justify-content:flex-end">
       <div style="background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 100%);padding:16px 14px 14px;border-radius:0 0 18px 18px">
         ${!s.cover_url ? `<div style="font-size:42px;text-align:center;margin-bottom:6px">${s.cover_emoji||'💅'}</div>` : ''}
-        <div style="font-family:Tajawal;font-size:18px;font-weight:800;color:white">${s.name}</div>
-        <div style="font-family:Tajawal;font-size:13px;color:rgba(255,255,255,0.8);margin-top:2px">📍 ${s.city} · ⭐ ${s.rating}</div>
+        <div style="font-family:El Messiri;font-size:18px;font-weight:800;color:white">${s.name}</div>
+        <div style="font-family:El Messiri;font-size:13px;color:rgba(255,255,255,0.8);margin-top:2px">📍 ${s.city} · ⭐ ${s.rating}</div>
       </div>
     </div>`;
   }).join('');
