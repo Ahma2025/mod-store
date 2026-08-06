@@ -136,25 +136,46 @@ router.get('/:other_id', authenticate, async (req, res) => {
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { receiver_id, content, booking_id } = req.body;
-    if (!receiver_id || !content?.trim()) return res.status(400).json({ error: 'الرسالة فارغة' });
-    // ✅ SECURITY: message length limit
-    if (content.trim().length > 2000) return res.status(400).json({ error: 'الرسالة طويلة جداً (الحد الأقصى 2000 حرف)' });
+    const { receiver_id, content, booking_id, msg_type = 'text', media_url = null } = req.body;
+    if (!receiver_id) return res.status(400).json({ error: 'مستقبل مجهول' });
 
-    const msg = await DB.messages.insert({
-      sender_id: req.user.id,
-      receiver_id: parseInt(receiver_id),
-      booking_id: booking_id || null,
-      content: content.trim()
-    });
+    const textContent = (msg_type === 'text') ? (content || '').trim() : (content || '').trim();
+    if (msg_type === 'text' && !textContent) return res.status(400).json({ error: 'الرسالة فارغة' });
+    if (msg_type === 'text' && textContent.length > 2000) return res.status(400).json({ error: 'الرسالة طويلة جداً' });
+
+    const { query } = require('../database');
+    const msg = await query(
+      `INSERT INTO messages (sender_id, receiver_id, booking_id, content, msg_type, media_url)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [req.user.id, parseInt(receiver_id), booking_id || null, textContent || '', msg_type, media_url]
+    ).then(r => r.rows[0]);
+
     const sender = await DB.users.findOne(u => u.id === req.user.id);
     const receiver = await DB.users.findOne(u => u.id === parseInt(receiver_id));
 
-    await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: content.trim().slice(0, 60), type: 'message' });
+    const notifBody = msg_type === 'voice' ? '🎤 رسالة صوتية' : msg_type === 'image' ? '📷 صورة' : textContent.slice(0, 60);
+    await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message' });
     req.io?.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: req.user.id });
     req.io?.to(`user_${receiver_id}`).emit('new_message', { ...msg, sender_name: sender?.name });
     if (receiver?.fcm_token) {
       fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+    }
+
+    // Auto-bot: reply to common questions when the receiver is a stylist-linked user
+    const receiverUser = receiver;
+    if (receiverUser?.role === 'stylist' && msg_type === 'text') {
+      const autoReply = getAutoReply(textContent);
+      if (autoReply) {
+        setTimeout(async () => {
+          try {
+            const bot = await query(
+              `INSERT INTO messages (sender_id, receiver_id, content, msg_type) VALUES ($1,$2,$3,'text') RETURNING *`,
+              [parseInt(receiver_id), req.user.id, autoReply]
+            ).then(r => r.rows[0]);
+            req.io?.to(`user_${req.user.id}`).emit('new_message', { ...bot, sender_name: sender?.name || 'الصالون', is_bot: true });
+          } catch {}
+        }, 1200);
+      }
     }
 
     res.status(201).json({ ...msg, sender_name: sender?.name });
@@ -163,5 +184,40 @@ router.post('/', authenticate, async (req, res) => {
     res.status(500).json({ error: 'خطأ في إرسال الرسالة' });
   }
 });
+
+// Mark messages as seen and notify sender
+router.post('/seen/:sender_id', authenticate, async (req, res) => {
+  try {
+    const { query } = require('../database');
+    const senderId = parseInt(req.params.sender_id);
+    const now = new Date().toISOString();
+    await query(
+      `UPDATE messages SET is_read=1, seen_at=NOW() WHERE sender_id=$1 AND receiver_id=$2 AND is_read=0`,
+      [senderId, req.user.id]
+    );
+    req.io?.to(`user_${senderId}`).emit('messages_seen', { by: req.user.id, at: now });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+const FAQ_TRIGGERS = [
+  { words: ['سعر','أسعار','كم تكلف','بكم','التكلفة'], reply: 'أهلاً! يمكنك الاطلاع على أسعارنا من قسم الخدمات في صفحة الصالون 💅' },
+  { words: ['وقت','متى','مواعيد','دوام','ساعات العمل'], reply: 'أوقات الدوام موضحة في صفحة الصالون ضمن تبويب "المواعيد" 🕐' },
+  { words: ['حجز','أحجز','أقدر أحجز','أريد حجز'], reply: 'يمكنك الحجز مباشرة من صفحة الصالون > اختاري الخدمة > اضغطي حجز 📅' },
+  { words: ['إلغاء','ألغي','ألغ الحجز'], reply: 'لإلغاء الحجز، اذهبي إلى "حجوزاتي" وافتحي الحجز واضغطي إلغاء ❌' },
+  { words: ['عنوان','وين','أين','الموقع','لوكيشن'], reply: 'موقعنا موضح في صفحة الصالون، يمكنك الضغط على الخريطة للوصول إلينا 📍' },
+  { words: ['شكراً','شكرا','تسلمي','يعطيكي العافية'], reply: 'العفو! نتشرف بخدمتك دائماً 🌸' },
+  { words: ['مرحبا','أهلا','هلا','السلام'], reply: 'أهلاً وسهلاً! كيف يمكنني مساعدتك؟ 💖' },
+];
+
+function getAutoReply(text) {
+  const t = text.toLowerCase();
+  for (const faq of FAQ_TRIGGERS) {
+    if (faq.words.some(w => t.includes(w))) return faq.reply;
+  }
+  return null;
+}
 
 module.exports = router;

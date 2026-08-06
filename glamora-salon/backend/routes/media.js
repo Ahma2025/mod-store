@@ -195,6 +195,27 @@ router.post('/review/photo', authenticate, upload.single('file'), async (req, re
   }
 });
 
+// Upload chat image or voice message
+router.post('/chat/upload', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
+    const isAudio = req.file.mimetype.startsWith('audio/');
+    const isImage = req.file.mimetype.startsWith('image/');
+    if (!isAudio && !isImage) return res.status(400).json({ error: 'نوع ملف غير مدعوم' });
+    const ext = isAudio ? '.webm' : (req.file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)?.[0] || '.jpg');
+    const filename = `chat_${req.user.id}_${Date.now()}${ext}`;
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+    res.json({ url, msg_type: isAudio ? 'voice' : 'image' });
+  } catch (e) {
+    res.status(500).json({ error: `فشل رفع الملف: ${e.message}` });
+  }
+});
+
 router.get('/salon/:id/media', async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);

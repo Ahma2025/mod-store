@@ -58,6 +58,8 @@ function stSwitchTab(name, btn) {
   if (name === 'chat') {
     loadStConversations();
     document.getElementById('st-chat-badge')?.classList.add('hidden');
+    // Show quick replies for stylists
+    document.getElementById('quick-replies-row')?.classList.remove('hidden');
   }
   if (name === 'profile') loadStProfile();
 }

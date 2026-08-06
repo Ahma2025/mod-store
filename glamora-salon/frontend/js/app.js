@@ -1456,6 +1456,10 @@ function writeReview(id) {
 }
 
 // ===== CHAT =====
+let voiceRecorder = null;
+let voiceChunks = [];
+let voiceRecording = false;
+
 async function loadConversations() {
   document.getElementById('conversations-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
@@ -1487,7 +1491,6 @@ async function openChatWith(userId, userName) {
   showScreen('chat-conv');
 
   const msgs = await Api.messages.get(userId);
-  // Register all loaded IDs so incoming socket echoes are ignored
   renderedMsgIds.clear();
   msgs.forEach(m => { if (m.id) renderedMsgIds.add(m.id); });
   const container = document.getElementById('chat-messages');
@@ -1496,23 +1499,46 @@ async function openChatWith(userId, userName) {
     const container = document.getElementById('chat-messages');
     if (container) container.scrollTop = container.scrollHeight;
   }, 100);
+  // Mark incoming messages as seen
+  Api.messages.markSeen(userId).catch(() => {});
 }
 
 function buildMsgHtml(msg) {
   const isMe = msg.sender_id === currentUser?.id;
+  const type = msg.msg_type || 'text';
+  let bubble = '';
+  if (type === 'image') {
+    bubble = `<img class="chat-img" src="${msg.media_url}" onclick="viewChatImage('${msg.media_url}')" loading="lazy">`;
+  } else if (type === 'voice') {
+    bubble = `<audio class="chat-audio" controls src="${msg.media_url}" preload="metadata"></audio>`;
+  } else {
+    bubble = escapeHtml(msg.content);
+  }
+  const seenTick = isMe ? `<span class="msg-seen" id="seen_${msg.id}">${msg.seen_at ? '✓✓' : '✓'}</span>` : '';
   return `
-    <div class="msg-wrap ${isMe ? 'me' : 'them'}">
-      <div class="msg-bubble">${msg.content}</div>
-      <div class="msg-time">${formatTime(msg.created_at)}</div>
+    <div class="msg-wrap ${isMe ? 'me' : 'them'}" data-id="${msg.id || ''}">
+      <div class="msg-bubble ${type !== 'text' ? 'msg-bubble-media' : ''}">${bubble}</div>
+      <div class="msg-time">${formatTime(msg.created_at)}${seenTick}</div>
     </div>
   `;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function viewChatImage(url) {
+  const ov = document.createElement('div');
+  ov.className = 'media-viewer-overlay';
+  ov.innerHTML = `<button class="media-viewer-close" onclick="this.closest('.media-viewer-overlay').remove()">✕</button><img src="${url}" style="max-width:95vw;max-height:90vh;border-radius:12px;">`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 
 function appendChatMessage(msg, isMe) {
   const container = document.getElementById('chat-messages');
   container.insertAdjacentHTML('beforeend', buildMsgHtml({ ...msg, sender_id: isMe ? currentUser?.id : msg.sender_id }));
-  const container2 = document.getElementById('chat-messages');
-  if (container2) container2.scrollTop = container2.scrollHeight;
+  container.scrollTop = container.scrollHeight;
 }
 
 function sendChatMessage() {
@@ -1522,17 +1548,79 @@ function sendChatMessage() {
 
   input.value = '';
   input.focus();
-  const fakeMsg = { content, sender_id: currentUser?.id, created_at: new Date().toISOString() };
+  const fakeMsg = { content, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'text' };
   appendChatMessage(fakeMsg, true);
 
   if (socket?.connected) {
     socket.emit('send_message', { receiver_id: currentChatUserId, content });
-    // message_sent event will register the real DB id
   } else {
     Api.messages.send(currentChatUserId, content)
       .then(msg => { if (msg?.id) renderedMsgIds.add(msg.id); })
       .catch(e => showToast('⚠️ ' + e.message));
   }
+}
+
+async function sendChatImage() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    showToast('📤 جاري رفع الصورة...');
+    try {
+      const res = await Api.messages.uploadChatFile(file);
+      if (res.url) {
+        const fakeMsg = { media_url: res.url, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'image', content: '' };
+        appendChatMessage(fakeMsg, true);
+        Api.messages.send(currentChatUserId, '', null, 'image', res.url).catch(e => showToast('⚠️ ' + e.message));
+      }
+    } catch (e) { showToast('⚠️ فشل رفع الصورة'); }
+  };
+  input.click();
+}
+
+async function startVoiceRecord() {
+  if (voiceRecording) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceChunks = [];
+    voiceRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+    voiceRecorder.start();
+    voiceRecording = true;
+    document.getElementById('chat-voice-btn')?.classList.add('recording');
+    showToast('🎤 جاري التسجيل...');
+  } catch (e) {
+    showToast('⚠️ لا يمكن الوصول للميكروفون');
+  }
+}
+
+async function stopVoiceRecord() {
+  if (!voiceRecording || !voiceRecorder) return;
+  voiceRecording = false;
+  document.getElementById('chat-voice-btn')?.classList.remove('recording');
+  voiceRecorder.stream?.getTracks().forEach(t => t.stop());
+  voiceRecorder.onstop = async () => {
+    const blob = new Blob(voiceChunks, { type: 'audio/webm' });
+    if (blob.size < 1000) { showToast('التسجيل قصير جداً'); return; }
+    showToast('📤 جاري إرسال الرسالة الصوتية...');
+    try {
+      const file = new File([blob], 'voice.webm', { type: 'audio/webm' });
+      const res = await Api.messages.uploadChatFile(file);
+      if (res.url) {
+        const fakeMsg = { media_url: res.url, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'voice', content: '' };
+        appendChatMessage(fakeMsg, true);
+        Api.messages.send(currentChatUserId, '', null, 'voice', res.url).catch(e => showToast('⚠️ ' + e.message));
+      }
+    } catch (e) { showToast('⚠️ فشل إرسال الرسالة الصوتية'); }
+  };
+  voiceRecorder.stop();
+}
+
+function useQuickReply(text) {
+  document.getElementById('chat-input').value = text;
+  document.getElementById('chat-input').focus();
+  document.getElementById('quick-replies-row')?.classList.add('hidden');
 }
 
 async function doLogout() {

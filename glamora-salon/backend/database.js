@@ -210,6 +210,9 @@ async function initDatabase() {
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS after_photo TEXT`,
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS reply_text TEXT`,
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ`,
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS msg_type TEXT DEFAULT 'text'`,
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT`,
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }

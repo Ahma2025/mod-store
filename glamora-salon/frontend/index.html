@@ -528,8 +528,20 @@
     <div id="typing-indicator" class="typing-indicator hidden">
       <span></span><span></span><span></span>
     </div>
+    <!-- Quick replies (shown for stylist users) -->
+    <div id="quick-replies-row" class="quick-replies-row hidden">
+      <button class="quick-reply-chip" onclick="useQuickReply('أهلاً وسهلاً! كيف أقدر أساعدك؟ 💖')">أهلاً 💖</button>
+      <button class="quick-reply-chip" onclick="useQuickReply('تم الحجز بنجاح، بنتشرف بزيارتك 🌸')">تم الحجز ✅</button>
+      <button class="quick-reply-chip" onclick="useQuickReply('عذراً الموعد هذا غير متاح، هل يناسبك وقت آخر؟')">غير متاح ❌</button>
+      <button class="quick-reply-chip" onclick="useQuickReply('شكراً لتواصلك، سيتم الرد قريباً 🙏')">شكراً 🙏</button>
+      <button class="quick-reply-chip" onclick="useQuickReply('يمكنك الاطلاع على أسعارنا من قسم الخدمات في صفحة الصالون 💅')">الأسعار 💅</button>
+    </div>
     <div class="chat-input-bar">
-      <input type="text" id="chat-input" placeholder="اكتبي رسالتك..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+      <button class="chat-media-btn" id="chat-voice-btn"
+        ontouchstart="startVoiceRecord()" ontouchend="stopVoiceRecord()"
+        onmousedown="startVoiceRecord()" onmouseup="stopVoiceRecord()" title="رسالة صوتية">🎤</button>
+      <button class="chat-media-btn" onclick="sendChatImage()" title="إرسال صورة">📷</button>
+      <input type="text" id="chat-input" placeholder="اكتبي رسالتك..." onkeydown="if(event.key==='Enter')sendChatMessage()" style="text-align:right;direction:rtl;">
       <button class="send-btn" onclick="sendChatMessage()">➤</button>
     </div>
   </div>

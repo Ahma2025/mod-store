@@ -76,7 +76,13 @@ const Api = {
   messages: {
     conversations: () => apiCall('GET', '/messages/conversations'),
     get: (otherId) => apiCall('GET', `/messages/${otherId}`),
-    send: (receiver_id, content, booking_id) => apiCall('POST', '/messages', { receiver_id, content, booking_id }),
+    send: (receiver_id, content, booking_id, msg_type = 'text', media_url = null) =>
+      apiCall('POST', '/messages', { receiver_id, content, booking_id, msg_type, media_url }),
+    markSeen: (senderId) => apiCall('POST', `/messages/seen/${senderId}`),
+    uploadChatFile: (file) => {
+      const fd = new FormData(); fd.append('file', file);
+      return fetch(`${API}/media/chat/upload`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
+    },
   },
   stylists: {
     get: (id) => apiCall('GET', `/stylists/${id}`),
@@ -168,6 +174,10 @@ function initSocket() {
   socket.on('user_typing', () => {
     document.getElementById('typing-indicator')?.classList.remove('hidden');
     setTimeout(() => document.getElementById('typing-indicator')?.classList.add('hidden'), 2000);
+  });
+
+  socket.on('messages_seen', () => {
+    document.querySelectorAll('.msg-seen').forEach(el => { el.textContent = '✓✓'; el.classList.add('seen'); });
   });
 }
 
