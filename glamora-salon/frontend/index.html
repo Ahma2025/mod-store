@@ -411,7 +411,41 @@
             <span class="star-btn" data-v="4" onclick="setSalonRating(4)">★</span>
             <span class="star-btn" data-v="5" onclick="setSalonRating(5)">★</span>
           </div>
+          <!-- Sub-ratings -->
+          <div class="sub-ratings">
+            <div class="sub-rating-row">
+              <span class="sub-rating-label">🧹 النظافة</span>
+              <div class="sub-star-input" id="sub-cleanliness">
+                <span data-v="1" onclick="setSubRating('cleanliness',1)">★</span><span data-v="2" onclick="setSubRating('cleanliness',2)">★</span><span data-v="3" onclick="setSubRating('cleanliness',3)">★</span><span data-v="4" onclick="setSubRating('cleanliness',4)">★</span><span data-v="5" onclick="setSubRating('cleanliness',5)">★</span>
+              </div>
+            </div>
+            <div class="sub-rating-row">
+              <span class="sub-rating-label">⏰ الالتزام بالوقت</span>
+              <div class="sub-star-input" id="sub-punctuality">
+                <span data-v="1" onclick="setSubRating('punctuality',1)">★</span><span data-v="2" onclick="setSubRating('punctuality',2)">★</span><span data-v="3" onclick="setSubRating('punctuality',3)">★</span><span data-v="4" onclick="setSubRating('punctuality',4)">★</span><span data-v="5" onclick="setSubRating('punctuality',5)">★</span>
+              </div>
+            </div>
+            <div class="sub-rating-row">
+              <span class="sub-rating-label">✨ النتيجة</span>
+              <div class="sub-star-input" id="sub-result">
+                <span data-v="1" onclick="setSubRating('result',1)">★</span><span data-v="2" onclick="setSubRating('result',2)">★</span><span data-v="3" onclick="setSubRating('result',3)">★</span><span data-v="4" onclick="setSubRating('result',4)">★</span><span data-v="5" onclick="setSubRating('result',5)">★</span>
+              </div>
+            </div>
+          </div>
           <textarea id="rating-comment" placeholder="اكتبي تعليقك (اختياري)..." rows="2" class="rating-comment-input"></textarea>
+          <!-- Before/After photos -->
+          <div class="review-photos-row">
+            <label class="review-photo-btn" onclick="document.getElementById('before-photo-input').click()">
+              📷 قبل
+              <input type="file" id="before-photo-input" accept="image/*" style="display:none" onchange="previewReviewPhoto(this,'before')">
+            </label>
+            <label class="review-photo-btn" onclick="document.getElementById('after-photo-input').click()">
+              📷 بعد
+              <input type="file" id="after-photo-input" accept="image/*" style="display:none" onchange="previewReviewPhoto(this,'after')">
+            </label>
+            <img id="before-photo-preview" class="review-photo-preview hidden" alt="قبل">
+            <img id="after-photo-preview" class="review-photo-preview hidden" alt="بعد">
+          </div>
           <button class="btn-primary rating-submit-btn" onclick="submitSalonRating()">إرسال التقييم</button>
         </div>
       </div>
@@ -624,6 +658,14 @@
               <button class="btn-sm btn-sm-primary" onclick="showAddServiceForm()">+ إضافة</button>
             </div>
             <div id="st-services-list" class="services-mgmt-list"></div>
+          </div>
+
+          <!-- Reviews -->
+          <div class="mgmt-section">
+            <div class="mgmt-section-header">
+              <h4>تقييمات الزبونات</h4>
+            </div>
+            <div id="st-reviews-list"><div style="font-size:13px;color:var(--gray);padding:8px 0">جاري التحميل...</div></div>
           </div>
 
           <!-- Block Slots -->

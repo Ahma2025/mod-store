@@ -81,6 +81,23 @@ router.put('/salon/:id', authenticate, async (req, res) => {
   }
 });
 
+router.post('/reviews/:id/reply', authenticate, async (req, res) => {
+  try {
+    const reviewId = parseInt(req.params.id);
+    const { reply_text } = req.body;
+    if (!reply_text?.trim()) return res.status(400).json({ error: 'الرد فارغ' });
+    // verify review belongs to this stylist's salon
+    const stylist = await DB.stylists.findOne(st => st.user_id == req.user.id);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+    const review = await DB.salon_ratings.findOne(r => r.id === reviewId && r.salon_id === stylist.salon_id);
+    if (!review) return res.status(404).json({ error: 'التقييم غير موجود' });
+    await query(`UPDATE salon_ratings SET reply_text=$1, replied_at=NOW() WHERE id=$2`, [reply_text.trim(), reviewId]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ في الرد' });
+  }
+});
+
 router.put('/salon/:id/categories', authenticate, async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);

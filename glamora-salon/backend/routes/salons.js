@@ -18,6 +18,16 @@ router.get('/', async (req, res) => {
     if (city) salons = salons.filter(s => s.city.includes(city));
     if (search) salons = salons.filter(s => s.name.includes(search) || (s.description || '').includes(search));
 
+    // Count bookings this week per salon for "most_booked" badge
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const weeklyRes = await query(
+      `SELECT salon_id, COUNT(*) as cnt FROM bookings WHERE created_at >= $1 GROUP BY salon_id`,
+      [weekAgo]
+    );
+    const weeklyMap = {};
+    weeklyRes.rows.forEach(r => { weeklyMap[r.salon_id] = parseInt(r.cnt); });
+    const maxWeekly = Math.max(1, ...Object.values(weeklyMap));
+
     const enriched = await Promise.all(salons.map(async s => {
       const { rating, reviews_count } = await computeSalonRating(s.id);
       const rawStylists = await DB.stylists.find(st => st.salon_id === s.id && st.is_active === 1);
@@ -27,7 +37,11 @@ router.get('/', async (req, res) => {
       }));
       const allMedia = await DB.salon_media.find(m => m.salon_id === s.id);
       const cover = allMedia.find(m => m.is_cover === 1 && m.type === 'photo') || allMedia.find(m => m.type === 'photo');
-      return { ...s, rating, reviews_count, stylists, cover_url: cover?.url || null };
+      const createdAt = s.created_at ? new Date(s.created_at) : null;
+      const is_new = createdAt ? (Date.now() - createdAt.getTime()) < 30 * 24 * 60 * 60 * 1000 : false;
+      const weekly = weeklyMap[s.id] || 0;
+      const is_most_booked = weekly > 0 && weekly >= maxWeekly * 0.7;
+      return { ...s, rating, reviews_count, stylists, cover_url: cover?.url || null, is_new, is_most_booked };
     }));
 
     enriched.sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count);
@@ -85,7 +99,17 @@ router.get('/:id', async (req, res) => {
         })
     );
 
-    res.json({ ...salon, rating, reviews_count, hours, stylists, services, reviews, salon_ratings: salonRatings });
+    // Total unique visitors (completed bookings)
+    const visitorsRes = await query(
+      `SELECT COUNT(DISTINCT client_id) as cnt FROM bookings WHERE salon_id=$1 AND status='completed'`,
+      [id]
+    );
+    const total_visitors = parseInt(visitorsRes.rows[0]?.cnt || 0);
+
+    const createdAt = salon.created_at ? new Date(salon.created_at) : null;
+    const is_new = createdAt ? (Date.now() - createdAt.getTime()) < 30 * 24 * 60 * 60 * 1000 : false;
+
+    res.json({ ...salon, rating, reviews_count, hours, stylists, services, reviews, salon_ratings: salonRatings, total_visitors, is_new });
   } catch (e) {
     console.error('GET /salons/:id error:', e);
     res.status(500).json({ error: 'خطأ في جلب الصالون' });
@@ -97,12 +121,19 @@ router.post('/:id/rate', authenticate, async (req, res) => {
     const salonId = parseInt(req.params.id);
     const clientId = req.user?.id;
     if (!clientId) return res.status(401).json({ error: 'يجب تسجيل الدخول أولاً' });
-    const { stars, comment } = req.body;
+    const { stars, comment, cleanliness_rating, punctuality_rating, result_rating, before_photo, after_photo } = req.body;
     if (!stars || stars < 1 || stars > 5) return res.status(400).json({ error: 'التقييم يجب أن يكون بين 1 و 5 نجوم' });
     const salon = await DB.salons.findOne(s => s.id === salonId);
     if (!salon) return res.status(404).json({ error: 'الصالون غير موجود' });
 
-    await DB.salon_ratings.insert({ salon_id: salonId, client_id: clientId, stars, comment: comment || '' });
+    await DB.salon_ratings.insert({
+      salon_id: salonId, client_id: clientId, stars, comment: comment || '',
+      cleanliness_rating: cleanliness_rating || null,
+      punctuality_rating: punctuality_rating || null,
+      result_rating: result_rating || null,
+      before_photo: before_photo || null,
+      after_photo: after_photo || null,
+    });
     const { rating, reviews_count } = await computeSalonRating(salonId);
     res.json({ success: true, rating, reviews_count, user_stars: stars });
   } catch (e) {

@@ -201,6 +201,15 @@ async function initDatabase() {
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)`,
     `ALTER TABLE stylists ADD COLUMN IF NOT EXISTS avatar TEXT`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS categories TEXT DEFAULT '[]'`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS is_verified INTEGER DEFAULT 0`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS cleanliness_rating INTEGER`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS punctuality_rating INTEGER`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS result_rating INTEGER`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS before_photo TEXT`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS after_photo TEXT`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS reply_text TEXT`,
+    `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }

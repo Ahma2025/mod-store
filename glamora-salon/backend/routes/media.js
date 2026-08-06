@@ -178,6 +178,23 @@ router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, 
   }
 });
 
+router.post('/review/photo', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
+    const ext = path.extname(req.file.originalname) || '.jpg';
+    const filename = `review_${req.user.id}_${Date.now()}${ext}`;
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+    res.json({ url });
+  } catch (e) {
+    res.status(500).json({ error: `فشل رفع الصورة: ${e.message}` });
+  }
+});
+
 router.get('/salon/:id/media', async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);

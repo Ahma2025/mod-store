@@ -40,6 +40,7 @@ async function loadStylistDashboard() {
       renderServices();
       loadSalonMedia();
       loadBlockedSlots();
+      loadStReviews();
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -863,4 +864,48 @@ async function saveCategories() {
   } catch (e) {
     showToast('فشل الحفظ');
   }
+}
+
+async function loadStReviews() {
+  if (!stSalonData) return;
+  const el = document.getElementById('st-reviews-list');
+  if (!el) return;
+  try {
+    const data = await Api.salons.get(stSalonData.id);
+    const ratings = data.salon_ratings || [];
+    if (!ratings.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--gray);padding:8px 0">لا توجد تقييمات بعد</div>';
+      return;
+    }
+    el.innerHTML = ratings.map(r => `
+      <div class="review-card" style="margin:0 0 10px">
+        <div class="review-header">
+          <div class="review-avatar">${(r.client_name||'؟')[0]}</div>
+          <div>
+            <div class="review-name">${r.client_name||'زبونة'}</div>
+            <div class="review-date">${new Date(r.created_at).toLocaleDateString('ar-SA')}</div>
+          </div>
+          <div style="margin-right:auto;color:#FFB800;font-size:14px">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>
+        </div>
+        ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
+        ${r.reply_text
+          ? `<div class="review-reply"><div class="review-reply-label">💬 ردك</div><div class="review-reply-text">${r.reply_text}</div></div>`
+          : `<div style="margin-top:8px">
+              <textarea id="reply-input-${r.id}" placeholder="اكتبي ردك على هذا التقييم..." rows="2" class="rating-comment-input" style="font-size:13px"></textarea>
+              <button class="btn-sm btn-sm-primary" style="margin-top:6px;width:100%" onclick="sendReviewReply(${r.id})">إرسال الرد</button>
+             </div>`
+        }
+      </div>`).join('');
+  } catch (e) { el.innerHTML = '<div style="color:red;font-size:13px">فشل تحميل التقييمات</div>'; }
+}
+
+async function sendReviewReply(reviewId) {
+  const input = document.getElementById(`reply-input-${reviewId}`);
+  const text = input?.value?.trim();
+  if (!text) { showToast('اكتبي الرد أولاً'); return; }
+  try {
+    await Api.stylistDash.replyToReview(reviewId, text);
+    showToast('تم إرسال الرد ✓');
+    loadStReviews();
+  } catch (e) { showToast('فشل إرسال الرد'); }
 }

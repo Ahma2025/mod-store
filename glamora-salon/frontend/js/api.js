@@ -59,7 +59,8 @@ const Api = {
     get: (id) => apiCall('GET', `/salons/${id}`),
     services: (id, category) => apiCall('GET', `/salons/${id}/services${category ? '?category=' + category : ''}`),
     media: (id) => apiCall('GET', `/media/salon/${id}/media`),
-    rate: (id, stars, comment = '') => apiCall('POST', `/salons/${id}/rate`, { stars, comment }),
+    rate: (id, stars, comment = '', cleanliness_rating = null, punctuality_rating = null, result_rating = null, before_photo = null, after_photo = null) =>
+      apiCall('POST', `/salons/${id}/rate`, { stars, comment, cleanliness_rating, punctuality_rating, result_rating, before_photo, after_photo }),
     myRating: (id) => apiCall('GET', `/salons/${id}/my-rating`),
     updateLocation: (id, latitude, longitude) => apiCall('PUT', `/salons/${id}/location`, { latitude, longitude }),
     allLocations: () => apiCall('GET', '/salons/all-locations'),
@@ -93,6 +94,12 @@ const Api = {
     updateSalon: (id, data) => apiCall('PUT', `/stylist/salon/${id}`, data),
     setHours: (id, hours) => apiCall('POST', `/stylist/salon/${id}/hours`, { hours }),
     setCategories: (id, categories) => apiCall('PUT', `/stylist/salon/${id}/categories`, { categories }),
+    replyToReview: (reviewId, reply_text) => apiCall('POST', `/stylist/reviews/${reviewId}/reply`, { reply_text }),
+    myReviews: (salonId) => apiCall('GET', `/salons/${salonId}?reviews_only=1`),
+    uploadReviewPhoto: (file) => {
+      const fd = new FormData(); fd.append('file', file);
+      return fetch(`${API}/media/review/photo`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
+    },
     addService: (id, data) => apiCall('POST', `/stylist/salon/${id}/services`, data),
     editService: (id, data) => apiCall('PUT', `/stylist/services/${id}`, data),
     deleteService: (id) => apiCall('DELETE', `/stylist/services/${id}`),

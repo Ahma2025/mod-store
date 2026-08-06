@@ -634,6 +634,11 @@ function renderSalonsList(salons, showDistance = false) {
       <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
       <div class="salon-card-info">
         <h4>${s.name}</h4>
+        <div class="salon-badges-row">
+          ${s.is_verified ? '<span class="salon-badge badge-verified">✓ موثّق</span>' : ''}
+          ${s.is_new ? '<span class="salon-badge badge-new">✨ جديد</span>' : ''}
+          ${s.is_most_booked ? '<span class="salon-badge badge-hot">🔥 الأكثر حجزاً</span>' : ''}
+        </div>
         <div class="salon-card-meta">
           <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
           ${distBadge}
@@ -675,6 +680,17 @@ async function openSalon(id) {
     document.getElementById('salon-detail-rating').textContent = data.rating || '0';
     document.getElementById('salon-detail-reviews').textContent = data.reviews_count || 0;
     document.getElementById('salon-detail-city').textContent = data.city;
+    // Badges on detail header
+    const badgesHtml = [
+      data.is_verified ? '<span class="salon-badge badge-verified">✓ موثّق</span>' : '',
+      data.is_new ? '<span class="salon-badge badge-new">✨ جديد</span>' : '',
+    ].filter(Boolean).join('');
+    const metaEl = document.querySelector('.salon-meta');
+    if (metaEl && badgesHtml) {
+      let badgeRow = document.getElementById('salon-detail-badges');
+      if (!badgeRow) { badgeRow = document.createElement('div'); badgeRow.id = 'salon-detail-badges'; badgeRow.className = 'salon-badges-row'; metaEl.after(badgeRow); }
+      badgeRow.innerHTML = badgesHtml;
+    }
 
     renderSalonServices(data.services);
     renderSalonStylists(data.stylists);
@@ -734,7 +750,17 @@ function renderSalonRatings(data) {
   document.getElementById('rw-stars-display').textContent = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '☆☆☆☆☆';
   document.getElementById('rw-count').textContent = count > 0 ? `${count} تقييم` : 'لا توجد تقييمات بعد';
 
-  // Load user's existing rating if logged in
+  // Visitor count
+  if (data.total_visitors > 0) {
+    const countEl = document.getElementById('rw-count');
+    countEl.textContent = `${count} تقييم · 👩 ${data.total_visitors} زبونة زارت الصالون`;
+  }
+
+  // Reset sub-ratings
+  subRatings = { cleanliness: 0, punctuality: 0, result: 0 };
+  ['cleanliness','punctuality','result'].forEach(k => updateSubStars(k, 0));
+
+  // Load user's existing rating
   selectedRating = 0;
   if (currentUser && currentSalonData) {
     Api.salons.myRating(currentSalonData.id).then(r => {
@@ -742,12 +768,28 @@ function renderSalonRatings(data) {
     }).catch(() => {});
   }
 
-  // Render reviews list
   if (!ratings.length) {
     document.getElementById('salon-reviews-list').innerHTML = '<div class="empty-state" style="padding:20px 16px"><div class="empty-icon">⭐</div><h3>كوني أول من يقيّم!</h3></div>';
     return;
   }
-  document.getElementById('salon-reviews-list').innerHTML = ratings.map(r => `
+
+  document.getElementById('salon-reviews-list').innerHTML = ratings.map(r => {
+    const subTags = [
+      r.cleanliness_rating ? `🧹 ${r.cleanliness_rating}/5` : '',
+      r.punctuality_rating ? `⏰ ${r.punctuality_rating}/5` : '',
+      r.result_rating ? `✨ ${r.result_rating}/5` : '',
+    ].filter(Boolean);
+    const baHtml = (r.before_photo || r.after_photo) ? `
+      <div class="review-before-after">
+        ${r.before_photo ? `<div class="review-ba-img"><img src="${r.before_photo}" loading="lazy"><div class="review-ba-label">قبل</div></div>` : ''}
+        ${r.after_photo ? `<div class="review-ba-img"><img src="${r.after_photo}" loading="lazy"><div class="review-ba-label">بعد</div></div>` : ''}
+      </div>` : '';
+    const replyHtml = r.reply_text ? `
+      <div class="review-reply">
+        <div class="review-reply-label">💬 رد الصالون</div>
+        <div class="review-reply-text">${r.reply_text}</div>
+      </div>` : '';
+    return `
     <div class="review-card">
       <div class="review-header">
         <div class="review-avatar">${(r.client_name || '؟')[0]}</div>
@@ -757,9 +799,40 @@ function renderSalonRatings(data) {
         </div>
       </div>
       <div class="review-stars-row">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</div>
+      ${subTags.length ? `<div class="review-sub-ratings">${subTags.map(t => `<span class="review-sub-tag">${t}</span>`).join('')}</div>` : ''}
       ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
-    </div>
-  `).join('');
+      ${baHtml}
+      ${replyHtml}
+    </div>`;
+  }).join('');
+}
+
+let subRatings = { cleanliness: 0, punctuality: 0, result: 0 };
+
+function setSubRating(key, val) {
+  subRatings[key] = val;
+  updateSubStars(key, val);
+}
+
+function updateSubStars(key, val) {
+  document.querySelectorAll(`#sub-${key} span`).forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.v) <= val);
+  });
+}
+
+let reviewBeforeUrl = null, reviewAfterUrl = null;
+
+async function previewReviewPhoto(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  const previewEl = document.getElementById(`${type}-photo-preview`);
+  const reader = new FileReader();
+  reader.onload = e => { previewEl.src = e.target.result; previewEl.classList.remove('hidden'); };
+  reader.readAsDataURL(file);
+  try {
+    const res = await Api.stylistDash.uploadReviewPhoto(file);
+    if (res.url) { type === 'before' ? (reviewBeforeUrl = res.url) : (reviewAfterUrl = res.url); }
+  } catch (e) { showToast('فشل رفع الصورة'); }
 }
 
 function updateStarInput(val) {
@@ -781,7 +854,10 @@ async function submitSalonRating() {
   const comment = document.getElementById('rating-comment').value.trim();
   if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
   try {
-    const result = await Api.salons.rate(currentSalonData.id, selectedRating, comment);
+    const result = await Api.salons.rate(currentSalonData.id, selectedRating, comment,
+      subRatings.cleanliness || null, subRatings.punctuality || null, subRatings.result || null,
+      reviewBeforeUrl, reviewAfterUrl
+    );
     document.getElementById('salon-detail-rating').textContent = result.rating;
     document.getElementById('salon-detail-reviews').textContent = result.reviews_count;
     document.getElementById('rw-avg').textContent = result.rating.toFixed(1);
