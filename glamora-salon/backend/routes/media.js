@@ -140,6 +140,9 @@ router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), a
       url = `data:${req.file.mimetype};base64,${b64}`;
     }
 
+    // Always save to stylists.avatar (works even if no user account linked)
+    await query('UPDATE stylists SET avatar=$1 WHERE id=$2', [url, stylistId]);
+    // Also sync to users.avatar when the stylist has a linked account
     if (stylist.user_id) {
       await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, stylist.user_id]);
     }
@@ -166,6 +169,8 @@ router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, 
     }
 
     await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, req.user.id]);
+    // Sync to all stylist records linked to this user
+    await query('UPDATE stylists SET avatar=$1 WHERE user_id=$2', [url, req.user.id]);
     res.json({ avatar: url });
   } catch (e) {
     console.error('Avatar upload error:', e.message);

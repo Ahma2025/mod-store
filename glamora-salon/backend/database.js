@@ -199,6 +199,7 @@ async function initDatabase() {
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS cover_url TEXT`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)`,
+    `ALTER TABLE stylists ADD COLUMN IF NOT EXISTS avatar TEXT`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }
