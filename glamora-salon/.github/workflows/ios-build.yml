@@ -9,41 +9,91 @@ jobs:
   build-ios:
     name: Build iOS App
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: List and select latest Xcode
+      # ── Xcode ────────────────────────────────────────────────
+      - name: Select latest Xcode
         run: |
-          echo "=== Available Xcodes ==="
-          ls /Applications/ | grep -i xcode || true
           LATEST=$(ls /Applications/ | grep "^Xcode" | sort -V | tail -1)
-          echo "Selecting: $LATEST"
+          echo "Using Xcode: $LATEST"
           sudo xcode-select -s /Applications/$LATEST/Contents/Developer
           xcodebuild -version
 
+      # ── Node ─────────────────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: glamora-salon/node_modules
+          key: node-${{ hashFiles('glamora-salon/package-lock.json') }}
+          restore-keys: node-
+
       - name: Install Node dependencies
         working-directory: glamora-salon
-        run: npm install
+        run: npm ci --prefer-offline || npm install
 
       - name: Sync Capacitor iOS
         working-directory: glamora-salon
         run: npx cap sync ios
 
-      - name: Install Fastlane & CocoaPods
-        run: sudo gem install fastlane cocoapods --no-document
+      # ── Ruby / Gems ──────────────────────────────────────────
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Cache Ruby gems
+        uses: actions/cache@v4
+        id: gem-cache
+        with:
+          path: vendor/bundle
+          key: gems-${{ runner.os }}-${{ hashFiles('glamora-salon/ios/App/Gemfile.lock', '**/Gemfile.lock') }}
+          restore-keys: gems-${{ runner.os }}-
+
+      - name: Install Fastlane
+        run: |
+          gem install bundler --no-document 2>/dev/null || true
+          if ! gem list fastlane -i > /dev/null 2>&1; then
+            for i in 1 2 3; do
+              sudo gem install fastlane cocoapods --no-document && break
+              echo "Retry $i..."
+              sleep 10
+            done
+          fi
+          fastlane --version
+          pod --version
+
+      # ── CocoaPods ────────────────────────────────────────────
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        id: pods-cache
+        with:
+          path: |
+            glamora-salon/ios/App/Pods
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: pods-${{ hashFiles('glamora-salon/ios/App/Podfile.lock') }}
+          restore-keys: pods-
 
       - name: Install CocoaPods dependencies
         working-directory: glamora-salon/ios/App
-        run: pod install
+        run: |
+          for i in 1 2 3; do
+            pod install --repo-update && break
+            echo "pod install failed, retry $i..."
+            sleep 15
+          done
 
+      # ── Build & Upload ───────────────────────────────────────
       - name: Build & Upload to TestFlight
         working-directory: glamora-salon/ios/App
         env:
@@ -57,6 +107,7 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
         run: fastlane beta
 
+      # ── Artifacts ────────────────────────────────────────────
       - name: Save IPA as artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,3 +116,14 @@ jobs:
           path: glamora-salon/ios/App/App.ipa
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            ~/Library/Logs/gym/
+            glamora-salon/ios/App/fastlane/logs/
+          if-no-files-found: ignore
+          retention-days: 7
