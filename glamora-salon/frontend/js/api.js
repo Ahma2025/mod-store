@@ -92,6 +92,7 @@ const Api = {
     createSalon: (data) => apiCall('POST', '/stylist/salon', data),
     updateSalon: (id, data) => apiCall('PUT', `/stylist/salon/${id}`, data),
     setHours: (id, hours) => apiCall('POST', `/stylist/salon/${id}/hours`, { hours }),
+    setCategories: (id, categories) => apiCall('PUT', `/stylist/salon/${id}/categories`, { categories }),
     addService: (id, data) => apiCall('POST', `/stylist/salon/${id}/services`, data),
     editService: (id, data) => apiCall('PUT', `/stylist/services/${id}`, data),
     deleteService: (id) => apiCall('DELETE', `/stylist/services/${id}`),

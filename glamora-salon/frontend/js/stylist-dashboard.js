@@ -36,6 +36,7 @@ async function loadStylistDashboard() {
       document.getElementById('st-salon-info').classList.remove('hidden');
       renderSalonHeader();
       renderHours();
+      renderCategories();
       renderServices();
       loadSalonMedia();
       loadBlockedSlots();
@@ -837,4 +838,30 @@ function stLogout() {
   if (!confirm('تريدين تسجيل الخروج؟')) return;
   clearAuth();
   location.reload();
+}
+
+function renderCategories() {
+  if (!stSalonData) return;
+  let cats = [];
+  try { cats = JSON.parse(stSalonData.categories || '[]'); } catch {}
+  document.querySelectorAll('#cat-chips .cat-chip').forEach(chip => {
+    chip.classList.toggle('selected', cats.includes(chip.dataset.cat));
+  });
+}
+
+function toggleCatChip(el) {
+  el.classList.toggle('selected');
+}
+
+async function saveCategories() {
+  if (!stSalonData) return;
+  const selected = [...document.querySelectorAll('#cat-chips .cat-chip.selected')]
+    .map(c => c.dataset.cat);
+  try {
+    await Api.stylistDash.setCategories(stSalonData.id, selected);
+    stSalonData.categories = JSON.stringify(selected);
+    showToast('تم حفظ التخصصات ✓');
+  } catch (e) {
+    showToast('فشل الحفظ');
+  }
 }

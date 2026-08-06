@@ -600,6 +600,23 @@
             <div id="st-media-grid" class="media-grid"></div>
           </div>
 
+          <!-- Specialties -->
+          <div class="mgmt-section">
+            <div class="mgmt-section-header">
+              <h4>أنا متخصصة في</h4>
+              <button class="btn-sm btn-sm-primary" onclick="saveCategories()">حفظ</button>
+            </div>
+            <p class="media-hint">اختاري الخدمات التي تقدمينها — صالونك سيظهر عند البحث عنها</p>
+            <div class="cat-chips" id="cat-chips">
+              <div class="cat-chip" data-cat="شعر" onclick="toggleCatChip(this)">💇 شعر</div>
+              <div class="cat-chip" data-cat="مكياج" onclick="toggleCatChip(this)">💄 مكياج</div>
+              <div class="cat-chip" data-cat="أظافر" onclick="toggleCatChip(this)">💅 أظافر</div>
+              <div class="cat-chip" data-cat="عناية بالبشرة" onclick="toggleCatChip(this)">🧖 عناية بالبشرة</div>
+              <div class="cat-chip" data-cat="عرائس" onclick="toggleCatChip(this)">👰 عرائس</div>
+              <div class="cat-chip" data-cat="علاجات" onclick="toggleCatChip(this)">💆 علاجات</div>
+            </div>
+          </div>
+
           <!-- Services -->
           <div class="mgmt-section">
             <div class="mgmt-section-header">

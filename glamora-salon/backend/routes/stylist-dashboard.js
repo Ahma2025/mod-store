@@ -81,6 +81,20 @@ router.put('/salon/:id', authenticate, async (req, res) => {
   }
 });
 
+router.put('/salon/:id/categories', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === salonId);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+    const { categories } = req.body;
+    if (!Array.isArray(categories)) return res.status(400).json({ error: 'categories يجب أن تكون مصفوفة' });
+    await query('UPDATE salons SET categories=$1 WHERE id=$2', [JSON.stringify(categories), salonId]);
+    res.json({ categories });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ في حفظ التخصصات' });
+  }
+});
+
 router.post('/salon/:id/hours', authenticate, async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);

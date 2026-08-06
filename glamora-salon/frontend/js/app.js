@@ -489,11 +489,12 @@ async function filterByService(serviceName) {
     const salons = allSalonsCache || await Api.salons.list();
     allSalonsCache = salons;
 
-    const filtered = salons.filter(s =>
-      s.services?.some(sv =>
-        sv.category?.includes(serviceName) || sv.name?.includes(serviceName)
-      ) || s.stylists?.some(st => st.specialties?.includes(serviceName))
-    );
+    const filtered = salons.filter(s => {
+      let cats = [];
+      try { cats = JSON.parse(s.categories || '[]'); } catch {}
+      return cats.includes(serviceName) ||
+        s.services?.some(sv => sv.category?.includes(serviceName) || sv.name?.includes(serviceName));
+    });
 
     document.getElementById('service-filter-loading').style.display = 'none';
 
