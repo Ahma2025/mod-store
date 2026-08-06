@@ -140,6 +140,11 @@ function enterApp(user) {
   document.getElementById('home-user-name').textContent = user.name.split(' ')[0];
   loadHome();
   loadChatBadge();
+  // Beauty features: check reminders + load recommendations
+  setTimeout(() => {
+    checkBeautyReminder().catch(() => {});
+    loadRecommendations().catch(() => {});
+  }, 2000);
 }
 
 // ===== SALON LOCATION PICKER =====
@@ -1860,6 +1865,291 @@ function formatTime(dateStr) {
   if (diff < 60) return `${diff} د`;
   if (diff < 1440) return `${Math.floor(diff/60)} س`;
   return d.toLocaleDateString('ar-PS', { month: 'short', day: 'numeric' });
+}
+
+// ===== BEAUTY PROFILE =====
+let beautyProfileData = null;
+
+async function showBeautyProfile() {
+  showScreen('screen-beauty-profile');
+  try {
+    const data = await Api.beauty.getProfile();
+    beautyProfileData = data;
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('bp-hair-color', data.hair_color);
+    set('bp-hair-texture', data.hair_texture);
+    set('bp-skin-tone', data.skin_tone);
+    set('bp-face-shape', data.face_shape);
+    if (data.allergies) document.getElementById('bp-allergies').value = data.allergies;
+    if (data.color_notes) document.getElementById('bp-color-notes').value = data.color_notes;
+
+    // Reminder status
+    const rEl = document.getElementById('bp-reminder-status');
+    if (data.next_reminder_date) {
+      const d = new Date(data.next_reminder_date);
+      rEl.textContent = `التذكير القادم: ${d.toLocaleDateString('ar-PS', { day:'numeric', month:'long' })}`;
+    } else {
+      rEl.textContent = 'لا يوجد تذكير مضبوط حالياً';
+    }
+
+    // Color formulas
+    const fl = document.getElementById('bp-formulas-list');
+    if (!data.color_formulas?.length) {
+      fl.innerHTML = '<div style="font-size:13px;color:var(--gray);text-align:center;padding:16px">لا توجد وصفات محفوظة بعد</div>';
+    } else {
+      fl.innerHTML = data.color_formulas.map(f => `
+        <div class="formula-card">
+          <div class="formula-card-name">🎨 ${f.color_name || 'وصفة لون'}</div>
+          <div class="formula-card-detail">${f.formula || ''}</div>
+          ${f.notes ? `<div class="formula-card-detail" style="color:var(--rose-dark)">${f.notes}</div>` : ''}
+          <div class="formula-card-detail">${f.visit_date || ''}</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) { showToast('تعذّر تحميل الملف الجمالي'); }
+}
+
+async function saveBeautyProfile() {
+  try {
+    const data = {
+      hair_color: document.getElementById('bp-hair-color').value || null,
+      hair_texture: document.getElementById('bp-hair-texture').value || null,
+      skin_tone: document.getElementById('bp-skin-tone').value || null,
+      face_shape: document.getElementById('bp-face-shape').value || null,
+      allergies: document.getElementById('bp-allergies').value.trim() || null,
+      color_notes: document.getElementById('bp-color-notes').value.trim() || null,
+    };
+    await Api.beauty.updateProfile(data);
+    showToast('✅ تم حفظ ملفك الجمالي');
+  } catch (e) { showToast('⚠️ فشل الحفظ'); }
+}
+
+async function setBeautyReminder(weeks) {
+  try {
+    const res = await Api.beauty.scheduleReminder(weeks);
+    const d = new Date(res.reminder_date);
+    document.getElementById('bp-reminder-status').textContent = `التذكير القادم: ${d.toLocaleDateString('ar-PS', { day:'numeric', month:'long' })}`;
+    showToast(`✅ سنذكّرك بعد ${weeks} أسابيع 💆`);
+  } catch (e) { showToast('⚠️ فشل ضبط التذكير'); }
+}
+
+async function checkBeautyReminder() {
+  if (!authToken) return;
+  try {
+    const data = await Api.beauty.getProfile();
+    if (!data.next_reminder_date) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (data.next_reminder_date <= today) {
+      const banner = document.getElementById('beauty-reminder-banner');
+      const msg = document.getElementById('beauty-reminder-msg');
+      if (banner && msg) {
+        msg.textContent = `آخر صبغة: ${data.last_color_date || 'غير محددة'} — حان وقت التجديد!`;
+        banner.classList.remove('hidden');
+        // Show banner in beauty profile if open, else toast
+        showToast('💆 تذكير: حان وقت صبغة شعرك!', 5000);
+      }
+    }
+  } catch (e) {}
+}
+
+// ===== AI HAIRSTYLE =====
+let aiFaceBase64 = null;
+let aiSelectedShape = null;
+
+function loadAiScreen() {
+  aiFaceBase64 = null;
+  aiSelectedShape = null;
+  document.getElementById('ai-face-preview').classList.add('hidden');
+  document.getElementById('ai-results').classList.add('hidden');
+  document.querySelectorAll('.face-shape-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ai-analyze-btn').disabled = false;
+  // Pre-fill shape from beauty profile
+  if (beautyProfileData?.face_shape) {
+    const btn = document.querySelector(`.face-shape-btn[data-shape="${beautyProfileData.face_shape}"]`);
+    if (btn) { btn.classList.add('selected'); aiSelectedShape = beautyProfileData.face_shape; }
+  }
+}
+
+function previewAiFace(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    aiFaceBase64 = e.target.result;
+    const img = document.getElementById('ai-face-preview');
+    img.src = aiFaceBase64;
+    img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function selectFaceShape(el) {
+  document.querySelectorAll('.face-shape-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  aiSelectedShape = el.dataset.shape;
+}
+
+async function runAiHairstyle() {
+  const btn = document.getElementById('ai-analyze-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحليل...';
+  try {
+    const result = await Api.beauty.aiHairstyle(aiFaceBase64, aiSelectedShape);
+    renderAiResults(result);
+  } catch (e) {
+    showToast('⚠️ فشل التحليل، جربي مرة أخرى');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ احصلي على توصياتك';
+  }
+}
+
+function renderAiResults(data) {
+  const results = document.getElementById('ai-results');
+  results.classList.remove('hidden');
+
+  const shapeNames = { oval:'بيضاوي', round:'مستدير', square:'مربع', heart:'قلب', rectangle:'مستطيل', diamond:'ماسي' };
+  const shapeName = shapeNames[data.face_shape] || data.face_shape || '';
+
+  document.getElementById('ai-hairstyles-list').innerHTML = (data.hairstyles || []).map(h => `
+    <div class="hairstyle-result-item">
+      <div class="hairstyle-result-name">💇 ${h.name}</div>
+      <div class="hairstyle-result-why">${h.why || ''}</div>
+      <div class="hairstyle-result-desc">${h.description || ''}</div>
+    </div>
+  `).join('') || '<div style="color:var(--gray);font-size:13px">لا توجد نتائج</div>';
+
+  document.getElementById('ai-colors-list').innerHTML = (data.colors || []).map(c => `
+    <span class="color-result-chip">🎨 ${c.arabic_name || c.name} <small style="font-weight:400;color:var(--gray)">${c.why || ''}</small></span>
+  `).join('');
+
+  if (shapeName) {
+    const shapeEl = document.querySelector('.ai-intro-card h3');
+    if (shapeEl) shapeEl.textContent = `شكل وجهك: ${shapeName}`;
+  }
+  results.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== HAIR COLOR CALCULATOR =====
+const calcAnswers = {};
+let calcCurrentStep = 1;
+const calcTotalSteps = 3;
+
+function initColorCalc() {
+  Object.keys(calcAnswers).forEach(k => delete calcAnswers[k]);
+  calcCurrentStep = 1;
+  document.querySelectorAll('.calc-step').forEach((s, i) => s.classList.toggle('active', i === 0));
+  document.querySelectorAll('.calc-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('color-calc-quiz').classList.remove('hidden');
+  document.getElementById('color-calc-result').classList.add('hidden');
+  document.getElementById('calc-next-btn').disabled = true;
+  document.getElementById('calc-prev-btn').style.visibility = 'hidden';
+  document.getElementById('calc-progress-bar').style.width = '33%';
+}
+
+function calcPick(el) {
+  const key = el.dataset.key;
+  document.querySelectorAll(`.calc-opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  calcAnswers[key] = el.dataset.val;
+  document.getElementById('calc-next-btn').disabled = false;
+}
+
+function calcStep(dir) {
+  const nextStep = calcCurrentStep + dir;
+  if (nextStep < 1 || nextStep > calcTotalSteps) {
+    if (calcCurrentStep === calcTotalSteps) { showColorCalcResult(); return; }
+    return;
+  }
+  document.querySelector(`.calc-step[data-step="${calcCurrentStep}"]`).classList.remove('active');
+  calcCurrentStep = nextStep;
+  document.querySelector(`.calc-step[data-step="${calcCurrentStep}"]`).classList.add('active');
+  document.getElementById('calc-progress-bar').style.width = `${(calcCurrentStep / calcTotalSteps) * 100}%`;
+  document.getElementById('calc-prev-btn').style.visibility = calcCurrentStep === 1 ? 'hidden' : 'visible';
+  const isLastStep = calcCurrentStep === calcTotalSteps;
+  const nextBtn = document.getElementById('calc-next-btn');
+  nextBtn.textContent = isLastStep ? 'عرض النتيجة ✨' : 'التالي ›';
+  const currentKey = document.querySelector(`.calc-step[data-step="${calcCurrentStep}"] .calc-opt`)?.dataset?.key;
+  nextBtn.disabled = currentKey ? !calcAnswers[currentKey] : false;
+}
+
+function showColorCalcResult() {
+  const { skin, eyes, style } = calcAnswers;
+  const results = getColorRecommendations(skin, eyes, style);
+  document.getElementById('color-calc-quiz').classList.add('hidden');
+  document.getElementById('color-calc-result').classList.remove('hidden');
+  document.getElementById('calc-result-title').textContent = results.headline;
+  document.getElementById('calc-result-desc').textContent = results.desc;
+  document.getElementById('calc-result-list').innerHTML = results.colors.map(c => `
+    <div class="beauty-card" style="margin-bottom:10px;border-right:4px solid ${c.swatch}">
+      <div style="font-size:15px;font-weight:800;margin-bottom:4px">${c.name}</div>
+      <div style="font-size:13px;color:var(--gray)">${c.reason}</div>
+      <div style="font-size:12px;color:var(--rose-dark);margin-top:4px">${c.tip}</div>
+    </div>
+  `).join('');
+}
+
+function resetColorCalc() { initColorCalc(); }
+
+function getColorRecommendations(skin, eyes, style) {
+  // Scoring matrix
+  const allColors = [
+    { name: 'بني شوكولاتة داكن', swatch: '#4a2c17', skins: ['olive','dark','medium'], eyes: ['brown','hazel','black'], styles: ['natural','professional'], reason: 'يناسب البشرة القمحية والداكنة ويعطي عمقاً طبيعياً', tip: 'أضيفي هايلايت كراميل لإضاءة الوجه' },
+    { name: 'بني كراميل ذهبي', swatch: '#c68642', skins: ['fair','light','medium'], eyes: ['hazel','brown','green'], styles: ['warm','bold'], reason: 'يُضيء البشرة الفاتحة ويعطي دفئاً جميلاً', tip: 'رائع مع بالياج منتشر من المنتصف' },
+    { name: 'أشقر رمادي بارد', swatch: '#b8b8b8', skins: ['fair','light'], eyes: ['blue','green','hazel'], styles: ['cool','bold'], reason: 'يُبرز العيون الزرقاء والخضراء بشكل مذهل', tip: 'يحتاج صيانة كل 4-5 أسابيع' },
+    { name: 'بني رمادي أسود', swatch: '#2d2d2d', skins: ['olive','dark','medium'], eyes: ['black','brown'], styles: ['cool','professional'], reason: 'أنيق وعصري، يناسب جميع مناسبات العمل', tip: 'ألمع مع شامبو اللون الأسود' },
+    { name: 'نحاسي دافئ', swatch: '#b87333', skins: ['medium','olive','light'], eyes: ['hazel','brown','green'], styles: ['warm','bold'], reason: 'لون جريء يُبرز تفاصيل الوجه ويعطي حيوية', tip: 'احمي لونك بواقي الألوان يومياً' },
+    { name: 'بلاتيني فاتح', swatch: '#e8d5a3', skins: ['fair','light'], eyes: ['blue','green'], styles: ['bold','cool'], reason: 'تغيير جذري وجريء، مثالي للبشرة الفاتحة', tip: 'يحتاج فترات استراحة بين الجلسات' },
+    { name: 'بني طبيعي دافئ', swatch: '#8b5a2b', skins: ['medium','olive','light'], eyes: ['brown','hazel','black'], styles: ['natural'], reason: 'الأقل ضرراً والأكثر طبيعية لأي بشرة', tip: 'خيار مثالي إذا كنتِ تفضلين الشعر الصحي' },
+    { name: 'أحمر برغندي', swatch: '#800020', skins: ['fair','medium','olive'], eyes: ['hazel','green','brown'], styles: ['bold','warm'], reason: 'لون عاطفي وجريء يناسب الشخصيات القوية', tip: 'البرغندي الداكن يناسب الجميع' },
+  ];
+
+  const scored = allColors.map(c => ({
+    ...c,
+    score: (c.skins.includes(skin) ? 2 : 0) + (c.eyes.includes(eyes) ? 2 : 0) + (c.styles.includes(style) ? 1 : 0)
+  })).sort((a, b) => b.score - a.score).slice(0, 3);
+
+  const styleLabels = { natural:'الطبيعية', bold:'الجريئة', warm:'الدافئة', cool:'الأنيقة الباردة' };
+  return {
+    headline: `أنسب الألوان لشخصيتك ${styleLabels[style] || ''}`,
+    desc: 'بناءً على لون بشرتك وعيونك وأسلوبك',
+    colors: scored,
+  };
+}
+
+// ===== RECOMMENDATIONS on home =====
+async function loadRecommendations() {
+  if (!authToken) return;
+  try {
+    const [recoRes, likeRes] = await Promise.all([Api.beauty.recommendations(), Api.beauty.youMightLike()]);
+
+    // "قد يعجبك" section
+    if (likeRes?.length) {
+      const homeContent = document.getElementById('tab-home');
+      if (homeContent) {
+        let likeSection = document.getElementById('you-might-section');
+        if (!likeSection) {
+          likeSection = document.createElement('div');
+          likeSection.id = 'you-might-section';
+          likeSection.className = 'you-might-section';
+          const salonsSection = homeContent.querySelector('.salons-section') || homeContent.lastElementChild;
+          homeContent.insertBefore(likeSection, salonsSection);
+        }
+        likeSection.innerHTML = `
+          <h3>💡 قد يعجبك</h3>
+          <div class="you-might-scroll">
+            ${likeRes.map(s => `
+              <div class="you-might-card" onclick="openSalon(${s.salon_id})">
+                <div class="you-might-name">${s.name}</div>
+                <div class="you-might-price">₪${s.price}</div>
+                <div class="you-might-salon">${s.category || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+  } catch (e) {}
 }
 
 // ===== INIT =====

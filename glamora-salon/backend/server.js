@@ -80,6 +80,7 @@ app.use('/api/blocked-slots', require('./routes/blocked-slots'));
 
 app.use('/api/bookings', (req, res, next) => { req.io = io; next(); }, require('./routes/bookings'));
 app.use('/api/messages', (req, res, next) => { req.io = io; next(); }, require('./routes/messages'));
+app.use('/api/beauty', require('./routes/beauty'));
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;

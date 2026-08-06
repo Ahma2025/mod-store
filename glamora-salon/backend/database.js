@@ -213,6 +213,15 @@ async function initDatabase() {
     `ALTER TABLE messages ADD COLUMN IF NOT EXISTS msg_type TEXT DEFAULT 'text'`,
     `ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT`,
     `ALTER TABLE messages ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS hair_color TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS hair_texture TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS skin_tone TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS face_shape TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS allergies TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS color_notes TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences_json TEXT DEFAULT '{}'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_color_date TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS next_reminder_date TEXT`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }

@@ -307,8 +307,32 @@
       </div>
 
       <div class="profile-menu">
-        <div class="profile-menu-item" onclick="showColorHistory()">
+        <div class="profile-menu-item" onclick="showBeautyProfile()">
+          <span class="menu-icon">💆</span>
+          <div class="menu-text">
+            <span>ملفي الجمالي</span>
+            <span class="menu-sub">شعري، بشرتي، حساسيتي، وصفات الألوان</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="profile-menu-item" onclick="showScreen('screen-ai-hairstyle'); loadAiScreen()">
+          <span class="menu-icon">✨</span>
+          <div class="menu-text">
+            <span>مستشارة التسريحة AI</span>
+            <span class="menu-sub">ارفعي صورتك واحصلي على توصيات ذكية</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="profile-menu-item" onclick="showScreen('screen-color-calc'); initColorCalc()">
           <span class="menu-icon">🎨</span>
+          <div class="menu-text">
+            <span>حاسبة لون الشعر</span>
+            <span class="menu-sub">اكتشفي أنسب لون لبشرتك وعيونك</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="profile-menu-item" onclick="showColorHistory()">
+          <span class="menu-icon">🧴</span>
           <div class="menu-text">
             <span>تاريخ ألوان شعري</span>
             <span class="menu-sub">فورمولات جميع الصبغات السابقة</span>
@@ -562,6 +586,227 @@
       <h2>تاريخ ألوان شعري</h2>
     </div>
     <div id="color-history-list" class="color-history-list"></div>
+  </div>
+
+  <!-- ======= BEAUTY PROFILE ======= -->
+  <div id="screen-beauty-profile" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>ملفي الجمالي</h2>
+    </div>
+    <div class="home-content" style="padding:16px">
+
+      <!-- Reminder banner -->
+      <div id="beauty-reminder-banner" class="reminder-banner hidden">
+        <span class="reminder-icon">💆</span>
+        <div>
+          <strong>حان وقت صبغة شعرك!</strong>
+          <div id="beauty-reminder-msg" style="font-size:12px;opacity:.8"></div>
+        </div>
+        <button class="reminder-dismiss" onclick="document.getElementById('beauty-reminder-banner').classList.add('hidden')">✕</button>
+      </div>
+
+      <!-- Profile fields -->
+      <div class="beauty-card">
+        <h4 class="beauty-section-title">💇 معلومات شعري</h4>
+        <div class="form-group">
+          <label>اللون الحالي</label>
+          <select id="bp-hair-color" class="beauty-select">
+            <option value="">اختاري...</option>
+            <option value="أسود">أسود</option>
+            <option value="بني داكن">بني داكن</option>
+            <option value="بني متوسط">بني متوسط</option>
+            <option value="بني فاتح">بني فاتح</option>
+            <option value="أشقر داكن">أشقر داكن</option>
+            <option value="أشقر">أشقر</option>
+            <option value="أحمر">أحمر</option>
+            <option value="مصبوغ / هايلايت">مصبوغ / هايلايت</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>نوع الشعر</label>
+          <select id="bp-hair-texture" class="beauty-select">
+            <option value="">اختاري...</option>
+            <option value="ناعم مستقيم">ناعم مستقيم</option>
+            <option value="موجي">موجي</option>
+            <option value="مجعد خفيف">مجعد خفيف</option>
+            <option value="مجعد كثيف">مجعد كثيف</option>
+            <option value="كيرلي">كيرلي</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>لون البشرة</label>
+          <select id="bp-skin-tone" class="beauty-select">
+            <option value="">اختاري...</option>
+            <option value="فاتح">فاتح جداً</option>
+            <option value="واضح">واضح</option>
+            <option value="قمحي">قمحي</option>
+            <option value="زيتوني">زيتوني</option>
+            <option value="أسمر">أسمر</option>
+            <option value="داكن">داكن</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>شكل الوجه</label>
+          <select id="bp-face-shape" class="beauty-select">
+            <option value="">اختاري...</option>
+            <option value="oval">بيضاوي</option>
+            <option value="round">مستدير</option>
+            <option value="square">مربع</option>
+            <option value="heart">قلب</option>
+            <option value="rectangle">مستطيل</option>
+            <option value="diamond">ماسي</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="beauty-card">
+        <h4 class="beauty-section-title">⚕️ حساسية وملاحظات</h4>
+        <div class="form-group">
+          <label>حساسية (إذا وجدت)</label>
+          <input id="bp-allergies" type="text" placeholder="مثال: لا أتحمل الأمونيا..." class="beauty-input">
+        </div>
+        <div class="form-group">
+          <label>ملاحظات للكوفيرة</label>
+          <textarea id="bp-color-notes" placeholder="مثال: أحب الألوان الدافئة، لا تعالج الشعر أكثر من اللازم..." class="beauty-textarea"></textarea>
+        </div>
+      </div>
+
+      <button class="btn-primary full" onclick="saveBeautyProfile()">💾 حفظ الملف الجمالي</button>
+
+      <!-- Color formula history -->
+      <div class="beauty-card" style="margin-top:16px">
+        <h4 class="beauty-section-title">🎨 وصفات الألوان المحفوظة</h4>
+        <div id="bp-formulas-list"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+      </div>
+
+      <!-- Reminder section -->
+      <div class="beauty-card" style="margin-top:16px">
+        <h4 class="beauty-section-title">⏰ تذكير صبغة الشعر</h4>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:12px">سنذكّرك عند حلول موعد تجديد لون شعرك</p>
+        <div id="bp-reminder-status" style="font-size:13px;color:var(--gray);margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm btn-sm-primary" onclick="setBeautyReminder(4)">4 أسابيع</button>
+          <button class="btn-sm btn-sm-primary" onclick="setBeautyReminder(6)">6 أسابيع</button>
+          <button class="btn-sm btn-sm-primary" onclick="setBeautyReminder(8)">8 أسابيع</button>
+        </div>
+      </div>
+
+      <div style="height:30px"></div>
+    </div>
+  </div>
+
+  <!-- ======= AI HAIRSTYLE ======= -->
+  <div id="screen-ai-hairstyle" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>🤖 مستشارة التسريحة</h2>
+    </div>
+    <div class="home-content" style="padding:16px">
+      <div class="beauty-card ai-intro-card">
+        <div class="ai-icon-big">✨</div>
+        <h3>اكتشفي التسريحة المناسبة لك</h3>
+        <p>ارفعي صورة وجهك أو اختاري شكل وجهك وسنقترح تسريحات ولون شعر يناسبك</p>
+      </div>
+
+      <div class="beauty-card">
+        <h4 class="beauty-section-title">📸 صورة وجهك (اختياري)</h4>
+        <div id="ai-face-preview-wrap" class="ai-face-preview-wrap">
+          <img id="ai-face-preview" class="hidden" style="max-width:100%;border-radius:12px;margin-bottom:8px">
+          <label class="ai-upload-btn">
+            📷 رفع صورة وجهك
+            <input type="file" id="ai-face-input" accept="image/*" onchange="previewAiFace(this)" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <div class="beauty-card">
+        <h4 class="beauty-section-title">أو اختاري شكل وجهك</h4>
+        <div class="face-shape-grid">
+          <div class="face-shape-btn" data-shape="oval" onclick="selectFaceShape(this)">🥚 بيضاوي</div>
+          <div class="face-shape-btn" data-shape="round" onclick="selectFaceShape(this)">⭕ مستدير</div>
+          <div class="face-shape-btn" data-shape="square" onclick="selectFaceShape(this)">⬜ مربع</div>
+          <div class="face-shape-btn" data-shape="heart" onclick="selectFaceShape(this)">🩷 قلب</div>
+        </div>
+      </div>
+
+      <button class="btn-primary full" id="ai-analyze-btn" onclick="runAiHairstyle()">✨ احصلي على توصياتك</button>
+
+      <div id="ai-results" class="hidden" style="margin-top:16px">
+        <div class="beauty-card">
+          <h4 class="beauty-section-title">💇 تسريحات مقترحة</h4>
+          <div id="ai-hairstyles-list"></div>
+        </div>
+        <div class="beauty-card" style="margin-top:12px">
+          <h4 class="beauty-section-title">🎨 ألوان مقترحة</h4>
+          <div id="ai-colors-list"></div>
+        </div>
+      </div>
+      <div style="height:30px"></div>
+    </div>
+  </div>
+
+  <!-- ======= HAIR COLOR CALCULATOR ======= -->
+  <div id="screen-color-calc" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>🎨 حاسبة لون الشعر</h2>
+    </div>
+    <div class="home-content" style="padding:16px">
+      <div id="color-calc-quiz">
+        <!-- Step 1 -->
+        <div class="calc-step active" data-step="1">
+          <div class="calc-step-title">لون بشرتك؟</div>
+          <div class="calc-options">
+            <div class="calc-opt" data-key="skin" data-val="fair" onclick="calcPick(this)">🌸 فاتح جداً</div>
+            <div class="calc-opt" data-key="skin" data-val="light" onclick="calcPick(this)">🍑 واضح</div>
+            <div class="calc-opt" data-key="skin" data-val="medium" onclick="calcPick(this)">🌾 قمحي</div>
+            <div class="calc-opt" data-key="skin" data-val="olive" onclick="calcPick(this)">🫒 زيتوني</div>
+            <div class="calc-opt" data-key="skin" data-val="dark" onclick="calcPick(this)">🍫 أسمر</div>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="calc-step" data-step="2">
+          <div class="calc-step-title">لون عيونك؟</div>
+          <div class="calc-options">
+            <div class="calc-opt" data-key="eyes" data-val="blue" onclick="calcPick(this)">🔵 أزرق</div>
+            <div class="calc-opt" data-key="eyes" data-val="green" onclick="calcPick(this)">🟢 أخضر</div>
+            <div class="calc-opt" data-key="eyes" data-val="hazel" onclick="calcPick(this)">🟤 بندقي</div>
+            <div class="calc-opt" data-key="eyes" data-val="brown" onclick="calcPick(this)">🫗 بني</div>
+            <div class="calc-opt" data-key="eyes" data-val="black" onclick="calcPick(this)">⚫ أسود</div>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="calc-step" data-step="3">
+          <div class="calc-step-title">أسلوبك المفضل؟</div>
+          <div class="calc-options">
+            <div class="calc-opt" data-key="style" data-val="natural" onclick="calcPick(this)">🌿 طبيعي وهادئ</div>
+            <div class="calc-opt" data-key="style" data-val="bold" onclick="calcPick(this)">🔥 جريء ومميز</div>
+            <div class="calc-opt" data-key="style" data-val="warm" onclick="calcPick(this)">☀️ دافئ ومشرق</div>
+            <div class="calc-opt" data-key="style" data-val="cool" onclick="calcPick(this)">❄️ بارد وأنيق</div>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div class="calc-progress">
+          <div class="calc-progress-bar" id="calc-progress-bar"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:12px">
+          <button class="btn-sm" id="calc-prev-btn" onclick="calcStep(-1)" style="visibility:hidden">السابق</button>
+          <button class="btn-sm btn-sm-primary" id="calc-next-btn" onclick="calcStep(1)" disabled>التالي ›</button>
+        </div>
+      </div>
+
+      <div id="color-calc-result" class="hidden">
+        <div class="beauty-card ai-intro-card" style="margin-bottom:16px">
+          <div class="ai-icon-big">🎨</div>
+          <h3 id="calc-result-title">لون موصى به</h3>
+          <p id="calc-result-desc"></p>
+        </div>
+        <div id="calc-result-list"></div>
+        <button class="btn-primary full" style="margin-top:16px" onclick="resetColorCalc()">↩ إعادة الحساب</button>
+      </div>
+      <div style="height:30px"></div>
+    </div>
   </div>
 
   <!-- ======= SUCCESS MODAL ======= -->

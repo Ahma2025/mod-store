@@ -493,6 +493,57 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .quick-reply-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--rose-light); background: var(--white); color: var(--rose-dark); font-family: 'El Messiri', sans-serif; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .quick-reply-chip:active { background: var(--rose-light); }
 
+/* ===== BEAUTY PROFILE & AI ===== */
+.beauty-card { background: var(--white); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.beauty-section-title { font-size: 14px; font-weight: 800; color: var(--dark); margin: 0 0 12px; }
+.beauty-select, .beauty-input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--gray-light); font-family: 'El Messiri', sans-serif; font-size: 14px; background: var(--bg); outline: none; box-sizing: border-box; }
+.beauty-select:focus, .beauty-input:focus { border-color: var(--rose); }
+.beauty-textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--gray-light); font-family: 'El Messiri', sans-serif; font-size: 14px; background: var(--bg); outline: none; min-height: 80px; resize: none; box-sizing: border-box; }
+.beauty-textarea:focus { border-color: var(--rose); }
+/* Reminder banner */
+.reminder-banner { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, var(--rose-light), #fff0f5); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; border: 1.5px solid var(--rose-light); }
+.reminder-icon { font-size: 28px; flex-shrink: 0; }
+.reminder-dismiss { margin-right: auto; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gray); flex-shrink: 0; }
+/* Formula history card */
+.formula-card { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-right: 4px solid var(--rose); }
+.formula-card-name { font-weight: 700; font-size: 14px; }
+.formula-card-detail { font-size: 12px; color: var(--gray); margin-top: 4px; }
+/* AI Hairstyle */
+.ai-intro-card { text-align: center; background: linear-gradient(135deg, var(--rose-light), #fff); }
+.ai-icon-big { font-size: 48px; margin-bottom: 8px; }
+.ai-intro-card h3 { margin: 0 0 6px; font-size: 18px; }
+.ai-intro-card p { font-size: 13px; color: var(--gray); margin: 0; }
+.ai-face-preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ai-upload-btn { display: inline-block; padding: 10px 20px; border-radius: 99px; background: var(--rose-light); color: var(--rose-dark); font-family: 'El Messiri', sans-serif; font-size: 14px; cursor: pointer; font-weight: 700; }
+.face-shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.face-shape-btn { padding: 14px 10px; border-radius: 12px; border: 2px solid var(--gray-light); text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; transition: all 0.2s; background: var(--bg); }
+.face-shape-btn.selected { border-color: var(--rose); background: var(--rose-light); color: var(--rose-dark); }
+.hairstyle-result-item { padding: 12px; border-radius: 10px; background: var(--bg); margin-bottom: 8px; }
+.hairstyle-result-name { font-weight: 800; font-size: 14px; }
+.hairstyle-result-why { font-size: 12px; color: var(--rose-dark); margin-top: 2px; }
+.hairstyle-result-desc { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.color-result-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 99px; margin: 4px; background: var(--bg); border: 1.5px solid var(--gray-light); font-size: 13px; font-weight: 700; }
+/* Color Calculator */
+.calc-step { display: none; }
+.calc-step.active { display: block; }
+.calc-step-title { font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 16px; color: var(--dark); }
+.calc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.calc-opt { padding: 14px 10px; border-radius: 12px; border: 2px solid var(--gray-light); text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; transition: all 0.2s; background: var(--bg); }
+.calc-opt.selected { border-color: var(--rose); background: var(--rose-light); color: var(--rose-dark); transform: scale(1.02); }
+.calc-progress { height: 6px; background: var(--gray-light); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.calc-progress-bar { height: 100%; background: linear-gradient(90deg, var(--rose), var(--rose-dark)); border-radius: 99px; transition: width 0.3s; width: 33%; }
+/* Recommendations section on home */
+.reco-section { margin: 16px 0; }
+.reco-section h3 { font-size: 16px; font-weight: 800; margin: 0 0 12px; }
+.you-might-section { margin: 0 16px 20px; }
+.you-might-section h3 { font-size: 15px; font-weight: 800; margin: 0 0 10px; }
+.you-might-scroll { display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px; }
+.you-might-scroll::-webkit-scrollbar { display: none; }
+.you-might-card { flex-shrink: 0; width: 140px; background: var(--white); border-radius: 14px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; }
+.you-might-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.you-might-price { font-size: 12px; color: var(--rose-dark); font-weight: 800; }
+.you-might-salon { font-size: 11px; color: var(--gray); }
+
 /* ===== NOTIFICATIONS ===== */
 .notifs-list { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .notif-item { background: var(--white); border-radius: var(--radius-sm); padding: 14px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05); }

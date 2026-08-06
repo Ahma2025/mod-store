@@ -94,6 +94,14 @@ const Api = {
     markNotifsRead: () => apiCall('PUT', '/users/notifications/read'),
     colorHistory: () => apiCall('GET', '/users/color-history'),
   },
+  beauty: {
+    getProfile: () => apiCall('GET', '/beauty/profile'),
+    updateProfile: (data) => apiCall('PUT', '/beauty/profile', data),
+    recommendations: () => apiCall('GET', '/beauty/recommendations'),
+    youMightLike: () => apiCall('GET', '/beauty/you-might-like'),
+    aiHairstyle: (image_base64, face_shape) => apiCall('POST', '/beauty/ai-hairstyle', { image_base64, face_shape }),
+    scheduleReminder: (weeks) => apiCall('POST', '/beauty/schedule-reminder', { weeks }),
+  },
   stylistDash: {
     mySalon: () => apiCall('GET', '/stylist/my-salon'),
     createSalon: (data) => apiCall('POST', '/stylist/salon', data),
