@@ -117,40 +117,59 @@ router.delete('/media/:id', authenticate, async (req, res) => {
 
 router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), async (req, res) => {
   try {
+    if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
+
     const stylistId = parseInt(req.params.stylistId);
     const stylist = await DB.stylists.findOne(s => s.id === stylistId);
     if (!stylist) return res.status(404).json({ error: 'كوفيرة غير موجودة' });
 
-    // must be salon owner of that salon
-    const ownerStylist = await DB.stylists.findOne(s => s.user_id == req.user.id && s.salon_id == stylist.salon_id);
-    if (!ownerStylist) return res.status(403).json({ error: 'غير مصرح' });
+    // allow: same user uploading their own avatar, OR any stylist in the same salon
+    const isOwn = stylist.user_id == req.user.id;
+    const isSameSalon = await DB.stylists.findOne(s => s.user_id == req.user.id && s.salon_id == stylist.salon_id);
+    if (!isOwn && !isSameSalon) return res.status(403).json({ error: 'غير مصرح' });
 
-    if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
     const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `stylist_avatar_${stylist.user_id}_${Date.now()}${ext}`;
-    const url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
-    await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, stylist.user_id]);
+    const filename = `stylist_avatar_${stylist.user_id || stylistId}_${Date.now()}${ext}`;
+
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      // R2 not configured — store as data URL fallback (base64, max ~2MB practical)
+      const b64 = req.file.buffer.toString('base64');
+      url = `data:${req.file.mimetype};base64,${b64}`;
+    }
+
+    if (stylist.user_id) {
+      await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, stylist.user_id]);
+    }
     res.json({ avatar: url });
   } catch (e) {
-    console.error('Stylist avatar upload error:', e);
-    res.status(500).json({ error: 'فشل رفع الصورة' });
+    console.error('Stylist avatar upload error:', e.message, e.stack);
+    res.status(500).json({ error: `فشل رفع الصورة: ${e.message}` });
   }
 });
 
 router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
-    if (!req.file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'يجب أن يكون الملف صورة' });
 
     const ext = path.extname(req.file.originalname) || '.jpg';
     const filename = `stylist_avatar_${req.user.id}_${Date.now()}${ext}`;
-    const url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      const b64 = req.file.buffer.toString('base64');
+      url = `data:${req.file.mimetype};base64,${b64}`;
+    }
 
     await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, req.user.id]);
     res.json({ avatar: url });
   } catch (e) {
-    console.error('Avatar upload error:', e);
-    res.status(500).json({ error: 'فشل رفع الصورة' });
+    console.error('Avatar upload error:', e.message);
+    res.status(500).json({ error: `فشل رفع الصورة: ${e.message}` });
   }
 });
 

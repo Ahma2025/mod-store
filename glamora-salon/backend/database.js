@@ -1,175 +1,585 @@
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-const path = require('path');
+const { Pool } = require('pg');
 
-const adapter = new FileSync(path.join(__dirname, 'glamora.json'));
-const db = low(adapter);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway.internal')
+    ? false
+    : { rejectUnauthorized: false }
+});
 
-db.defaults({
-  users: [], salons: [], salon_hours: [], stylists: [],
-  services: [], bookings: [], reviews: [], messages: [],
-  color_formulas: [], loyalty_transactions: [], stylist_availability: [], notifications: [],
-  salon_media: [], stylist_blocked_slots: [], salon_ratings: [],
-  _counters: { users:0, salons:0, salon_hours:0, stylists:0, services:0, bookings:0, reviews:0, messages:0, color_formulas:0, loyalty_transactions:0, stylist_availability:0, notifications:0, salon_media:0, stylist_blocked_slots:0, salon_ratings:0 }
-}).write();
+const query = (text, params) => pool.query(text, params);
 
-function nextId(table) {
-  const n = (db.get(`_counters.${table}`).value() || 0) + 1;
-  db.set(`_counters.${table}`, n).write();
-  return n;
+async function initDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      name TEXT NOT NULL,
+      phone TEXT UNIQUE NOT NULL,
+      email TEXT,
+      password_hash TEXT NOT NULL,
+      role TEXT DEFAULT 'client',
+      loyalty_points INTEGER DEFAULT 0,
+      avatar TEXT,
+      fcm_token TEXT,
+      fcm_platform TEXT,
+      fcm_updated_at TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS salons (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      address TEXT NOT NULL,
+      city TEXT NOT NULL,
+      phone TEXT DEFAULT '',
+      cover_emoji TEXT DEFAULT '💅',
+      rating NUMERIC(3,1) DEFAULT 0,
+      reviews_count INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      latitude NUMERIC(10,7),
+      longitude NUMERIC(10,7)
+    );
+
+    CREATE TABLE IF NOT EXISTS salon_hours (
+      id SERIAL PRIMARY KEY,
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      day_of_week INTEGER NOT NULL,
+      open_time TEXT DEFAULT '09:00',
+      close_time TEXT DEFAULT '20:00',
+      is_closed INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS stylists (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      name TEXT,
+      phone TEXT DEFAULT '',
+      email TEXT,
+      bio TEXT DEFAULT '',
+      specialties TEXT DEFAULT '[]',
+      experience_years INTEGER DEFAULT 1,
+      rating NUMERIC(3,1) DEFAULT 0,
+      reviews_count INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS services (
+      id SERIAL PRIMARY KEY,
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      stylist_id INTEGER REFERENCES stylists(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      name_ar TEXT,
+      category TEXT,
+      duration_minutes INTEGER DEFAULT 60,
+      price NUMERIC(10,2) NOT NULL,
+      description TEXT DEFAULT '',
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS bookings (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      client_id INTEGER REFERENCES users(id),
+      stylist_id INTEGER REFERENCES stylists(id),
+      service_id INTEGER REFERENCES services(id),
+      salon_id INTEGER REFERENCES salons(id),
+      booking_date TEXT NOT NULL,
+      booking_time TEXT NOT NULL,
+      notes TEXT,
+      total_price NUMERIC(10,2),
+      status TEXT DEFAULT 'pending',
+      payment_status TEXT DEFAULT 'unpaid'
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      booking_id INTEGER REFERENCES bookings(id),
+      client_id INTEGER REFERENCES users(id),
+      stylist_id INTEGER REFERENCES stylists(id),
+      rating INTEGER,
+      comment TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS salon_ratings (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ,
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      client_id INTEGER REFERENCES users(id),
+      stars INTEGER,
+      comment TEXT DEFAULT '',
+      UNIQUE(salon_id, client_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      sender_id INTEGER REFERENCES users(id),
+      receiver_id INTEGER REFERENCES users(id),
+      booking_id INTEGER REFERENCES bookings(id),
+      content TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS color_formulas (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      client_id INTEGER REFERENCES users(id),
+      stylist_id INTEGER REFERENCES stylists(id),
+      formula TEXT,
+      color_name TEXT,
+      notes TEXT,
+      visit_date TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS loyalty_transactions (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      user_id INTEGER REFERENCES users(id),
+      points INTEGER,
+      type TEXT,
+      description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS stylist_availability (
+      id SERIAL PRIMARY KEY,
+      stylist_id INTEGER REFERENCES stylists(id) ON DELETE CASCADE,
+      day_of_week INTEGER NOT NULL,
+      is_off INTEGER DEFAULT 0,
+      start_time TEXT DEFAULT '09:00',
+      end_time TEXT DEFAULT '17:00',
+      shift2_enabled INTEGER DEFAULT 0,
+      shift2_start TEXT,
+      shift2_end TEXT,
+      UNIQUE(stylist_id, day_of_week)
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      user_id INTEGER REFERENCES users(id),
+      title TEXT,
+      body TEXT,
+      type TEXT,
+      booking_id INTEGER,
+      is_read INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS salon_media (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      filename TEXT,
+      url TEXT,
+      type TEXT DEFAULT 'photo',
+      is_cover INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS stylist_blocked_slots (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      stylist_id INTEGER REFERENCES stylists(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      reason TEXT DEFAULT ''
+    );
+  `);
+
+  // Safe migrations — add columns that may not exist in older deployments
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_platform TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_updated_at TIMESTAMPTZ`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS cover_url TEXT`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)`,
+  ];
+  for (const m of migrations) {
+    try { await pool.query(m); } catch (e) { /* column may already exist */ }
+  }
+
+  console.log('[DB] PostgreSQL schema ready');
 }
 
-const now = () => new Date().toISOString();
+// Helper: convert pg rows to plain objects with integers where needed
+function row(r) { return r || null; }
+function rows(r) { return r || []; }
 
 const DB = {
   users: {
-    insert: (data) => { const id = nextId('users'); const row = { id, created_at: now(), loyalty_points: 0, avatar: null, ...data }; db.get('users').push(row).write(); return row; },
-    find: (fn) => db.get('users').filter(fn).value(),
-    findOne: (fn) => db.get('users').find(fn).value(),
-    update: (fn, data) => { db.get('users').filter(fn).each(u => Object.assign(u, data)).write(); },
-    updateOne: (fn, data) => { const u = db.get('users').find(fn).value(); if (u) { Object.assign(u, data); db.write(); } },
+    insert: async (data) => {
+      const { name, phone, email = null, password_hash, role = 'client', loyalty_points = 0, avatar = null, fcm_token = null, fcm_platform = null } = data;
+      const r = await query(
+        `INSERT INTO users (name,phone,email,password_hash,role,loyalty_points,avatar,fcm_token,fcm_platform) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [name, phone, email, password_hash, role, loyalty_points, avatar, fcm_token, fcm_platform]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM users');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM users');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM users');
+      const matched = rows(r.rows).filter(filter);
+      for (const u of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE users SET ${fields} WHERE id=$1`, [u.id, ...Object.values(data)]);
+      }
+    },
+    updateOne: async (filter, data) => {
+      const r = await query('SELECT * FROM users');
+      const u = rows(r.rows).find(filter);
+      if (!u) return;
+      const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+      await query(`UPDATE users SET ${fields} WHERE id=$1`, [u.id, ...Object.values(data)]);
+    },
   },
+
   salons: {
-    insert: (data) => { const id = nextId('salons'); const row = { id, created_at: now(), is_active: 1, rating: 0, reviews_count: 0, ...data }; db.get('salons').push(row).write(); return row; },
-    find: (fn) => db.get('salons').filter(fn).value(),
-    findOne: (fn) => db.get('salons').find(fn).value(),
+    insert: async (data) => {
+      const { name, description = '', address, city, phone = '', cover_emoji = '💅', rating = 0, reviews_count = 0 } = data;
+      const r = await query(
+        `INSERT INTO salons (name,description,address,city,phone,cover_emoji,rating,reviews_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [name, description, address, city, phone, cover_emoji, rating, reviews_count]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM salons');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM salons');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM salons');
+      const matched = rows(r.rows).filter(filter);
+      for (const s of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE salons SET ${fields} WHERE id=$1`, [s.id, ...Object.values(data)]);
+      }
+    },
   },
+
   salon_hours: {
-    insert: (data) => { const id = nextId('salon_hours'); const row = { id, ...data }; db.get('salon_hours').push(row).write(); return row; },
-    find: (fn) => db.get('salon_hours').filter(fn).value(),
+    insert: async (data) => {
+      const { salon_id, day_of_week, open_time = '09:00', close_time = '20:00', is_closed = 0 } = data;
+      const r = await query(
+        `INSERT INTO salon_hours (salon_id,day_of_week,open_time,close_time,is_closed) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [salon_id, day_of_week, open_time, close_time, is_closed]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM salon_hours');
+      return rows(r.rows).filter(filter);
+    },
+    upsert: async (salon_id, day_of_week, data) => {
+      const { open_time, close_time, is_closed } = data;
+      await query(
+        `INSERT INTO salon_hours (salon_id,day_of_week,open_time,close_time,is_closed) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT DO NOTHING`,
+        [salon_id, day_of_week, open_time, close_time, is_closed]
+      );
+      await query(
+        `UPDATE salon_hours SET open_time=$3, close_time=$4, is_closed=$5 WHERE salon_id=$1 AND day_of_week=$2`,
+        [salon_id, day_of_week, open_time, close_time, is_closed]
+      );
+    },
   },
+
   stylists: {
-    insert: (data) => { const id = nextId('stylists'); const row = { id, is_active: 1, rating: 0, reviews_count: 0, ...data }; db.get('stylists').push(row).write(); return row; },
-    find: (fn) => db.get('stylists').filter(fn).value(),
-    findOne: (fn) => db.get('stylists').find(fn).value(),
-    update: (fn, data) => { db.get('stylists').filter(fn).each(s => Object.assign(s, data)).write(); },
+    insert: async (data) => {
+      const { user_id = null, salon_id, name = null, phone = '', email = null, bio = '', specialties = '[]', experience_years = 1, rating = 0, reviews_count = 0, is_active = 1 } = data;
+      const r = await query(
+        `INSERT INTO stylists (user_id,salon_id,name,phone,email,bio,specialties,experience_years,rating,reviews_count,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [user_id, salon_id, name, phone, email, bio, specialties, experience_years, rating, reviews_count, is_active]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM stylists');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM stylists');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM stylists');
+      const matched = rows(r.rows).filter(filter);
+      for (const s of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE stylists SET ${fields} WHERE id=$1`, [s.id, ...Object.values(data)]);
+      }
+    },
   },
+
   services: {
-    insert: (data) => { const id = nextId('services'); const row = { id, is_active: 1, ...data }; db.get('services').push(row).write(); return row; },
-    find: (fn) => db.get('services').filter(fn).value(),
-    findOne: (fn) => db.get('services').find(fn).value(),
+    insert: async (data) => {
+      const { salon_id, stylist_id = null, name, name_ar = null, category = null, duration_minutes = 60, price, description = '', is_active = 1 } = data;
+      const r = await query(
+        `INSERT INTO services (salon_id,stylist_id,name,name_ar,category,duration_minutes,price,description,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [salon_id, stylist_id, name, name_ar, category, duration_minutes, price, description, is_active]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM services');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM services');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM services');
+      const matched = rows(r.rows).filter(filter);
+      for (const s of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE services SET ${fields} WHERE id=$1`, [s.id, ...Object.values(data)]);
+      }
+    },
   },
+
   bookings: {
-    insert: (data) => { const id = nextId('bookings'); const row = { id, created_at: now(), status: 'pending', payment_status: 'unpaid', ...data }; db.get('bookings').push(row).write(); return row; },
-    find: (fn) => db.get('bookings').filter(fn).value(),
-    findOne: (fn) => db.get('bookings').find(fn).value(),
-    update: (fn, data) => { db.get('bookings').filter(fn).each(b => Object.assign(b, data)).write(); },
+    insert: async (data) => {
+      const { client_id, stylist_id, service_id, salon_id, booking_date, booking_time, notes = null, total_price, status = 'pending', payment_status = 'unpaid' } = data;
+      const r = await query(
+        `INSERT INTO bookings (client_id,stylist_id,service_id,salon_id,booking_date,booking_time,notes,total_price,status,payment_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [client_id, stylist_id, service_id, salon_id, booking_date, booking_time, notes, total_price, status, payment_status]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM bookings');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM bookings');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM bookings');
+      const matched = rows(r.rows).filter(filter);
+      for (const b of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE bookings SET ${fields} WHERE id=$1`, [b.id, ...Object.values(data)]);
+      }
+    },
   },
+
   reviews: {
-    insert: (data) => { const id = nextId('reviews'); const row = { id, created_at: now(), ...data }; db.get('reviews').push(row).write(); return row; },
-    find: (fn) => db.get('reviews').filter(fn).value(),
+    insert: async (data) => {
+      const { booking_id = null, client_id, stylist_id, rating, comment = null } = data;
+      const r = await query(
+        `INSERT INTO reviews (booking_id,client_id,stylist_id,rating,comment) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [booking_id, client_id, stylist_id, rating, comment]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM reviews');
+      return rows(r.rows).filter(filter);
+    },
   },
+
   salon_ratings: {
-    insert: (data) => { const id = nextId('salon_ratings'); const row = { id, created_at: now(), ...data }; db.get('salon_ratings').push(row).write(); return row; },
-    find: (fn) => db.get('salon_ratings').filter(fn).value(),
-    findOne: (fn) => db.get('salon_ratings').find(fn).value(),
-    update: (fn, data) => { db.get('salon_ratings').filter(fn).each(r => Object.assign(r, data)).write(); },
+    insert: async (data) => {
+      const { salon_id, client_id, stars, comment = '' } = data;
+      const r = await query(
+        `INSERT INTO salon_ratings (salon_id,client_id,stars,comment) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (salon_id,client_id) DO UPDATE SET stars=$3, comment=$4, updated_at=NOW() RETURNING *`,
+        [salon_id, client_id, stars, comment]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM salon_ratings');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM salon_ratings');
+      return rows(r.rows).find(filter) || null;
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM salon_ratings');
+      const matched = rows(r.rows).filter(filter);
+      for (const sr of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE salon_ratings SET ${fields} WHERE id=$1`, [sr.id, ...Object.values(data)]);
+      }
+    },
   },
+
   messages: {
-    insert: (data) => { const id = nextId('messages'); const row = { id, created_at: now(), is_read: 0, ...data }; db.get('messages').push(row).write(); return row; },
-    find: (fn) => db.get('messages').filter(fn).value(),
-    update: (fn, data) => { db.get('messages').filter(fn).each(m => Object.assign(m, data)).write(); },
+    insert: async (data) => {
+      const { sender_id, receiver_id, booking_id = null, content, is_read = 0 } = data;
+      const r = await query(
+        `INSERT INTO messages (sender_id,receiver_id,booking_id,content,is_read) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [sender_id, receiver_id, booking_id, content, is_read]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM messages');
+      return rows(r.rows).filter(filter);
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM messages');
+      const matched = rows(r.rows).filter(filter);
+      for (const m of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE messages SET ${fields} WHERE id=$1`, [m.id, ...Object.values(data)]);
+      }
+    },
   },
+
   color_formulas: {
-    insert: (data) => { const id = nextId('color_formulas'); const row = { id, created_at: now(), ...data }; db.get('color_formulas').push(row).write(); return row; },
-    find: (fn) => db.get('color_formulas').filter(fn).value(),
+    insert: async (data) => {
+      const { client_id, stylist_id, formula, color_name, notes = null, visit_date } = data;
+      const r = await query(
+        `INSERT INTO color_formulas (client_id,stylist_id,formula,color_name,notes,visit_date) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [client_id, stylist_id, formula, color_name, notes, visit_date]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM color_formulas');
+      return rows(r.rows).filter(filter);
+    },
   },
+
   loyalty_transactions: {
-    insert: (data) => { const id = nextId('loyalty_transactions'); const row = { id, created_at: now(), ...data }; db.get('loyalty_transactions').push(row).write(); return row; },
-    find: (fn) => db.get('loyalty_transactions').filter(fn).value(),
+    insert: async (data) => {
+      const { user_id, points, type, description } = data;
+      const r = await query(
+        `INSERT INTO loyalty_transactions (user_id,points,type,description) VALUES ($1,$2,$3,$4) RETURNING *`,
+        [user_id, points, type, description]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM loyalty_transactions');
+      return rows(r.rows).filter(filter);
+    },
   },
+
   stylist_availability: {
-    insert: (data) => { const id = nextId('stylist_availability'); const row = { id, ...data }; db.get('stylist_availability').push(row).write(); return row; },
-    find: (fn) => db.get('stylist_availability').filter(fn).value(),
-    findOne: (fn) => db.get('stylist_availability').find(fn).value(),
+    insert: async (data) => {
+      const { stylist_id, day_of_week, is_off = 0, start_time = '09:00', end_time = '17:00', shift2_enabled = 0, shift2_start = null, shift2_end = null } = data;
+      const r = await query(
+        `INSERT INTO stylist_availability (stylist_id,day_of_week,is_off,start_time,end_time,shift2_enabled,shift2_start,shift2_end)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (stylist_id,day_of_week) DO UPDATE
+         SET is_off=$3,start_time=$4,end_time=$5,shift2_enabled=$6,shift2_start=$7,shift2_end=$8 RETURNING *`,
+        [stylist_id, day_of_week, is_off, start_time, end_time, shift2_enabled, shift2_start, shift2_end]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM stylist_availability');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM stylist_availability');
+      return rows(r.rows).find(filter) || null;
+    },
   },
+
   notifications: {
-    insert: (data) => { const id = nextId('notifications'); const row = { id, created_at: now(), is_read: 0, ...data }; db.get('notifications').push(row).write(); return row; },
-    find: (fn) => db.get('notifications').filter(fn).value(),
-    update: (fn, data) => { db.get('notifications').filter(fn).each(n => Object.assign(n, data)).write(); },
+    insert: async (data) => {
+      const { user_id, title, body, type, booking_id = null, is_read = 0 } = data;
+      const r = await query(
+        `INSERT INTO notifications (user_id,title,body,type,booking_id,is_read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [user_id, title, body, type, booking_id, is_read]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM notifications');
+      return rows(r.rows).filter(filter);
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM notifications');
+      const matched = rows(r.rows).filter(filter);
+      for (const n of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE notifications SET ${fields} WHERE id=$1`, [n.id, ...Object.values(data)]);
+      }
+    },
   },
+
   salon_media: {
-    insert: (data) => { const id = nextId('salon_media'); const row = { id, created_at: now(), is_cover: 0, ...data }; db.get('salon_media').push(row).write(); return row; },
-    find: (fn) => db.get('salon_media').filter(fn).value(),
-    findOne: (fn) => db.get('salon_media').find(fn).value(),
-    remove: (fn) => { db.get('salon_media').remove(fn).write(); },
-    update: (fn, data) => { db.get('salon_media').filter(fn).each(m => Object.assign(m, data)).write(); },
+    insert: async (data) => {
+      const { salon_id, filename, url, type = 'photo', is_cover = 0 } = data;
+      const r = await query(
+        `INSERT INTO salon_media (salon_id,filename,url,type,is_cover) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [salon_id, filename, url, type, is_cover]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM salon_media');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM salon_media');
+      return rows(r.rows).find(filter) || null;
+    },
+    remove: async (filter) => {
+      const r = await query('SELECT * FROM salon_media');
+      const matched = rows(r.rows).filter(filter);
+      for (const m of matched) {
+        await query('DELETE FROM salon_media WHERE id=$1', [m.id]);
+      }
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM salon_media');
+      const matched = rows(r.rows).filter(filter);
+      for (const m of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE salon_media SET ${fields} WHERE id=$1`, [m.id, ...Object.values(data)]);
+      }
+    },
   },
+
   stylist_blocked_slots: {
-    insert: (data) => { const id = nextId('stylist_blocked_slots'); const row = { id, created_at: now(), ...data }; db.get('stylist_blocked_slots').push(row).write(); return row; },
-    find: (fn) => db.get('stylist_blocked_slots').filter(fn).value(),
-    findOne: (fn) => db.get('stylist_blocked_slots').find(fn).value(),
-    remove: (fn) => { db.get('stylist_blocked_slots').remove(fn).write(); },
+    insert: async (data) => {
+      const { stylist_id, date, start_time, end_time, reason = '' } = data;
+      const r = await query(
+        `INSERT INTO stylist_blocked_slots (stylist_id,date,start_time,end_time,reason) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [stylist_id, date, start_time, end_time, reason]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM stylist_blocked_slots');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM stylist_blocked_slots');
+      return rows(r.rows).find(filter) || null;
+    },
+    remove: async (filter) => {
+      const r = await query('SELECT * FROM stylist_blocked_slots');
+      const matched = rows(r.rows).filter(filter);
+      for (const b of matched) {
+        await query('DELETE FROM stylist_blocked_slots WHERE id=$1', [b.id]);
+      }
+    },
   },
 };
 
-function initDatabase() {
-  // No seed data - starts empty
-}
-
-function seedData() {
-  const bcrypt = require('bcryptjs');
-  const hash = bcrypt.hashSync('123456', 10);
-
-  const u1 = DB.users.insert({ name: 'سارة أحمد', phone: '0591000001', email: 'sara@gmail.com', password_hash: hash, role: 'client', loyalty_points: 320 });
-  const u2 = DB.users.insert({ name: 'ليلى محمود', phone: '0591000002', email: 'layla@gmail.com', password_hash: hash, role: 'client', loyalty_points: 150 });
-  const u3 = DB.users.insert({ name: 'مريم الكوفيرة', phone: '0591000003', email: 'mariam@gmail.com', password_hash: hash, role: 'stylist', loyalty_points: 0 });
-  const u4 = DB.users.insert({ name: 'نور العمري', phone: '0591000004', email: 'nour@gmail.com', password_hash: hash, role: 'stylist', loyalty_points: 0 });
-  const u5 = DB.users.insert({ name: 'رنا السالم', phone: '0591000005', email: 'rana@gmail.com', password_hash: hash, role: 'stylist', loyalty_points: 0 });
-
-  const s1 = DB.salons.insert({ name: 'صالون غلامورا', description: 'صالون نسائي فاخر يقدم أحدث صيحات الموضة والعناية بالشعر', address: 'شارع الرشيد، المنطقة المركزية', city: 'رام الله', phone: '0592100001', rating: 4.9, reviews_count: 234 });
-  const s2 = DB.salons.insert({ name: 'لوكس بيوتي', description: 'متخصصون في صبغ الشعر والعناية المتكاملة', address: 'شارع النزهة', city: 'نابلس', phone: '0592100002', rating: 4.7, reviews_count: 187 });
-  const s3 = DB.salons.insert({ name: 'بيلا ستار', description: 'خبرة 15 سنة في التجميل والعناية بالبشرة', address: 'شارع القدس القديمة', city: 'القدس', phone: '0592100003', rating: 4.8, reviews_count: 312 });
-
-  for (let d = 0; d <= 6; d++) {
-    DB.salon_hours.insert({ salon_id: s1.id, day_of_week: d, open_time: '09:00', close_time: '20:00', is_closed: d === 0 ? 1 : 0 });
-    DB.salon_hours.insert({ salon_id: s2.id, day_of_week: d, open_time: '10:00', close_time: '19:00', is_closed: d === 6 ? 1 : 0 });
-    DB.salon_hours.insert({ salon_id: s3.id, day_of_week: d, open_time: '09:30', close_time: '21:00', is_closed: 0 });
-  }
-
-  const st1 = DB.stylists.insert({ user_id: u3.id, salon_id: s1.id, bio: 'متخصصة في صبغ البالياج والأومبري، أعمل في مجال التجميل منذ 8 سنوات', specialties: JSON.stringify(['بالياج','أومبري','قص متقدم','كيراتين']), experience_years: 8, rating: 4.9, reviews_count: 156 });
-  const st2 = DB.stylists.insert({ user_id: u4.id, salon_id: s1.id, bio: 'خبيرة في العناية بالشعر الكيرلي والعلاجات المتخصصة', specialties: JSON.stringify(['شعر كيرلي','علاج بالبروتين','صبغ طبيعي']), experience_years: 5, rating: 4.8, reviews_count: 98 });
-  const st3 = DB.stylists.insert({ user_id: u5.id, salon_id: s2.id, bio: 'متخصصة في المكياج السينمائي وتصفيف شعر الأفراح', specialties: JSON.stringify(['مكياج','تصفيف','باروكة','كيراتين']), experience_years: 10, rating: 4.9, reviews_count: 201 });
-
-  DB.services.insert({ salon_id: s1.id, stylist_id: st1.id, name: 'Balayage', name_ar: 'بالياج', category: 'صبغ الشعر', duration_minutes: 180, price: 250, description: 'تقنية البالياج الفرنسية للحصول على لون طبيعي متدرج' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st1.id, name: 'Ombre', name_ar: 'أومبري', category: 'صبغ الشعر', duration_minutes: 150, price: 200, description: 'تدرج لوني من الجذور للأطراف' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st1.id, name: 'Hair Color Full', name_ar: 'صبغ كامل', category: 'صبغ الشعر', duration_minutes: 120, price: 150, description: 'صبغ شامل لكامل الشعر' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st1.id, name: 'Keratin Treatment', name_ar: 'علاج كيراتين', category: 'علاجات', duration_minutes: 180, price: 300, description: 'علاج الكيراتين البرازيلي لتنعيم الشعر' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st2.id, name: 'Curly Hair Treatment', name_ar: 'علاج الشعر الكيرلي', category: 'علاجات', duration_minutes: 90, price: 120, description: 'علاج متخصص للشعر الكيرلي' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st2.id, name: 'Hair Cut', name_ar: 'قص شعر', category: 'قص', duration_minutes: 60, price: 80, description: 'قص وتشكيل الشعر' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st1.id, name: 'Blowout', name_ar: 'سشوار وتمليس', category: 'تصفيف', duration_minutes: 45, price: 60, description: 'سشوار احترافي مع تمليس' });
-  DB.services.insert({ salon_id: s1.id, stylist_id: st2.id, name: 'Hair Mask', name_ar: 'ماسك شعر', category: 'علاجات', duration_minutes: 60, price: 90, description: 'ماسك مغذي عميق للشعر التالف' });
-  DB.services.insert({ salon_id: s2.id, stylist_id: st3.id, name: 'Bridal Makeup', name_ar: 'مكياج عروس', category: 'مكياج', duration_minutes: 120, price: 350, description: 'مكياج عروس احترافي يدوم طوال اليوم' });
-  DB.services.insert({ salon_id: s2.id, stylist_id: st3.id, name: 'Party Makeup', name_ar: 'مكياج سهرة', category: 'مكياج', duration_minutes: 75, price: 150, description: 'مكياج سهرة وحفلات' });
-  DB.services.insert({ salon_id: s2.id, stylist_id: st3.id, name: 'Hair Styling Bridal', name_ar: 'تصفيف شعر عروس', category: 'تصفيف', duration_minutes: 90, price: 280, description: 'تصفيف شعر العروس مع التاج' });
-  DB.services.insert({ salon_id: s2.id, stylist_id: st3.id, name: 'Nail Art Full Set', name_ar: 'أظافر جيل كامل', category: 'أظافر', duration_minutes: 90, price: 120, description: 'جيل كامل مع رسم' });
-  DB.services.insert({ salon_id: s3.id, stylist_id: st1.id, name: 'Highlights', name_ar: 'هايلايت', category: 'صبغ الشعر', duration_minutes: 120, price: 180, description: 'هايلايت فاتح يعطي انطباع طبيعي' });
-
-  for (let d = 0; d <= 6; d++) {
-    if (d !== 0) { DB.stylist_availability.insert({ stylist_id: st1.id, day_of_week: d, start_time: '09:00', end_time: '18:00' }); DB.stylist_availability.insert({ stylist_id: st2.id, day_of_week: d, start_time: '10:00', end_time: '20:00' }); }
-    if (d !== 6) { DB.stylist_availability.insert({ stylist_id: st3.id, day_of_week: d, start_time: '10:00', end_time: '19:00' }); }
-  }
-
-  DB.bookings.insert({ client_id: u1.id, stylist_id: st1.id, service_id: 1, salon_id: s1.id, booking_date: '2026-06-20', booking_time: '10:00', status: 'confirmed', total_price: 250, payment_status: 'paid' });
-  DB.bookings.insert({ client_id: u1.id, stylist_id: st2.id, service_id: 6, salon_id: s1.id, booking_date: '2026-06-25', booking_time: '14:00', status: 'pending', total_price: 80, payment_status: 'unpaid' });
-  DB.bookings.insert({ client_id: u2.id, stylist_id: st3.id, service_id: 9, salon_id: s2.id, booking_date: '2026-06-18', booking_time: '11:00', status: 'confirmed', total_price: 350, payment_status: 'paid' });
-
-  DB.color_formulas.insert({ client_id: u1.id, stylist_id: st1.id, formula: 'Wella 7/0 + 9/16 - 30vol - 1:1.5', color_name: 'بالياج بلاتيني فاتح', notes: 'الشعر حساس، تركها 30 دقيقة بس', visit_date: '2026-05-10' });
-  DB.color_formulas.insert({ client_id: u1.id, stylist_id: st1.id, formula: 'Wella 8/0 + 9/16 - 20vol', color_name: 'بلوند دافئ', notes: 'ممتازة - استجابت كويس', visit_date: '2026-03-15' });
-
-  DB.messages.insert({ sender_id: u1.id, receiver_id: u3.id, booking_id: 1, content: 'مرحبا، أريد التأكد من موعدي' });
-  DB.messages.insert({ sender_id: u3.id, receiver_id: u1.id, booking_id: 1, content: 'أهلاً سارة! الموعد مؤكد الساعة 10 صباحاً 💕' });
-  DB.messages.insert({ sender_id: u1.id, receiver_id: u3.id, booking_id: 1, content: 'هل أحتاج أجي بشعر مغسول؟' });
-  DB.messages.insert({ sender_id: u3.id, receiver_id: u1.id, booking_id: 1, content: 'نعم من فضلك تيجي بشعر مغسول وجاف 🌸' });
-
-  DB.loyalty_transactions.insert({ user_id: u1.id, points: 50, type: 'earned', description: 'حجز بالياج' });
-  DB.loyalty_transactions.insert({ user_id: u1.id, points: 30, type: 'earned', description: 'كيراتين - صالون غلامورا' });
-  DB.loyalty_transactions.insert({ user_id: u1.id, points: -100, type: 'redeemed', description: 'خصم على الحجز القادم' });
-  DB.loyalty_transactions.insert({ user_id: u1.id, points: 340, type: 'earned', description: 'تسجيل + حجوزات متعددة' });
-
-  DB.notifications.insert({ user_id: u1.id, title: 'تأكيد الحجز ✅', body: 'تم تأكيد موعدك يوم الجمعة 20/6 الساعة 10:00 مع مريم 💅', type: 'booking' });
-  DB.notifications.insert({ user_id: u1.id, title: 'تذكير بالموعد ⏰', body: 'موعدك بكرة مع مريم الساعة 10 صباحاً - لا تنسي!', type: 'reminder' });
-  DB.notifications.insert({ user_id: u1.id, title: 'نقاط مكسوبة 🌟', body: 'كسبتِ 50 نقطة من حجزك الأخير', type: 'loyalty' });
-}
-
-module.exports = { DB, db, nextId, initDatabase };
+module.exports = { DB, query, pool, initDatabase };
