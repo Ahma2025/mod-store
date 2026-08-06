@@ -11,9 +11,13 @@ function showScreen(id) {
   const target = document.getElementById('screen-' + id);
   if (!target) return;
 
-  all.forEach(s => { s.classList.remove('active'); });
+  all.forEach(s => s.classList.remove('active'));
   target.style.display = 'block';
-  setTimeout(() => target.classList.add('active'), 10);
+
+  // rAF ensures display:block is painted before the class (and transition) fires
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => target.classList.add('active'));
+  });
 
   if (id !== 'splash' && id !== 'onboard' && id !== 'login' && id !== 'register') {
     const prev = screenStack[screenStack.length - 1];
@@ -29,14 +33,18 @@ function goBack() {
   const target = document.getElementById('screen-' + prev);
   if (!target) { showScreen('main'); return; }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  target.classList.add('active');
+  requestAnimationFrame(() => target.classList.add('active'));
 }
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name)?.classList.add('active');
-  btn?.classList.add('active');
+
+  // let the remove paint first, then add for a smooth cross-fade
+  requestAnimationFrame(() => {
+    document.getElementById('tab-' + name)?.classList.add('active');
+    btn?.classList.add('active');
+  });
 
   if (name === 'bookings') loadMyBookings();
   if (name === 'chat') {
