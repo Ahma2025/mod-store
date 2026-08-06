@@ -370,6 +370,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .stylist-card-full:active { transform: scale(0.98); }
 .stylist-card-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: white; flex-shrink: 0; overflow: hidden; }
 .stylist-card-info h4 { font-size: 16px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
+.stylist-bio { font-size: 13px; color: var(--gray); margin-bottom: 6px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .stylist-card-info .rating { font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
 .specialty-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 4px 10px; background: var(--cream2); border-radius: 99px; font-size: 11px; color: var(--rose-dark); font-weight: 600; }

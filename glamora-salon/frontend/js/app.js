@@ -715,7 +715,7 @@ function renderSalonStylists(stylists) {
       <div class="stylist-card-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
       <div class="stylist-card-info">
         <h4>${st.name}</h4>
-        <div class="rating">⭐ ${st.rating} · ${st.reviews_count} تقييم · ${st.experience_years} سنوات خبرة</div>
+        ${st.bio ? `<div class="stylist-bio">${st.bio}</div>` : ''}
         <div class="specialty-tags">${specs.slice(0,3).map(t => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
     </div>`;
