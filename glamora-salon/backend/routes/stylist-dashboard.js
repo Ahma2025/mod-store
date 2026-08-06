@@ -84,7 +84,7 @@ router.put('/salon/:id', authenticate, async (req, res) => {
 router.put('/salon/:id/categories', authenticate, async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);
-    const stylist = await DB.stylists.findOne(st => st.user_id === req.user.id && st.salon_id === salonId);
+    const stylist = await DB.stylists.findOne(st => st.user_id == req.user.id && st.salon_id == salonId);
     if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
     const { categories } = req.body;
     if (!Array.isArray(categories)) return res.status(400).json({ error: 'categories يجب أن تكون مصفوفة' });
