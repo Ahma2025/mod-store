@@ -498,6 +498,108 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .fcm-close { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
 .fcm-close:hover { color: #fff; }
 
+/* ===== MOTION & ANIMATIONS ===== */
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes floatDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fabBreath {
+  0%,100% { box-shadow: 0 4px 20px rgba(155,27,59,0.45); }
+  50%      { box-shadow: 0 4px 32px rgba(155,27,59,0.75), 0 0 0 10px rgba(155,27,59,0.08); }
+}
+@keyframes navPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+@keyframes heartbeat {
+  0%,100% { transform: scale(1); }
+  14%      { transform: scale(1.15); }
+  28%      { transform: scale(1); }
+  42%      { transform: scale(1.1); }
+  70%      { transform: scale(1); }
+}
+
+/* Home header entrance */
+.home-header { animation: floatDown 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+/* Home sections staggered entrance */
+.home-content .section { animation: slideUpFade 0.5s ease both; }
+.home-content .section:nth-child(1) { animation-delay: 0.08s; }
+.home-content .section:nth-child(2) { animation-delay: 0.16s; }
+.home-content .section:nth-child(3) { animation-delay: 0.24s; }
+.home-content .section:nth-child(4) { animation-delay: 0.32s; }
+.home-content .section:nth-child(5) { animation-delay: 0.40s; }
+
+/* Service category cards */
+.service-cat-card { animation: fadeInScale 0.4s ease both; }
+.services-grid .service-cat-card:nth-child(1) { animation-delay: 0.05s; }
+.services-grid .service-cat-card:nth-child(2) { animation-delay: 0.10s; }
+.services-grid .service-cat-card:nth-child(3) { animation-delay: 0.15s; }
+.services-grid .service-cat-card:nth-child(4) { animation-delay: 0.20s; }
+.services-grid .service-cat-card:nth-child(5) { animation-delay: 0.25s; }
+.services-grid .service-cat-card:nth-child(6) { animation-delay: 0.30s; }
+
+/* Salon cards (static list) */
+.salons-list .salon-card { animation: slideUpFade 0.38s ease both; }
+.salons-list .salon-card:nth-child(1)  { animation-delay: 0.04s; }
+.salons-list .salon-card:nth-child(2)  { animation-delay: 0.09s; }
+.salons-list .salon-card:nth-child(3)  { animation-delay: 0.14s; }
+.salons-list .salon-card:nth-child(4)  { animation-delay: 0.19s; }
+.salons-list .salon-card:nth-child(5)  { animation-delay: 0.24s; }
+.salons-list .salon-card:nth-child(n+6){ animation-delay: 0.28s; }
+
+/* Salon card hover lift */
+.salon-card:not(:active) { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+@media (hover: hover) {
+  .salon-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+}
+
+/* Home horizontal scroll cards */
+.home-salon-card { animation: slideUpFade 0.4s ease both; }
+
+/* FAB button breathing glow */
+.nav-plus {
+  animation: fabBreath 2.8s ease-in-out infinite;
+}
+
+/* Nav icon active pop */
+.nav-btn.active .nav-icon {
+  display: inline-block;
+  animation: navPop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* Notification badge heartbeat */
+#notif-badge:not(.hidden) {
+  animation: heartbeat 1.8s ease-in-out 0.5s infinite;
+}
+
+/* Search bar focus glow */
+.search-bar:focus-within {
+  box-shadow: 0 0 0 3px rgba(181,66,106,0.22);
+  transition: box-shadow 0.25s;
+}
+
+/* Screen slide-up improved spring */
+.screen.slide-up { transition: transform 0.42s cubic-bezier(0.32,0.72,0,1); }
+
+/* Greeting name fade in */
+#home-user-name { animation: slideUpFade 0.5s 0.15s ease both; }
+.greeting-small  { animation: slideUpFade 0.4s 0.08s ease both; }
+
+/* Section headers */
+.section-header { animation: slideUpFade 0.4s ease both; }
+
 /* ===== STYLIST DASHBOARD ===== */
 #screen-stylist { background: var(--cream); }
 #screen-stylist .tab { position: absolute; inset: 0; overflow-y: auto; display: none; padding-bottom: 90px; }
