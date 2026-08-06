@@ -334,6 +334,15 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .cover-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: all 0.25s; }
 .cover-dot.active { background: #fff; width: 16px; border-radius: 3px; }
 
+/* ── Video Section ─────────────────────────────────── */
+.salon-video-section { margin: 14px 16px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.12); position: relative; cursor: pointer; }
+.salon-video-section .svs-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #1a0a12; }
+.salon-video-section .svs-play { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%); gap: 10px; }
+.salon-video-section .svs-play-btn { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.35); transform: scale(1); transition: transform 0.2s; }
+.salon-video-section:active .svs-play-btn { transform: scale(0.92); }
+.salon-video-section .svs-play-btn svg { width: 28px; height: 28px; margin-right: -3px; }
+.salon-video-section .svs-label { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+/* ── Salon Tabs ─────────────────────────────────────── */
 .salon-tabs { display: flex; background: var(--white); border-bottom: 1px solid var(--gray-light); position: sticky; top: 0; z-index: 10; }
 .stab { flex: 1; padding: 14px 4px; border: none; background: none; font-family: 'El Messiri', sans-serif; font-size: 14px; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
 .stab.active { color: var(--rose); border-color: var(--rose); }

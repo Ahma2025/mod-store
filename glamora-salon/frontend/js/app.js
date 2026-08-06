@@ -822,15 +822,37 @@ let _coverSliderState = null;
 async function loadSalonGallery(salonId) {
   try {
     const media = await Api.salons.media(salonId);
+    const photos = media.filter(m => m.url && m.type !== 'video');
+    const video  = media.find(m => m.url && m.type === 'video');
 
-    // Build cover slider from ALL media (photos + videos)
-    const allMedia = media.filter(m => m.url);
-    buildCoverSlider(allMedia);
+    // Slider: photos only
+    buildCoverSlider(photos);
 
-    // Hide old gallery strip (no longer needed)
+    // Dedicated video section
+    buildVideoSection(video);
+
     const strip = document.getElementById('salon-gallery-strip');
     if (strip) strip.classList.add('hidden');
   } catch (e) {}
+}
+
+function buildVideoSection(videoItem) {
+  const sec = document.getElementById('salon-video-section');
+  if (!sec) return;
+  if (!videoItem) { sec.classList.add('hidden'); sec.innerHTML = ''; return; }
+
+  const url = mediaUrl(videoItem.url);
+  sec.classList.remove('hidden');
+  sec.innerHTML = `
+    <video class="svs-thumb" src="${url}" preload="metadata" muted playsinline></video>
+    <div class="svs-play" onclick="openMediaViewer('${url}','video')">
+      <div class="svs-play-btn">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="11,7 31,18 11,29" fill="#7B1D40"/>
+        </svg>
+      </div>
+      <span class="svs-label">فيديو الصالون</span>
+    </div>`;
 }
 
 function buildCoverSlider(items) {
@@ -951,13 +973,13 @@ function sliderGoTo(idx) {
 function openMediaViewer(url, type) {
   const overlay = document.createElement('div');
   overlay.className = 'media-viewer-overlay';
-  const closeBtn = `<div class="media-viewer-close" onclick="this.parentElement.remove()">✕</div>`;
+  const closeBtn = `<div class="media-viewer-close" onclick="this.closest('.media-viewer-overlay').remove()">✕</div>`;
   if (type === 'video') {
-    overlay.innerHTML = closeBtn + `<video src="${url}" controls autoplay playsinline style="max-width:100%;max-height:85vh;border-radius:10px;background:#000"></video>`;
+    overlay.innerHTML = closeBtn + `<video src="${url}" controls autoplay playsinline style="max-width:100%;max-height:85vh;border-radius:10px;background:#000;outline:none"></video>`;
   } else {
     overlay.innerHTML = closeBtn + `<img src="${url}" style="max-width:100%;max-height:85vh;border-radius:10px;object-fit:contain">`;
-    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   }
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
 
