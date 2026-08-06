@@ -132,7 +132,11 @@ function renderTeam() {
     return `
       <div class="team-card">
         <div class="team-card-top">
-          <div class="team-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
+          <div class="team-avatar-wrap" onclick="document.getElementById('team-avatar-input-${st.id}').click()" style="position:relative;cursor:pointer;flex-shrink:0">
+            <div class="team-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
+            <div style="position:absolute;bottom:-2px;left:-2px;background:var(--rose);color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2)">📷</div>
+            <input type="file" id="team-avatar-input-${st.id}" accept="image/*" style="display:none" onchange="uploadTeamAvatar(${st.id}, this)">
+          </div>
           <div class="team-info">
             <div class="team-name">${st.name || '-'}</div>
             <div class="team-phone">📞 ${st.phone || '-'} · ${st.experience_years} سنوات خبرة</div>
@@ -696,6 +700,26 @@ function formatDateAr(d) {
   try {
     return new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   } catch { return d; }
+}
+
+async function uploadTeamAvatar(stylistId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const res = await Api.stylistDash.uploadStylistAvatar(stylistId, file);
+    if (res.avatar) {
+      // update local data and re-render
+      const st = stStylistData.find(s => s.id === stylistId);
+      if (st) st.avatar = res.avatar;
+      renderTeam();
+      showToast('تم تحديث الصورة ✓');
+    } else {
+      showToast(res.error || 'فشل رفع الصورة');
+    }
+  } catch (e) {
+    showToast('فشل رفع الصورة');
+  }
+  input.value = '';
 }
 
 async function uploadStylistAvatar(input) {
