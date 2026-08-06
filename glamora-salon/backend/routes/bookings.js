@@ -148,6 +148,16 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
+    // #73 — notify the assigned stylist directly (if different from owner)
+    if (stylist?.user_id && stylistUser && stylist.user_id !== owner?.id) {
+      const clientName = user?.name || 'زبونة';
+      await DB.notifications.insert({ user_id: stylist.user_id, title: 'زبونة جديدة حجزت عندك 🎉', body: `${clientName} · ${serviceName} · ${booking_date} ${booking_time}`, type: 'booking', booking_id: booking.id });
+      io?.to(`user_${stylist.user_id}`).emit('new_notif', { type: 'booking', booking_id: booking.id });
+      if (stylistUser.fcm_token) {
+        fcm.notifyNewBookingToStylist(stylistUser.fcm_token, clientName, serviceName, booking_date, booking_time).catch(() => {});
+      }
+    }
+
     const salon = await DB.salons.findOne(s => s.id === booking.salon_id);
     res.status(201).json({ booking: { ...booking, service_name: service.name, name_ar: service.name_ar, stylist_name: stylistName, salon_name: salon?.name }, points_earned: 0 });
   } catch (e) {

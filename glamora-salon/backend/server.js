@@ -136,6 +136,76 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+// ===== SMART NOTIFICATION JOBS =====
+const sentNotifCache = new Set(); // dedup within same day
+
+async function runSmartNotifJobs() {
+  const today = new Date().toISOString().split('T')[0];
+  // Reset cache at midnight
+  const hour = new Date().getHours();
+  if (hour === 0) sentNotifCache.clear();
+
+  try {
+    const allUsers = await DB.users.find(u => u.role === 'client' && u.fcm_token);
+
+    for (const user of allUsers) {
+      // #75 — inactive user reminder (no booking in 30+ days)
+      const inactiveKey = `inactive_${today}_${user.id}`;
+      if (!sentNotifCache.has(inactiveKey)) {
+        const bookings = await DB.bookings.find(b => b.client_id === user.id && b.status === 'completed');
+        if (bookings.length > 0) {
+          const last = bookings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+          const daysSince = Math.floor((Date.now() - new Date(last.created_at)) / 86400000);
+          if (daysSince >= 30) {
+            await fcm.notifyInactiveUser(user.fcm_token, daysSince).catch(() => {});
+            await DB.notifications.insert({ user_id: user.id, title: 'اشتقنا إليكِ! 💆', body: `مضى ${daysSince} يوماً على آخر زيارة — احجزي موعدك الآن`, type: 'reminder' });
+            sentNotifCache.add(inactiveKey);
+          }
+        }
+      }
+
+      // #71 — favorite salon has availability today (most visited salon)
+      const favKey = `fav_avail_${today}_${user.id}`;
+      if (!sentNotifCache.has(favKey)) {
+        const userBookings = await DB.bookings.find(b => b.client_id === user.id);
+        if (userBookings.length > 0) {
+          const salonCount = {};
+          userBookings.forEach(b => { salonCount[b.salon_id] = (salonCount[b.salon_id] || 0) + 1; });
+          const favSalonId = parseInt(Object.entries(salonCount).sort((a, b) => b[1] - a[1])[0]?.[0]);
+          if (favSalonId) {
+            // Check if salon has any stylists with availability today
+            const todayDay = new Date().getDay();
+            const stylists = await DB.stylists.find(s => s.salon_id === favSalonId && s.is_active !== 0);
+            const hasAvail = await Promise.any(
+              stylists.map(async st => {
+                const avail = await DB.stylist_availability.findOne(a => a.stylist_id === st.id && a.day_of_week === todayDay);
+                if (avail && !avail.is_closed) return true;
+                throw new Error('no');
+              })
+            ).catch(() => false);
+            if (hasAvail) {
+              const salon = await DB.salons.findOne(s => s.id === favSalonId);
+              if (salon) {
+                await fcm.notifyFavoriteSalonAvailability(user.fcm_token, salon.name).catch(() => {});
+                await DB.notifications.insert({ user_id: user.id, title: `${salon.name} متاح اليوم 💅`, body: `صالونك المفضل عنده أوقات فاضية — احجزي الآن!`, type: 'availability' });
+                sentNotifCache.add(favKey);
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[SmartNotifs] error:', e.message);
+  }
+}
+
+// Run smart jobs every 24 hours, first run after 10 seconds (server warm-up)
+setTimeout(() => {
+  runSmartNotifJobs();
+  setInterval(runSmartNotifJobs, 24 * 60 * 60 * 1000);
+}, 10000);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n🌸 Glamora running at http://localhost:${PORT}\n`);

@@ -328,4 +328,56 @@ router.get('/bookings', authenticate, async (req, res) => {
   }
 });
 
+// ===== SALON OFFERS (feature #72) =====
+router.get('/salon/:id/offers', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const { query } = require('../database');
+    const offers = await query(`SELECT * FROM salon_offers WHERE salon_id=$1 AND is_active=1 ORDER BY created_at DESC`, [salonId]);
+    res.json(offers.rows);
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
+router.post('/salon/:id/offers', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const stylist = await DB.stylists.findOne(s => s.user_id == req.user.id && s.salon_id === salonId);
+    if (!stylist) return res.status(403).json({ error: 'غير مصرح' });
+    const { title, description = '', discount_percent = 0, valid_until = null } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: 'عنوان العرض مطلوب' });
+
+    const { query } = require('../database');
+    const offer = await query(
+      `INSERT INTO salon_offers (salon_id, title, description, discount_percent, valid_until) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [salonId, title.trim(), description.trim(), discount_percent, valid_until]
+    ).then(r => r.rows[0]);
+
+    const salon = await DB.salons.findOne(s => s.id === salonId);
+    // Notify all users in same city
+    const fcm = require('../fcm');
+    const cityUsers = await DB.users.find(u => u.role === 'client' && u.fcm_token);
+    // Filter by city roughly: just send to clients who booked in this salon before
+    const salonBookings = await DB.bookings.find(b => b.salon_id === salonId);
+    const clientIds = [...new Set(salonBookings.map(b => b.client_id))];
+    for (const cid of clientIds) {
+      const client = await DB.users.findOne(u => u.id === cid);
+      if (client?.fcm_token) {
+        fcm.notifySpecialOffer(client.fcm_token, salon?.name || 'صالون', title.trim()).catch(() => {});
+      }
+      await DB.notifications.insert({ user_id: cid, title: `عرض خاص من ${salon?.name || 'الصالون'} 🎁`, body: title.trim(), type: 'offer' });
+      req.io?.to(`user_${cid}`).emit('new_notif', { type: 'offer' });
+    }
+
+    res.status(201).json({ offer, notified: clientIds.length });
+  } catch (e) { console.error('POST offers error:', e); res.status(500).json({ error: 'خطأ' }); }
+});
+
+router.delete('/offers/:id', authenticate, async (req, res) => {
+  try {
+    const { query } = require('../database');
+    await query(`UPDATE salon_offers SET is_active=0 WHERE id=$1`, [parseInt(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
 module.exports = router;

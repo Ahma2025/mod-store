@@ -135,6 +135,21 @@ router.post('/:id/rate', authenticate, async (req, res) => {
       after_photo: after_photo || null,
     });
     const { rating, reviews_count } = await computeSalonRating(salonId);
+
+    // #74 — notify salon stylists about new review
+    try {
+      const stylists = await DB.stylists.find(s => s.salon_id === salonId && s.user_id != null);
+      const rater = await DB.users.findOne(u => u.id === clientId);
+      for (const st of stylists) {
+        const stUser = await DB.users.findOne(u => u.id === st.user_id);
+        if (stUser?.fcm_token) {
+          fcm.notifyNewReview(stUser.fcm_token, rater?.name || 'زبونة', stars, salon.name).catch(() => {});
+        }
+        await DB.notifications.insert({ user_id: st.user_id, title: `تقييم جديد ${'⭐'.repeat(stars)}`, body: `${rater?.name || 'زبونة'} قيّمت ${salon.name}`, type: 'review' });
+        req.io?.to(`user_${st.user_id}`).emit('new_notif', { type: 'review' });
+      }
+    } catch (_) {}
+
     res.json({ success: true, rating, reviews_count, user_stars: stars });
   } catch (e) {
     console.error('POST /salons/:id/rate error:', e);

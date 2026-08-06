@@ -180,11 +180,62 @@ async function notifyBookingReminder(userFcmToken, serviceName, time) {
   );
 }
 
+async function notifyNewBookingToStylist(fcmToken, clientName, serviceName, date, time) {
+  return sendPushNotification(
+    fcmToken,
+    `زبونة جديدة حجزت عندك 🎉`,
+    `${clientName} · ${serviceName} · ${date} ${time}`,
+    { type: 'booking', action: 'open_bookings' }
+  );
+}
+
+async function notifyNewReview(fcmToken, clientName, stars, salonName) {
+  const starsStr = '⭐'.repeat(Math.min(5, stars || 1));
+  return sendPushNotification(
+    fcmToken,
+    `تقييم جديد ${starsStr}`,
+    `${clientName} قيّمت ${salonName}`,
+    { type: 'review', action: 'open_reviews' }
+  );
+}
+
+async function notifyFavoriteSalonAvailability(fcmToken, salonName) {
+  return sendPushNotification(
+    fcmToken,
+    `صالونك المفضل متاح اليوم 💅`,
+    `${salonName} عنده أوقات فاضية — احجزي الآن!`,
+    { type: 'availability', action: 'open_home' }
+  );
+}
+
+async function notifySpecialOffer(fcmToken, salonName, offerTitle) {
+  return sendPushNotification(
+    fcmToken,
+    `عرض خاص من ${salonName} 🎁`,
+    offerTitle,
+    { type: 'offer', action: 'open_home' }
+  );
+}
+
+async function notifyInactiveUser(fcmToken, daysSince) {
+  return sendPushNotification(
+    fcmToken,
+    `اشتقنا إليكِ! 💆`,
+    `مضى ${daysSince} يوماً على آخر زيارة — احجزي موعدك الآن`,
+    { type: 'reminder', action: 'open_home' }
+  );
+}
+
 module.exports = {
   sendPushNotification,
   notifyBookingConfirmed,
   notifyBookingCancelled,
   notifyNewMessage,
   notifyLoyaltyPoints,
-  notifyBookingReminder
+  notifyBookingReminder,
+  notifyNewBookingToStylist,
+  notifyNewReview,
+  notifyFavoriteSalonAvailability,
+  notifySpecialOffer,
+  notifyInactiveUser,
 };

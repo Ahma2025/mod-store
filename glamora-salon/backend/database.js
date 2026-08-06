@@ -222,6 +222,16 @@ async function initDatabase() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences_json TEXT DEFAULT '{}'`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_color_date TEXT`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS next_reminder_date TEXT`,
+    `CREATE TABLE IF NOT EXISTS salon_offers (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      discount_percent INTEGER DEFAULT 0,
+      valid_until TEXT,
+      is_active INTEGER DEFAULT 1
+    )`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }

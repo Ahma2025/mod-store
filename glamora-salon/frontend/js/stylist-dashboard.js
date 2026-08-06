@@ -41,6 +41,7 @@ async function loadStylistDashboard() {
       loadSalonMedia();
       loadBlockedSlots();
       loadStReviews();
+      loadOffers(stSalonData.id);
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -626,6 +627,68 @@ async function deleteMedia(mediaId) {
     showToast('تم الحذف');
     loadSalonMedia();
   } catch (e) { showToast(e.message); }
+}
+
+// ===== OFFERS =====
+let currentSalonIdForOffers = null;
+
+function showAddOfferForm() {
+  document.getElementById('offer-title').value = '';
+  document.getElementById('offer-desc').value = '';
+  document.getElementById('offer-discount').value = '';
+  document.getElementById('offer-valid-until').value = '';
+  document.getElementById('modal-add-offer').classList.remove('hidden');
+}
+
+async function saveOffer() {
+  const title = document.getElementById('offer-title').value.trim();
+  if (!title) { showToast('أدخلي عنوان العرض'); return; }
+  const btn = document.querySelector('#modal-add-offer .btn-primary');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  try {
+    const salonId = currentSalonIdForOffers;
+    await Api.stylistDash.addOffer(salonId, {
+      title,
+      description: document.getElementById('offer-desc').value.trim(),
+      discount_percent: parseInt(document.getElementById('offer-discount').value) || 0,
+      valid_until: document.getElementById('offer-valid-until').value || null,
+    });
+    closeModalById('modal-add-offer');
+    showToast('✅ تم إرسال العرض وإشعار الزبونات!');
+    loadOffers(salonId);
+  } catch (e) { showToast('⚠️ ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'إرسال العرض 🎁'; }
+}
+
+async function loadOffers(salonId) {
+  currentSalonIdForOffers = salonId;
+  const list = document.getElementById('st-offers-list');
+  if (!list) return;
+  try {
+    const offers = await Api.stylistDash.getOffers(salonId);
+    if (!offers.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--gray);padding:8px 0">لا توجد عروض نشطة</div>';
+      return;
+    }
+    list.innerHTML = offers.map(o => `
+      <div style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:8px;border-right:4px solid var(--rose);display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-weight:800;font-size:14px">🎁 ${o.title}</div>
+          ${o.discount_percent ? `<div style="font-size:12px;color:var(--rose-dark);margin-top:2px">خصم ${o.discount_percent}%</div>` : ''}
+          ${o.valid_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">صالح حتى ${o.valid_until}</div>` : ''}
+        </div>
+        <button onclick="deleteOffer(${o.id})" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;flex-shrink:0">🗑</button>
+      </div>
+    `).join('');
+  } catch (e) { list.innerHTML = ''; }
+}
+
+async function deleteOffer(id) {
+  try {
+    await Api.stylistDash.deleteOffer(id);
+    showToast('تم حذف العرض');
+    loadOffers(currentSalonIdForOffers);
+  } catch (e) { showToast('⚠️ ' + e.message); }
 }
 
 // ===== BLOCKED SLOTS =====
