@@ -656,10 +656,12 @@
     <!-- ---- PROFILE TAB ---- -->
     <div id="stab-profile" class="tab">
       <div class="profile-header-bg">
-        <div class="profile-avatar-wrap">
+        <div class="profile-avatar-wrap" style="cursor:pointer" onclick="document.getElementById('stylist-avatar-input').click()">
           <div class="profile-avatar" id="st-profile-avatar">م</div>
+          <div class="avatar-camera-btn">📷</div>
           <div class="profile-tier-badge" id="st-profile-role-badge">كوفيرة</div>
         </div>
+        <input type="file" id="stylist-avatar-input" accept="image/*" style="display:none" onchange="uploadStylistAvatar(this)">
         <h2 id="st-profile-name">-</h2>
         <p id="st-profile-phone">-</p>
       </div>

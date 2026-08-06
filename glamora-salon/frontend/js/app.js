@@ -712,7 +712,7 @@ function renderSalonStylists(stylists) {
     try { specs = JSON.parse(st.specialties || '[]'); } catch {}
     return `
     <div class="stylist-card-full" onclick="openStylistBooking(${st.id})">
-      <div class="stylist-card-avatar">${(st.name || '؟')[0]}</div>
+      <div class="stylist-card-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
       <div class="stylist-card-info">
         <h4>${st.name}</h4>
         <div class="rating">⭐ ${st.rating} · ${st.reviews_count} تقييم · ${st.experience_years} سنوات خبرة</div>
@@ -1084,7 +1084,7 @@ async function loadWizardStep2() {
       try { specs = JSON.parse(st.specialties || '[]'); } catch {}
       return `
         <div class="wizard-stylist-item ${wizardState.stylist?.id === st.id ? 'selected' : ''}" onclick="selectWizardStylist(${st.id}, '${st.name}', '${st.rating}', ${st.salon_id || currentSalonData?.id || 1})">
-          <div class="wst-avatar">${(st.name || '؟')[0]}</div>
+          <div class="wst-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
           <div class="service-info">
             <h4>${st.name}</h4>
             <div class="duration">⭐ ${st.rating} · ${specs.slice(0,2).join(' · ')}</div>

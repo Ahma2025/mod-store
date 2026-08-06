@@ -103,6 +103,10 @@ const Api = {
       const fd = new FormData(); fd.append('file', file);
       return fetch(`${API}/media/salon/${salonId}/media`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
     },
+    uploadAvatar: (file) => {
+      const fd = new FormData(); fd.append('file', file);
+      return fetch(`${API}/media/stylist/avatar`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
+    },
     setCover: (mediaId) => apiCall('PUT', `/media/media/${mediaId}/cover`),
     deleteMedia: (mediaId) => apiCall('DELETE', `/media/media/${mediaId}`),
     getSalonMedia: (salonId) => apiCall('GET', `/media/salon/${salonId}/media`),

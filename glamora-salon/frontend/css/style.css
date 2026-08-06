@@ -281,7 +281,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 /* ===== PROFILE ===== */
 .profile-header-bg { background: linear-gradient(160deg, var(--dark2), #4A1A2F); padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 30px; text-align: center; }
 .profile-avatar-wrap { position: relative; display: inline-block; margin-bottom: 12px; }
-.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--rose), var(--rose-dark)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.3); margin: 0 auto; }
+.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--rose), var(--rose-dark)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.3); margin: 0 auto; overflow: hidden; position: relative; }
+.avatar-camera-btn { position: absolute; bottom: -2px; left: -2px; background: var(--rose); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 2; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .profile-tier-badge { position: absolute; bottom: -4px; right: -4px; background: var(--gold); color: var(--dark); font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 99px; }
 .profile-header-bg h2 { color: white; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .profile-header-bg p { color: rgba(255,255,255,0.6); font-size: 14px; }
@@ -357,7 +359,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .salon-stylists { display: flex; flex-direction: column; gap: 14px; }
 .stylist-card-full { background: var(--white); border-radius: var(--radius); padding: 16px; display: flex; gap: 14px; align-items: flex-start; box-shadow: var(--shadow); cursor: pointer; }
 .stylist-card-full:active { transform: scale(0.98); }
-.stylist-card-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: white; flex-shrink: 0; }
+.stylist-card-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: white; flex-shrink: 0; overflow: hidden; }
 .stylist-card-info h4 { font-size: 16px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
 .stylist-card-info .rating { font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
 .specialty-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -410,7 +412,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .wizard-stylists { display: flex; flex-direction: column; gap: 12px; }
 .wizard-stylist-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--white); border-radius: var(--radius-sm); border: 2px solid var(--gray-light); cursor: pointer; transition: all 0.2s; }
 .wizard-stylist-item.selected { border-color: var(--rose); background: rgba(201,114,138,0.06); }
-.wst-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: white; flex-shrink: 0; }
+.wst-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: white; flex-shrink: 0; overflow: hidden; }
 
 .calendar-wrap { margin-bottom: 20px; }
 .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -679,7 +681,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .team-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .team-card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
 .team-card-top { display: flex; align-items: center; gap: 12px; }
-.team-avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--rose-light); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: var(--rose-dark); flex-shrink: 0; }
+.team-avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--rose-light); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: var(--rose-dark); flex-shrink: 0; overflow: hidden; }
 .team-info { flex: 1; }
 .team-name { font-size: 15px; font-weight: 700; color: var(--dark); }
 .team-phone { font-size: 12px; color: var(--gray); margin-top: 2px; }

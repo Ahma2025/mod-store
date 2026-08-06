@@ -132,7 +132,7 @@ function renderTeam() {
     return `
       <div class="team-card">
         <div class="team-card-top">
-          <div class="team-avatar">${(st.name || '؟')[0]}</div>
+          <div class="team-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
           <div class="team-info">
             <div class="team-name">${st.name || '-'}</div>
             <div class="team-phone">📞 ${st.phone || '-'} · ${st.experience_years} سنوات خبرة</div>
@@ -698,13 +698,37 @@ function formatDateAr(d) {
   } catch { return d; }
 }
 
+async function uploadStylistAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const res = await Api.stylistDash.uploadAvatar(file);
+    if (res.avatar) {
+      currentUser.avatar = res.avatar;
+      const avatarEl = document.getElementById('st-profile-avatar');
+      avatarEl.innerHTML = `<img class="avatar-img" src="${res.avatar}" alt="صورتي">`;
+      showToast('تم تحديث صورتك ✓');
+    } else {
+      showToast(res.error || 'فشل رفع الصورة');
+    }
+  } catch (e) {
+    showToast('فشل رفع الصورة');
+  }
+  input.value = '';
+}
+
 // ===== PROFILE TAB =====
 function loadStProfile() {
   const user = currentUser;
   if (!user) return;
 
   const initial = (user.name || 'م')[0].toUpperCase();
-  document.getElementById('st-profile-avatar').textContent = initial;
+  const avatarEl = document.getElementById('st-profile-avatar');
+  if (user.avatar) {
+    avatarEl.innerHTML = `<img class="avatar-img" src="${user.avatar}" alt="صورتي">`;
+  } else {
+    avatarEl.textContent = initial;
+  }
   document.getElementById('st-profile-name').textContent = user.name || '-';
   document.getElementById('st-profile-phone').textContent = user.phone || '';
   document.getElementById('st-profile-role-badge').textContent =
