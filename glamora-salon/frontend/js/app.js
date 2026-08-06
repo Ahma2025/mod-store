@@ -2123,31 +2123,22 @@ async function loadRecommendations() {
   try {
     const [recoRes, likeRes] = await Promise.all([Api.beauty.recommendations(), Api.beauty.youMightLike()]);
 
-    // "قد يعجبك" section
-    if (likeRes?.length) {
-      const homeContent = document.getElementById('tab-home');
-      if (homeContent) {
-        let likeSection = document.getElementById('you-might-section');
-        if (!likeSection) {
-          likeSection = document.createElement('div');
-          likeSection.id = 'you-might-section';
-          likeSection.className = 'you-might-section';
-          const salonsSection = homeContent.querySelector('.salons-section') || homeContent.lastElementChild;
-          homeContent.insertBefore(likeSection, salonsSection);
-        }
-        likeSection.innerHTML = `
-          <h3>💡 قد يعجبك</h3>
-          <div class="you-might-scroll">
-            ${likeRes.map(s => `
-              <div class="you-might-card" onclick="openSalon(${s.salon_id})">
-                <div class="you-might-name">${s.name}</div>
-                <div class="you-might-price">₪${s.price}</div>
-                <div class="you-might-salon">${s.category || ''}</div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
+    // "قد يعجبك" section — uses static placeholder in HTML
+    const likeSection = document.getElementById('you-might-section');
+    if (likeSection && likeRes?.length) {
+      likeSection.innerHTML = `
+        <h3>💡 قد يعجبك</h3>
+        <div class="you-might-scroll">
+          ${likeRes.map(s => `
+            <div class="you-might-card" onclick="openSalon(${s.salon_id})">
+              <div class="you-might-name">${s.name}</div>
+              <div class="you-might-price">₪${s.price}</div>
+              <div class="you-might-salon">${s.category || ''}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      likeSection.classList.remove('hidden');
     }
   } catch (e) {}
 }
