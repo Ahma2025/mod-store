@@ -835,7 +835,6 @@ function closeModalById(id) {
 }
 
 function stLogout() {
-  if (!confirm('تريدين تسجيل الخروج؟')) return;
   clearAuth();
   location.reload();
 }
