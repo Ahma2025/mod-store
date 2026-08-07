@@ -206,6 +206,26 @@ setTimeout(() => {
   setInterval(runSmartNotifJobs, 24 * 60 * 60 * 1000);
 }, 10000);
 
+// ===== #63: BOOKING REMINDER (runs every hour) =====
+async function runBookingReminders() {
+  try {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const bookings = await DB.bookings.find(b => b.booking_date === tomorrow && (b.status === 'confirmed' || b.status === 'pending'));
+    for (const b of bookings) {
+      const client = await DB.users.findOne(u => u.id === b.client_id);
+      if (!client?.fcm_token) continue;
+      const alreadySent = await DB.notifications.find(n => n.user_id === b.client_id && n.type === 'reminder' && n.body?.includes(b.booking_time) && n.created_at > new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString());
+      if (alreadySent.length > 0) continue;
+      await fcm.sendPushNotification(client.fcm_token, 'تذكير بموعدك غداً 💅', `موعدك الساعة ${b.booking_time} غداً ${tomorrow}`, { type: 'reminder', booking_id: String(b.id) }).catch(() => {});
+      await DB.notifications.insert({ user_id: b.client_id, title: 'تذكير بموعدك غداً 💅', body: `موعدك الساعة ${b.booking_time} غداً ${tomorrow}`, type: 'reminder', booking_id: b.id });
+    }
+  } catch (e) { console.error('[Reminders] error:', e.message); }
+}
+setTimeout(() => {
+  runBookingReminders();
+  setInterval(runBookingReminders, 60 * 60 * 1000);
+}, 15000);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n🌸 Glamora running at http://localhost:${PORT}\n`);

@@ -235,6 +235,15 @@ async function initDatabase() {
     `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_ids TEXT`,
     `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_duration INTEGER`,
     `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_price NUMERIC(10,2)`,
+    `CREATE TABLE IF NOT EXISTS salon_inventory (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      quantity NUMERIC(10,2) DEFAULT 0,
+      unit TEXT DEFAULT 'قطعة',
+      low_threshold INTEGER DEFAULT 2
+    )`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }

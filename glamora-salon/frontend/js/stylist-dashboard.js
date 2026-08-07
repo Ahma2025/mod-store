@@ -42,6 +42,7 @@ async function loadStylistDashboard() {
       loadBlockedSlots();
       loadStReviews();
       loadOffers(stSalonData.id);
+      loadInventory();
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -973,4 +974,131 @@ async function sendReviewReply(reviewId) {
     showToast('تم إرسال الرد ✓');
     loadStReviews();
   } catch (e) { showToast('فشل إرسال الرد'); }
+}
+
+// ===== 59-61: ANALYTICS =====
+let analyticsData = null;
+async function showAnalytics() {
+  showScreen('screen-analytics');
+  if (!stSalonData?.id) return;
+  try {
+    analyticsData = await Api.stylistDash.analytics(stSalonData.id);
+    renderAnalytics('today');
+    document.getElementById('analytics-top-service').textContent =
+      analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} مرة)` : 'لا توجد بيانات بعد';
+    document.getElementById('analytics-top-hour').textContent =
+      analyticsData.busiest_hour ? `الساعة ${analyticsData.busiest_hour}` : 'لا توجد بيانات بعد';
+    document.getElementById('analytics-pending').textContent = analyticsData.bookings.pending;
+    document.getElementById('analytics-confirmed').textContent = analyticsData.bookings.confirmed;
+    document.getElementById('analytics-completed').textContent = analyticsData.bookings.completed;
+  } catch (e) { showToast('فشل تحميل التحليلات'); }
+}
+
+function renderAnalytics(period) {
+  if (!analyticsData) return;
+  const map = { today: analyticsData.revenue.today, week: analyticsData.revenue.week, month: analyticsData.revenue.month, total: analyticsData.revenue.total };
+  document.getElementById('analytics-revenue').textContent = `₪${(map[period] || 0).toFixed(2)}`;
+}
+
+function switchAnalyticsPeriod(period, el) {
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderAnalytics(period);
+}
+
+// ===== 64: CLIENTS =====
+async function showClients() {
+  showScreen('screen-clients');
+  if (!stSalonData?.id) return;
+  const el = document.getElementById('clients-list');
+  el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  try {
+    const { clients } = await Api.stylistDash.clients(stSalonData.id);
+    if (!clients.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>لا توجد زبونات بعد</p></div>'; return; }
+    el.innerHTML = clients.map(c => {
+      const lastB = c.bookings.sort((a, b) => b.date?.localeCompare(a.date))[0];
+      const total = c.bookings.filter(b => b.status === 'completed').reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+      return `<div class="client-card">
+        <div class="client-card-header">
+          <span class="client-name">${c.name}</span>
+          <span class="client-badge">${c.bookings.length} حجز</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="client-last-visit">آخر زيارة: ${lastB?.date || '-'}</span>
+          <span class="client-total">₪${total.toFixed(0)} إجمالي</span>
+        </div>
+        ${c.phone ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">📞 ${c.phone}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) { el.innerHTML = '<div style="color:red;padding:20px">فشل التحميل</div>'; }
+}
+
+// ===== 62: INVENTORY =====
+async function loadInventory() {
+  if (!stSalonData?.id) return;
+  const el = document.getElementById('st-inventory-list');
+  try {
+    const { items } = await Api.stylistDash.getInventory(stSalonData.id);
+    if (!items.length) { el.innerHTML = '<div class="media-hint">لا يوجد منتجات مضافة بعد</div>'; return; }
+    el.innerHTML = items.map(item => {
+      const isLow = parseFloat(item.quantity) <= parseInt(item.low_threshold);
+      return `<div class="inventory-item ${isLow ? 'low-stock' : ''}">
+        <div style="flex:1">
+          <div class="inv-name">${item.name}</div>
+          <div class="inv-qty">${item.quantity} ${item.unit}</div>
+        </div>
+        ${isLow ? `<span class="inv-low-badge">مخزون منخفض ⚠️</span>` : ''}
+        <div class="inv-actions">
+          <button class="inv-action-btn" onclick="editInventoryItem(${JSON.stringify(item).replace(/"/g,"'")})">✏️</button>
+          <button class="inv-action-btn" onclick="deleteInventoryItem(${item.id})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {}
+}
+
+function showAddInventory() {
+  document.getElementById('inv-edit-id').value = '';
+  document.getElementById('inv-name').value = '';
+  document.getElementById('inv-qty').value = '';
+  document.getElementById('inv-unit').value = 'قطعة';
+  document.getElementById('inv-threshold').value = '2';
+  document.getElementById('modal-inventory').classList.remove('hidden');
+}
+
+function editInventoryItem(item) {
+  if (typeof item === 'string') { try { item = JSON.parse(item.replace(/'/g, '"')); } catch {} }
+  document.getElementById('inv-edit-id').value = item.id;
+  document.getElementById('inv-name').value = item.name;
+  document.getElementById('inv-qty').value = item.quantity;
+  document.getElementById('inv-unit').value = item.unit;
+  document.getElementById('inv-threshold').value = item.low_threshold;
+  document.getElementById('modal-inventory').classList.remove('hidden');
+}
+
+async function saveInventoryItem() {
+  const id = document.getElementById('inv-edit-id').value;
+  const data = {
+    name: document.getElementById('inv-name').value.trim(),
+    quantity: document.getElementById('inv-qty').value,
+    unit: document.getElementById('inv-unit').value.trim() || 'قطعة',
+    low_threshold: document.getElementById('inv-threshold').value
+  };
+  if (!data.name) { showToast('اسم المنتج مطلوب'); return; }
+  try {
+    if (id) { await Api.stylistDash.updateInventory(id, data); }
+    else { await Api.stylistDash.addInventory(stSalonData.id, data); }
+    document.getElementById('modal-inventory').classList.add('hidden');
+    showToast('تم الحفظ ✓');
+    loadInventory();
+  } catch (e) { showToast('فشل الحفظ'); }
+}
+
+async function deleteInventoryItem(id) {
+  if (!confirm('حذف المنتج؟')) return;
+  try {
+    await Api.stylistDash.deleteInventory(id);
+    showToast('تم الحذف ✓');
+    loadInventory();
+  } catch (e) { showToast('فشل الحذف'); }
 }

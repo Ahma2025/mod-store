@@ -143,6 +143,12 @@ const Api = {
     addBlockedSlot: (data) => apiCall('POST', '/blocked-slots', data),
     deleteBlockedSlot: (id) => apiCall('DELETE', `/blocked-slots/${id}`),
     updateBooking: (id, status) => apiCall('PUT', `/bookings/${id}/status`, { status }),
+    analytics: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/analytics`),
+    clients: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/clients`),
+    getInventory: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/inventory`),
+    addInventory: (salonId, data) => apiCall('POST', `/stylist/salon/${salonId}/inventory`, data),
+    updateInventory: (id, data) => apiCall('PUT', `/stylist/inventory/${id}`, data),
+    deleteInventory: (id) => apiCall('DELETE', `/stylist/inventory/${id}`),
   },
 };
 

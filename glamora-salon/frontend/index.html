@@ -944,6 +944,26 @@
             <div class="media-hint">أغلقي وقتاً محدداً ليتوقف الحجز فيه</div>
             <div id="st-blocked-list"></div>
           </div>
+
+          <!-- Inventory -->
+          <div class="mgmt-section">
+            <div class="mgmt-section-header">
+              <h4>📦 المخزون</h4>
+              <button class="btn-sm btn-sm-primary" onclick="showAddInventory()">+ إضافة</button>
+            </div>
+            <div id="st-inventory-list"><div class="media-hint">لا يوجد منتجات مضافة بعد</div></div>
+          </div>
+
+          <!-- Quick Links -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+            <button class="analytics-quick-btn" onclick="showAnalytics()">
+              <span>📊</span><span>التحليلات</span>
+            </button>
+            <button class="analytics-quick-btn" onclick="showClients()">
+              <span>👥</span><span>الزبونات</span>
+            </button>
+          </div>
+
         </div>
         <div style="height:90px"></div>
       </div>
@@ -1063,6 +1083,99 @@
         <span class="nav-icon">👤</span><span class="nav-label">حسابي</span>
       </button>
     </nav>
+  </div>
+
+  <!-- ======= ANALYTICS SCREEN ======= -->
+  <div id="screen-analytics" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>📊 التحليلات</h2>
+    </div>
+    <div class="screen-body" style="padding:16px;gap:14px;display:flex;flex-direction:column">
+      <!-- Revenue Cards -->
+      <div class="analytics-period-tabs">
+        <button class="period-tab active" onclick="switchAnalyticsPeriod('today',this)">اليوم</button>
+        <button class="period-tab" onclick="switchAnalyticsPeriod('week',this)">الأسبوع</button>
+        <button class="period-tab" onclick="switchAnalyticsPeriod('month',this)">الشهر</button>
+        <button class="period-tab" onclick="switchAnalyticsPeriod('total',this)">الكل</button>
+      </div>
+      <div class="analytics-revenue-card">
+        <div class="revenue-label">الدخل</div>
+        <div class="revenue-amount" id="analytics-revenue">₪0</div>
+      </div>
+      <!-- Stats Row -->
+      <div class="analytics-stats-row">
+        <div class="analytics-stat-box">
+          <div class="stat-num" id="analytics-pending">0</div>
+          <div class="stat-lbl">بانتظار التأكيد</div>
+        </div>
+        <div class="analytics-stat-box">
+          <div class="stat-num" id="analytics-confirmed">0</div>
+          <div class="stat-lbl">مؤكدة</div>
+        </div>
+        <div class="analytics-stat-box">
+          <div class="stat-num" id="analytics-completed">0</div>
+          <div class="stat-lbl">مكتملة</div>
+        </div>
+      </div>
+      <!-- Top Service -->
+      <div class="analytics-info-card">
+        <div class="info-card-icon">💅</div>
+        <div>
+          <div class="info-card-label">أكثر خدمة مطلوبة</div>
+          <div class="info-card-value" id="analytics-top-service">-</div>
+        </div>
+      </div>
+      <!-- Busiest Hour -->
+      <div class="analytics-info-card">
+        <div class="info-card-icon">⏰</div>
+        <div>
+          <div class="info-card-label">أكثر وقت حجزاً</div>
+          <div class="info-card-value" id="analytics-top-hour">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= CLIENTS SCREEN ======= -->
+  <div id="screen-clients" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>👥 قائمة الزبونات</h2>
+    </div>
+    <div class="screen-body" style="padding:16px">
+      <div id="clients-list"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+    </div>
+  </div>
+
+  <!-- ======= INVENTORY MODAL ======= -->
+  <div id="modal-inventory" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3>📦 إضافة / تعديل منتج</h3>
+      <input type="hidden" id="inv-edit-id">
+      <div class="form-group">
+        <label>اسم المنتج *</label>
+        <input type="text" id="inv-name" placeholder="مثال: شامبو أرجان">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>الكمية</label>
+          <input type="number" id="inv-qty" min="0" step="0.5" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>الوحدة</label>
+          <input type="text" id="inv-unit" placeholder="قطعة / لتر / كغ">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>تحذير نقص عند وصول الكمية لـ</label>
+        <input type="number" id="inv-threshold" min="0" placeholder="2">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-primary" style="flex:1" onclick="saveInventoryItem()">حفظ</button>
+        <button class="btn-secondary" style="flex:1" onclick="document.getElementById('modal-inventory').classList.add('hidden')">إلغاء</button>
+      </div>
+    </div>
   </div>
 
   <!-- ======= OFFER MODAL ======= -->

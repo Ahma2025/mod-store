@@ -380,4 +380,112 @@ router.delete('/offers/:id', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'خطأ' }); }
 });
 
+// ===== 59-61: ANALYTICS =====
+router.get('/salon/:id/analytics', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now - 7 * 86400000).toISOString().split('T')[0];
+    const monthAgo = new Date(now - 30 * 86400000).toISOString().split('T')[0];
+
+    const completedBookings = await DB.bookings.find(b => b.salon_id === salonId && b.status === 'completed');
+
+    const revenue = (range) => completedBookings
+      .filter(b => b.booking_date >= range)
+      .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+
+    const todayRevenue = revenue(todayStr);
+    const weekRevenue = revenue(weekAgo);
+    const monthRevenue = revenue(monthAgo);
+    const totalRevenue = revenue('2000-01-01');
+
+    // 60 — most requested service
+    const serviceCounts = {};
+    completedBookings.forEach(b => {
+      const ids = b.service_ids ? JSON.parse(b.service_ids) : [b.service_id];
+      ids.forEach(id => { serviceCounts[id] = (serviceCounts[id] || 0) + 1; });
+    });
+    const topServiceId = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const topService = topServiceId ? await DB.services.findOne(s => s.id === parseInt(topServiceId)) : null;
+
+    // 61 — busiest booking hour
+    const hourCounts = {};
+    completedBookings.forEach(b => {
+      const h = b.booking_time?.split(':')[0];
+      if (h) hourCounts[h] = (hourCounts[h] || 0) + 1;
+    });
+    const topHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+    // Total bookings counts
+    const allBookings = await DB.bookings.find(b => b.salon_id === salonId);
+    const pending = allBookings.filter(b => b.status === 'pending').length;
+    const confirmed = allBookings.filter(b => b.status === 'confirmed').length;
+
+    res.json({
+      revenue: { today: todayRevenue, week: weekRevenue, month: monthRevenue, total: totalRevenue },
+      top_service: topService ? { name: topService.name_ar || topService.name, count: serviceCounts[topServiceId] } : null,
+      busiest_hour: topHour ? `${topHour}:00` : null,
+      bookings: { pending, confirmed, completed: completedBookings.length, total: allBookings.length }
+    });
+  } catch (e) { console.error('analytics error:', e); res.status(500).json({ error: 'خطأ' }); }
+});
+
+// ===== 64: CLIENT LIST =====
+router.get('/salon/:id/clients', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const bookings = await DB.bookings.find(b => b.salon_id === salonId);
+    const clientMap = {};
+    for (const b of bookings) {
+      if (!b.client_id) continue;
+      if (!clientMap[b.client_id]) {
+        const user = await DB.users.findOne(u => u.id === b.client_id);
+        clientMap[b.client_id] = { id: b.client_id, name: user?.name || 'زبونة', phone: user?.phone || '', bookings: [] };
+      }
+      clientMap[b.client_id].bookings.push({ date: b.booking_date, time: b.booking_time, status: b.status, total_price: b.total_price });
+    }
+    const clients = Object.values(clientMap).sort((a, b) => b.bookings.length - a.bookings.length);
+    res.json({ clients });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
+// ===== 62: INVENTORY =====
+router.get('/salon/:id/inventory', authenticate, async (req, res) => {
+  try {
+    const { rows } = await query(`SELECT * FROM salon_inventory WHERE salon_id=$1 ORDER BY name`, [parseInt(req.params.id)]);
+    res.json({ items: rows });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
+router.post('/salon/:id/inventory', authenticate, async (req, res) => {
+  try {
+    const { name, quantity, unit, low_threshold } = req.body;
+    if (!name) return res.status(400).json({ error: 'الاسم مطلوب' });
+    const { rows } = await query(
+      `INSERT INTO salon_inventory (salon_id, name, quantity, unit, low_threshold) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [parseInt(req.params.id), name.trim(), parseFloat(quantity) || 0, unit || 'قطعة', parseInt(low_threshold) || 2]
+    );
+    res.status(201).json({ item: rows[0] });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
+router.put('/inventory/:id', authenticate, async (req, res) => {
+  try {
+    const { name, quantity, unit, low_threshold } = req.body;
+    const { rows } = await query(
+      `UPDATE salon_inventory SET name=$1, quantity=$2, unit=$3, low_threshold=$4 WHERE id=$5 RETURNING *`,
+      [name, parseFloat(quantity) || 0, unit || 'قطعة', parseInt(low_threshold) || 2, parseInt(req.params.id)]
+    );
+    res.json({ item: rows[0] });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
+router.delete('/inventory/:id', authenticate, async (req, res) => {
+  try {
+    await query(`DELETE FROM salon_inventory WHERE id=$1`, [parseInt(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+});
+
 module.exports = router;

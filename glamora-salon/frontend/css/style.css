@@ -1048,3 +1048,35 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .badge-verified { background: #E3F2FD; color: #1565C0; }
 .badge-hot { background: #FFF3E0; color: #E65100; }
 .salon-badges-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+/* ===== ANALYTICS ===== */
+.analytics-period-tabs { display: flex; gap: 8px; }
+.period-tab { flex: 1; padding: 8px; border-radius: 20px; border: 1.5px solid var(--gray-light); font-size: 13px; font-family: 'El Messiri', sans-serif; background: var(--white); color: var(--gray); cursor: pointer; }
+.period-tab.active { background: var(--rose); color: white; border-color: var(--rose); }
+.analytics-revenue-card { background: linear-gradient(135deg, var(--burgundy), var(--rose)); border-radius: var(--radius); padding: 24px 20px; text-align: center; color: white; }
+.revenue-label { font-size: 13px; opacity: 0.85; margin-bottom: 6px; }
+.revenue-amount { font-size: 36px; font-weight: 700; }
+.analytics-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.analytics-stat-box { background: var(--white); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; border: 1.5px solid var(--gray-light); }
+.stat-num { font-size: 24px; font-weight: 700; color: var(--rose); }
+.stat-lbl { font-size: 11px; color: var(--gray); margin-top: 4px; }
+.analytics-info-card { display: flex; align-items: center; gap: 14px; background: var(--white); border-radius: var(--radius-sm); padding: 16px; border: 1.5px solid var(--gray-light); }
+.info-card-icon { font-size: 28px; }
+.info-card-label { font-size: 12px; color: var(--gray); }
+.info-card-value { font-size: 16px; font-weight: 700; color: var(--dark2); margin-top: 2px; }
+.analytics-quick-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px; background: var(--white); border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); font-size: 13px; font-family: 'El Messiri', sans-serif; color: var(--dark2); cursor: pointer; font-weight: 600; }
+.analytics-quick-btn span:first-child { font-size: 24px; }
+/* ===== CLIENTS ===== */
+.client-card { background: var(--white); border-radius: var(--radius-sm); padding: 14px 16px; border: 1.5px solid var(--gray-light); margin-bottom: 10px; }
+.client-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.client-name { font-size: 15px; font-weight: 700; color: var(--dark2); }
+.client-badge { background: var(--rose-light); color: var(--rose); font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+.client-last-visit { font-size: 12px; color: var(--gray); }
+.client-total { font-size: 13px; color: var(--burgundy); font-weight: 600; }
+/* ===== INVENTORY ===== */
+.inventory-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--white); border-radius: var(--radius-sm); border: 1.5px solid var(--gray-light); margin-bottom: 8px; }
+.inventory-item.low-stock { border-color: #FF9800; background: #FFF8E1; }
+.inv-name { font-size: 14px; font-weight: 600; color: var(--dark2); flex: 1; }
+.inv-qty { font-size: 13px; color: var(--gray); }
+.inv-low-badge { font-size: 11px; background: #FF9800; color: white; padding: 2px 7px; border-radius: 20px; }
+.inv-actions { display: flex; gap: 6px; }
+.inv-action-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--gray-light); font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--white); }
