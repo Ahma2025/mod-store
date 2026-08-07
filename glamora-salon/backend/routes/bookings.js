@@ -183,7 +183,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const salon = await DB.salons.findOne(s => s.id === booking.salon_id);
-    res.status(201).json({ booking: { ...booking, service_name: service.name, name_ar: service.name_ar, stylist_name: stylistName, salon_name: salon?.name }, points_earned: 0 });
+    res.status(201).json({ booking: { ...booking, service_name: serviceName, stylist_name: stylistName, salon_name: salon?.name }, points_earned: 0 });
   } catch (e) {
     console.error('POST /bookings error:', e);
     res.status(500).json({ error: 'خطأ في إنشاء الحجز' });
