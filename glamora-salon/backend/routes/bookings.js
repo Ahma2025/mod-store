@@ -88,7 +88,7 @@ function generateSlots(start, end, duration, booked) {
       return current < bs + b.duration_minutes && current + duration > bs;
     });
     slots.push({ time: timeStr, available: !isBooked });
-    current += 30;
+    current += duration;
   }
   return slots;
 }
