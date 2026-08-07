@@ -2175,10 +2175,23 @@ function previewAiFace(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    aiFaceBase64 = e.target.result;
-    const img = document.getElementById('ai-face-preview');
-    img.src = aiFaceBase64;
-    img.classList.remove('hidden');
+    // صور الآيفون كبيرة (2-5MB) وحد السيرفر 2MB — نصغّرها ونحوّلها JPEG قبل الإرسال
+    const tmp = new Image();
+    tmp.onload = () => {
+      const MAX = 768;
+      let w = tmp.width, h = tmp.height;
+      if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(tmp, 0, 0, w, h);
+      aiFaceBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      const img = document.getElementById('ai-face-preview');
+      img.src = aiFaceBase64;
+      img.classList.remove('hidden');
+    };
+    tmp.onerror = () => showToast(window.VELOUR_LANG === 'en' ? '⚠️ Could not read image' : '⚠️ تعذّر قراءة الصورة');
+    tmp.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
