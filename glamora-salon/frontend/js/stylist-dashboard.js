@@ -9,6 +9,8 @@ let stAvailStylistId = null;
 let stAllBookings = [];
 
 const DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function DAYS() { return window.VELOUR_LANG === 'en' ? DAYS_EN : DAYS_AR; }
 const CAT_ICONS = { 'صبغ الشعر': '🎨', 'قص': '✂️', 'علاجات': '💆', 'مكياج': '💄', 'أظافر': '💅', 'تصفيف': '👑' };
 
 // Called when stylist logs in
@@ -69,27 +71,32 @@ function stSwitchTab(name, btn) {
 // ===== SALON HEADER =====
 function renderSalonHeader() {
   if (!stSalonData) return;
-  const emoji = stSalonData.cover_emoji || '💅';
-  document.getElementById('st-cover-emoji').textContent = emoji;
+  const coverEl = document.getElementById('st-cover-emoji');
+  if (stSalonData.cover_url) {
+    coverEl.innerHTML = `<img src="${stSalonData.cover_url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`;
+  } else {
+    coverEl.textContent = stSalonData.cover_emoji || '💅';
+  }
   document.getElementById('st-sname').textContent = stSalonData.name;
   document.getElementById('st-scity').textContent = stSalonData.city;
   document.getElementById('st-saddress').textContent = stSalonData.address;
   document.getElementById('st-salon-name').textContent = stSalonData.name;
   const locEl = document.getElementById('st-location-status');
   if (locEl) {
+    const _e = window.VELOUR_LANG === 'en';
     locEl.textContent = (stSalonData.latitude && stSalonData.longitude)
-      ? `✅ الموقع محدد على الخريطة`
-      : '⚠️ لم يتم تحديد الموقع بعد — اضغطي على "تحديد الموقع"';
+      ? (_e ? '✅ Location set on map' : '✅ الموقع محدد على الخريطة')
+      : (_e ? '⚠️ Location not set — tap "Set Location"' : '⚠️ لم يتم تحديد الموقع بعد — اضغطي على "تحديد الموقع"');
   }
 }
 
 // ===== HOURS =====
 function renderHours() {
   const hours = stSalonData?.hours || [];
-  const closedDays = hours.filter(h => h.is_closed).map(h => DAYS_AR[h.day_of_week]);
+  const closedDays = hours.filter(h => h.is_closed).map(h => DAYS()[h.day_of_week]);
   const el = document.getElementById('st-hours-list');
   if (!closedDays.length) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--gray)">لا يوجد أيام إجازة — الصالون مفتوح كل الأيام</div>';
+    el.innerHTML = `<div style="font-size:13px;color:var(--gray)">${window.VELOUR_LANG === 'en' ? 'No days off — salon open every day' : 'لا يوجد أيام إجازة — الصالون مفتوح كل الأيام'}</div>`;
     return;
   }
   el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
@@ -100,16 +107,17 @@ function renderHours() {
 // ===== SERVICES =====
 function renderServices() {
   const services = stSalonData?.services || [];
+  const _svcEN = window.VELOUR_LANG === 'en';
   if (!services.length) {
-    document.getElementById('st-services-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray)">لا توجد خدمات بعد</div>';
+    document.getElementById('st-services-list').innerHTML = `<div style="text-align:center;padding:20px;color:var(--gray)">${_svcEN ? 'No services yet' : 'لا توجد خدمات بعد'}</div>`;
     return;
   }
   document.getElementById('st-services-list').innerHTML = services.map(s => `
     <div class="service-mgmt-item">
       <div class="svc-cat-badge">${CAT_ICONS[s.category] || '💅'}</div>
       <div class="svc-mgmt-info">
-        <div class="svc-mgmt-name">${s.name_ar || s.name}</div>
-        <div class="svc-mgmt-meta">${s.category} · ${s.duration_minutes} دقيقة</div>
+        <div class="svc-mgmt-name" translate="no">${s.name_ar || s.name}</div>
+        <div class="svc-mgmt-meta" translate="no">${s.category} · ${s.duration_minutes} ${_svcEN ? 'min' : 'دقيقة'}</div>
       </div>
       <div>
         <div class="svc-mgmt-price">${s.price}₪</div>
@@ -126,15 +134,16 @@ function renderServices() {
 function renderTeam() {
   if (!stSalonData) { loadStylistDashboard().then(renderTeam); return; }
   const list = document.getElementById('st-stylists-list');
+  const _teamEN = window.VELOUR_LANG === 'en';
   if (!stStylistData.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:40px"><div class="empty-icon">👩‍🎨</div><h3>لا توجد كوفيرات بعد</h3></div>';
+    list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">👩‍🎨</div><h3>${_teamEN ? 'No stylists yet' : 'لا توجد كوفيرات بعد'}</h3></div>`;
     return;
   }
   list.innerHTML = stStylistData.map(st => {
     let specs = [];
     try { specs = JSON.parse(st.specialties || '[]'); } catch {}
     const avail = st.availability || [];
-    const workDays = avail.filter(a => !a.is_off).map(a => DAYS_AR[a.day_of_week]).join('، ');
+    const workDays = avail.filter(a => !a.is_off).map(a => DAYS()[a.day_of_week]).join(window.VELOUR_LANG === 'en' ? ', ' : '، ');
     return `
       <div class="team-card">
         <div class="team-card-top">
@@ -145,16 +154,16 @@ function renderTeam() {
           </div>
           <div class="team-info">
             <div class="team-name">${st.name || '-'}</div>
-            <div class="team-phone">📞 ${st.phone || '-'} · ${st.experience_years} سنوات خبرة</div>
+            <div class="team-phone">📞 ${st.phone || '-'} · ${st.experience_years} ${_teamEN ? 'yrs exp' : 'سنوات خبرة'}</div>
           </div>
         </div>
         ${specs.length ? `<div class="team-specs">${specs.map(sp => `<span class="team-spec-tag">${sp}</span>`).join('')}</div>` : ''}
         ${avail.length ? `<div class="team-schedule">${avail.filter(a=>!a.is_off).map(a => {
-          let shifts = `${DAYS_AR[a.day_of_week]}: ${a.start_time}–${a.end_time}`;
+          let shifts = `<span class="day-label">${DAYS()[a.day_of_week]}</span>: ${a.start_time}–${a.end_time}`;
           if (a.shift2_enabled && a.shift2_start) shifts += ` · ${a.shift2_start}–${a.shift2_end}`;
           return `<span class="team-schedule-item">${shifts}</span>`;
-        }).join('')}</div>` : '<div style="font-size:12px;color:var(--gray);margin-top:8px;padding:8px;background:var(--cream2);border-radius:8px">⚠️ لم تُضبط مواعيد الدوام بعد</div>'}
-        <button class="team-avail-btn" onclick="showAvailForm(${st.id}, '${st.name}')">⏰ ضبط مواعيد الدوام</button>
+        }).join('')}</div>` : `<div style="font-size:12px;color:var(--gray);margin-top:8px;padding:8px;background:var(--cream2);border-radius:8px">⚠️ ${_teamEN ? 'Working hours not set yet' : 'لم تُضبط مواعيد الدوام بعد'}</div>`}
+        <button class="team-avail-btn" onclick="showAvailForm(${st.id}, '${st.name}')">⏰ ${_teamEN ? 'Set Working Hours' : 'ضبط مواعيد الدوام'}</button>
       </div>
     `;
   }).join('');
@@ -167,7 +176,7 @@ async function loadStBookings(filter) {
   try {
     stAllBookings = await Api.stylistDash.bookings(filter || 'pending');
     renderStBookings(stAllBookings);
-  } catch (e) { console.error(e); list.innerHTML = '<div class="empty-state" style="padding:40px"><div class="empty-icon">⚠️</div><h3>خطأ في التحميل</h3></div>'; }
+  } catch (e) { console.error(e); list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">⚠️</div><h3>${window.VELOUR_LANG === 'en' ? 'Loading error' : 'خطأ في التحميل'}</h3></div>`; }
 }
 
 function stFilterBookings(filter, btn) {
@@ -179,14 +188,21 @@ function stFilterBookings(filter, btn) {
 function renderStBookings(bookings) {
   const list = document.getElementById('st-bookings-list');
   if (!bookings.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:40px"><div class="empty-icon">📅</div><h3>لا توجد حجوزات</h3></div>';
+    list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">📅</div><h3>${window.VELOUR_LANG === 'en' ? 'No bookings' : 'لا توجد حجوزات'}</h3></div>`;
     return;
   }
   list.innerHTML = bookings.map(b => buildStBookingCard(b)).join('');
 }
 
 function buildStBookingCard(b) {
-  const statusMap = { confirmed: { label: 'مؤكد ✅', cls: 'status-confirmed' }, pending: { label: 'بانتظار الموافقة ⏳', cls: 'status-pending' }, cancelled: { label: 'ملغي ❌', cls: 'status-cancelled' }, rejected: { label: 'مرفوض ❌', cls: 'status-cancelled' }, completed: { label: 'مكتمل ✔️', cls: 'status-completed' } };
+  const _isEN = window.VELOUR_LANG === 'en';
+  const statusMap = {
+    confirmed: { label: _isEN ? 'Confirmed ✅' : 'مؤكد ✅', cls: 'status-confirmed' },
+    pending:   { label: _isEN ? 'Pending Approval ⏳' : 'بانتظار الموافقة ⏳', cls: 'status-pending' },
+    cancelled: { label: _isEN ? 'Cancelled ❌' : 'ملغي ❌', cls: 'status-cancelled' },
+    rejected:  { label: _isEN ? 'Rejected ❌' : 'مرفوض ❌', cls: 'status-cancelled' },
+    completed: { label: _isEN ? 'Completed ✔️' : 'مكتمل ✔️', cls: 'status-completed' }
+  };
   const st = statusMap[b.status] || { label: b.status, cls: '' };
   const catIcon = { 'صبغ الشعر': '🎨', 'قص': '✂️', 'علاجات': '💆', 'مكياج': '💄', 'أظافر': '💅', 'تصفيف': '👑' };
   const icon = catIcon[b.service_category] || '✨';
@@ -206,15 +222,15 @@ function buildStBookingCard(b) {
           <div class="st-bk-detail-row">
             <span class="st-bk-detail-icon">${icon}</span>
             <div>
-              <div class="st-bk-svc-name">${b.service_name || '-'}</div>
-              <div class="st-bk-svc-meta">${b.duration_minutes || '-'} دقيقة · ${b.service_price || b.total_price}₪</div>
+              <div class="st-bk-svc-name" translate="no">${b.service_name || '-'}</div>
+              <div class="st-bk-svc-meta">${b.duration_minutes || '-'} ${_isEN ? 'min' : 'دقيقة'} · ${b.service_price || b.total_price}₪</div>
             </div>
           </div>
           <div class="st-bk-detail-row">
             <span class="st-bk-detail-icon">📅</span>
             <div>
               <div class="st-bk-svc-name">${formatDateAr ? formatDateAr(b.booking_date) : b.booking_date}</div>
-              <div class="st-bk-svc-meta">الساعة ${b.booking_time}</div>
+              <div class="st-bk-svc-meta">${_isEN ? 'At' : 'الساعة'} ${b.booking_time}</div>
             </div>
           </div>
           ${b.stylist_name ? `<div class="st-bk-detail-row"><span class="st-bk-detail-icon">👩‍🎨</span><div class="st-bk-svc-name">${b.stylist_name}</div></div>` : ''}
@@ -223,28 +239,31 @@ function buildStBookingCard(b) {
       </div>
       ${b.status === 'pending' ? `
         <div class="st-bk-actions">
-          <button class="btn-accept" onclick="stUpdateBooking(${b.id},'confirmed')">قبول الحجز</button>
-          <button class="btn-reject" onclick="stUpdateBooking(${b.id},'rejected')">رفض</button>
+          <button class="btn-accept" onclick="stUpdateBooking(${b.id},'confirmed')">${_isEN ? 'Accept' : 'قبول الحجز'}</button>
+          <button class="btn-reject" onclick="stUpdateBooking(${b.id},'rejected')">${_isEN ? 'Reject' : 'رفض'}</button>
         </div>` : ''}
       ${b.status === 'confirmed' ? `
         <div class="st-bk-actions">
-          <button class="btn-chat-sm" onclick="openChatWith(${b.client_id || b.id}, '${b.client_name}')">تواصل</button>
-          <button class="btn-reject" onclick="stUpdateBooking(${b.id},'cancelled')">إلغاء الحجز</button>
+          <button class="btn-chat-sm" onclick="openChatWith(${b.client_id || b.id}, '${b.client_name}')">${_isEN ? 'Contact' : 'تواصل'}</button>
+          <button class="btn-reject" onclick="stUpdateBooking(${b.id},'cancelled')">${_isEN ? 'Cancel Booking' : 'إلغاء الحجز'}</button>
         </div>` : ''}
     </div>
   `;
 }
 
 async function stUpdateBooking(id, status) {
-  const labels = { confirmed: 'تم قبول الحجز وإشعار الزبونة', rejected: 'تم رفض الحجز', cancelled: 'تم إلغاء الحجز' };
+  const _bkEN = window.VELOUR_LANG === 'en';
+  const labels = _bkEN
+    ? { confirmed: 'Booking accepted & client notified', rejected: 'Booking rejected', cancelled: 'Booking cancelled' }
+    : { confirmed: 'تم قبول الحجز وإشعار الزبونة', rejected: 'تم رفض الحجز', cancelled: 'تم إلغاء الحجز' };
   try {
     await Api.stylistDash.updateBooking(id, status);
-    showToast(labels[status] || 'تم التحديث');
+    showToast(labels[status] || (_bkEN ? 'Updated' : 'تم التحديث'));
     // reload current active filter
     const activeBtn = document.querySelector('#stab-bookings .btab.active');
     const filter = activeBtn?.dataset?.filter || 'pending';
     loadStBookings(filter);
-  } catch (e) { showToast('حدث خطأ'); }
+  } catch (e) { showToast(window.VELOUR_LANG === 'en' ? 'An error occurred' : 'حدث خطأ'); }
 }
 
 // ===== CONVERSATIONS =====
@@ -252,7 +271,7 @@ async function loadStConversations() {
   try {
     const convs = await Api.messages.conversations();
     const list = document.getElementById('st-conversations-list');
-    if (!convs.length) { list.innerHTML = '<div class="empty-state" style="padding:40px"><div class="empty-icon">💬</div><h3>لا توجد رسائل</h3></div>'; return; }
+    if (!convs.length) { list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">💬</div><h3>${window.VELOUR_LANG === 'en' ? 'No messages' : 'لا توجد رسائل'}</h3></div>`; return; }
     list.innerHTML = convs.map(c => `
       <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}')">
         <div class="conv-avatar">${(c.other_name||'؟')[0]}</div>
@@ -267,33 +286,41 @@ async function loadStConversations() {
 }
 
 // ===== SALON FORM =====
+function _resetAvatarPreview(existingUrl) {
+  stPendingAvatarFile = null;
+  const preview = document.getElementById('sf-avatar-preview');
+  if (!preview) return;
+  if (existingUrl) {
+    preview.innerHTML = `<img src="${existingUrl}" style="width:100%;height:100%;object-fit:cover">`;
+  } else {
+    preview.innerHTML = '💅';
+  }
+}
+
 function showCreateSalonForm() {
   stEditingSalonId = null;
-  document.getElementById('salon-form-title').textContent = 'إضافة صالون جديد';
+  const _cEN = window.VELOUR_LANG === 'en';
+  document.getElementById('salon-form-title').textContent = _cEN ? 'Add New Salon' : 'إضافة صالون جديد';
   document.getElementById('sf-name').value = '';
   document.getElementById('sf-city').value = '';
   document.getElementById('sf-address').value = '';
   document.getElementById('sf-phone').value = '';
   document.getElementById('sf-desc').value = '';
-  stSelectedEmoji = '💅';
-  document.querySelectorAll('.ep-item').forEach(e => e.classList.remove('active'));
-  document.querySelector('.ep-item')?.classList.add('active');
+  _resetAvatarPreview(null);
   document.getElementById('modal-salon-form').classList.remove('hidden');
 }
 
 function showEditSalonForm() {
   if (!stSalonData) return;
   stEditingSalonId = stSalonData.id;
-  document.getElementById('salon-form-title').textContent = 'تعديل معلومات الصالون';
+  const _eEN = window.VELOUR_LANG === 'en';
+  document.getElementById('salon-form-title').textContent = _eEN ? 'Edit Salon Info' : 'تعديل معلومات الصالون';
   document.getElementById('sf-name').value = stSalonData.name || '';
   document.getElementById('sf-city').value = stSalonData.city || '';
   document.getElementById('sf-address').value = stSalonData.address || '';
   document.getElementById('sf-phone').value = stSalonData.phone || '';
   document.getElementById('sf-desc').value = stSalonData.description || '';
-  stSelectedEmoji = stSalonData.cover_emoji || '💅';
-  document.querySelectorAll('.ep-item').forEach(e => {
-    e.classList.toggle('active', e.textContent === stSelectedEmoji);
-  });
+  _resetAvatarPreview(stSalonData.cover_url || null);
   document.getElementById('modal-salon-form').classList.remove('hidden');
 }
 
@@ -303,23 +330,51 @@ function selectSalonEmoji(el, emoji) {
   el.classList.add('active');
 }
 
+let stPendingAvatarFile = null;
+
+function previewSalonAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  stPendingAvatarFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('sf-avatar-preview');
+    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+}
+
 async function saveSalon() {
   const name = document.getElementById('sf-name').value.trim();
   const city = document.getElementById('sf-city').value.trim();
   const address = document.getElementById('sf-address').value.trim();
   const phone = document.getElementById('sf-phone').value.trim();
   const description = document.getElementById('sf-desc').value.trim();
-  if (!name || !city || !address) { showToast('الاسم والمدينة والعنوان مطلوبة'); return; }
+  const _sfEN = window.VELOUR_LANG === 'en';
+  if (!name || !city || !address) { showToast(_sfEN ? 'Name, city and address are required' : 'الاسم والمدينة والعنوان مطلوبة'); return; }
 
   try {
     let salonId = stEditingSalonId;
     if (stEditingSalonId) {
-      await Api.stylistDash.updateSalon(stEditingSalonId, { name, city, address, phone, description, cover_emoji: stSelectedEmoji });
-      showToast('تم تحديث الصالون');
+      await Api.stylistDash.updateSalon(stEditingSalonId, { name, city, address, phone, description });
+      showToast(_sfEN ? 'Salon updated' : 'تم تحديث الصالون');
     } else {
-      const created = await Api.stylistDash.createSalon({ name, city, address, phone, description, cover_emoji: stSelectedEmoji });
+      const created = await Api.stylistDash.createSalon({ name, city, address, phone, description });
       salonId = created?.id;
-      showToast('تم إنشاء الصالون');
+      showToast(_sfEN ? 'Salon created' : 'تم إنشاء الصالون');
+    }
+    // Upload avatar if selected
+    if (stPendingAvatarFile && salonId) {
+      const fd = new FormData();
+      fd.append('file', stPendingAvatarFile);
+      const avatarRes = await fetch(`${typeof API !== 'undefined' ? API : '/api'}/media/salon/${salonId}/avatar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` },
+        body: fd
+      });
+      const avatarData = await avatarRes.json().catch(() => ({}));
+      if (!avatarRes.ok) showToast(avatarData.error || 'فشل رفع صورة الصالون');
+      stPendingAvatarFile = null;
     }
     if (typeof pendingSalonLocation !== 'undefined' && pendingSalonLocation && salonId) {
       await Api.salons.updateLocation(salonId, pendingSalonLocation.lat, pendingSalonLocation.lng);
@@ -334,8 +389,12 @@ async function saveSalon() {
 function showHoursForm() {
   const existing = stSalonData?.hours || [];
   const rows = document.getElementById('hours-form-rows');
+  const _hfEN = window.VELOUR_LANG === 'en';
+  const DAYS_DISP = _hfEN
+    ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+    : DAYS_AR;
   rows.innerHTML = `
-    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">اختاري أيام إجازة الصالون — الكوفيرات لن تتمكن من الحجز في هذه الأيام</p>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">${_hfEN ? 'Select days off — stylists cannot be booked on these days' : 'اختاري أيام إجازة الصالون — الكوفيرات لن تتمكن من الحجز في هذه الأيام'}</p>
     <div style="display:flex;flex-direction:column;gap:10px">
     ${DAYS_AR.map((day, i) => {
       const h = existing.find(e => e.day_of_week === i);
@@ -343,8 +402,8 @@ function showHoursForm() {
       return `
         <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;border:1.5px solid var(--gray-light);cursor:pointer" id="hf-label-${i}">
           <input type="checkbox" id="hf-closed-${i}" ${isOff} onchange="toggleOffDay(${i},this.checked)" style="width:18px;height:18px;accent-color:var(--primary)">
-          <span style="font-size:15px;font-weight:600">${day}</span>
-          ${h?.is_closed ? '<span class="off-day-chip" id="hf-badge-'+i+'">إجازة</span>' : '<span id="hf-badge-'+i+'"></span>'}
+          <span style="font-size:15px;font-weight:600">${DAYS_DISP[i]}</span>
+          ${h?.is_closed ? `<span class="off-day-chip" id="hf-badge-${i}">${_hfEN ? 'Day Off' : 'إجازة'}</span>` : `<span id="hf-badge-${i}"></span>`}
         </label>
       `;
     }).join('')}
@@ -356,9 +415,10 @@ function showHoursForm() {
 function toggleOffDay(i, isOff) {
   const badge = document.getElementById(`hf-badge-${i}`);
   const label = document.getElementById(`hf-label-${i}`);
+  const _tfEN = window.VELOUR_LANG === 'en';
   if (isOff) {
     badge.className = 'off-day-chip';
-    badge.textContent = 'إجازة';
+    badge.textContent = _tfEN ? 'Day Off' : 'إجازة';
     label.style.borderColor = '#EF4444';
     label.style.background = '#FEF2F2';
   } else {
@@ -378,7 +438,7 @@ async function saveHours() {
   }));
   try {
     await Api.stylistDash.setHours(stSalonData.id, hours);
-    showToast('تم حفظ أيام الإجازة');
+    showToast(window.VELOUR_LANG === 'en' ? 'Days off saved' : 'تم حفظ أيام الإجازة');
     closeModalById('modal-hours-form');
     await loadStylistDashboard();
   } catch (e) { showToast(e.message); }
@@ -416,15 +476,16 @@ async function saveService() {
   const price = document.getElementById('svc-price').value;
   const duration_minutes = document.getElementById('svc-duration').value;
   const description = document.getElementById('svc-desc').value.trim();
-  if (!name_ar || !price || !duration_minutes) { showToast('يرجى تعبئة جميع الحقول'); return; }
+  const _svcFEN = window.VELOUR_LANG === 'en';
+  if (!name_ar || !price || !duration_minutes) { showToast(_svcFEN ? 'Please fill all fields' : 'يرجى تعبئة جميع الحقول'); return; }
 
   try {
     if (stEditingServiceId) {
       await Api.stylistDash.editService(stEditingServiceId, { name_ar, category, price, duration_minutes, description });
-      showToast('تم تحديث الخدمة');
+      showToast(_svcFEN ? 'Service updated' : 'تم تحديث الخدمة');
     } else {
       await Api.stylistDash.addService(stSalonData.id, { name_ar, category, price, duration_minutes, description });
-      showToast('تمت إضافة الخدمة');
+      showToast(_svcFEN ? 'Service added' : 'تمت إضافة الخدمة');
     }
     closeModalById('modal-service-form');
     await loadStylistDashboard();
@@ -432,10 +493,11 @@ async function saveService() {
 }
 
 async function deleteService(id) {
-  if (!confirm('هل تريدين حذف هذه الخدمة؟')) return;
+  const _delSEN = window.VELOUR_LANG === 'en';
+  if (!confirm(_delSEN ? 'Delete this service?' : 'هل تريدين حذف هذه الخدمة؟')) return;
   try {
     await Api.stylistDash.deleteService(id);
-    showToast('تم حذف الخدمة');
+    showToast(_delSEN ? 'Service deleted' : 'تم حذف الخدمة');
     await loadStylistDashboard();
   } catch (e) { showToast(e.message); }
 }
@@ -454,18 +516,19 @@ function toggleSpec(el, spec) {
 }
 
 async function saveStylist() {
-  if (!stSalonData) { showToast('يجب إنشاء الصالون أولاً'); return; }
+  const _stFEN = window.VELOUR_LANG === 'en';
+  if (!stSalonData) { showToast(_stFEN ? 'Create a salon first' : 'يجب إنشاء الصالون أولاً'); return; }
   const name = document.getElementById('stf-name').value.trim();
   const phone = document.getElementById('stf-phone').value.trim();
   const experience_years = parseInt(document.getElementById('stf-exp').value) || 1;
   const bio = document.getElementById('stf-bio').value.trim();
-  if (!name || !phone) { showToast('الاسم والهاتف مطلوبان'); return; }
+  if (!name || !phone) { showToast(_stFEN ? 'Name and phone are required' : 'الاسم والهاتف مطلوبان'); return; }
 
   const btn = document.querySelector('#modal-stylist-form .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإضافة...'; }
+  if (btn) { btn.disabled = true; btn.textContent = _stFEN ? 'Adding...' : 'جاري الإضافة...'; }
   try {
     await Api.stylistDash.addStylist(stSalonData.id, { name, phone, bio, experience_years });
-    showToast('تمت إضافة الكوفيرة - كلمة مرورها الافتراضية: 123456');
+    showToast(_stFEN ? 'Stylist added — default password: 123456' : 'تمت إضافة الكوفيرة - كلمة مرورها الافتراضية: 123456');
     closeModalById('modal-stylist-form');
     await loadStylistDashboard();
     renderTeam();
@@ -473,18 +536,22 @@ async function saveStylist() {
     console.error('saveStylist error:', e);
     showToast(e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'إضافة'; }
+    if (btn) { btn.disabled = false; btn.textContent = window.VELOUR_LANG === 'en' ? 'Add' : 'إضافة'; }
   }
 }
 
 // ===== AVAILABILITY (2 SHIFTS) =====
 function showAvailForm(stylistId, name) {
   stAvailStylistId = stylistId;
-  document.getElementById('avail-form-title').textContent = `مواعيد دوام ${name} ⏰`;
+  const _avEN = window.VELOUR_LANG === 'en';
+  document.getElementById('avail-form-title').textContent = _avEN ? `${name} Working Hours ⏰` : `مواعيد دوام ${name} ⏰`;
   document.getElementById('avail-stylist-id').value = stylistId;
 
   const st = stStylistData.find(s => s.id === stylistId);
   const existing = st?.availability || [];
+  const DAYS_DISP2 = _avEN
+    ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+    : DAYS_AR;
 
   document.getElementById('avail-form-rows').innerHTML = DAYS_AR.map((day, i) => {
     const a = existing.find(e => e.day_of_week === i);
@@ -493,15 +560,15 @@ function showAvailForm(stylistId, name) {
     return `
       <div class="avail-day-block" id="avail-block-${i}">
         <div class="avail-day-header">
-          <span class="avail-day-name">${day}</span>
+          <span class="avail-day-name">${DAYS_DISP2[i]}</span>
           <label class="avail-toggle">
             <input type="checkbox" id="af-off-${i}" ${isOff ? 'checked' : ''} onchange="toggleAvailDay(${i},this.checked)">
-            <span class="avail-toggle-label ${isOff ? 'off' : 'on'}" id="af-off-label-${i}">${isOff ? 'إجازة' : 'دوام'}</span>
+            <span class="avail-toggle-label ${isOff ? 'off' : 'on'}" id="af-off-label-${i}">${isOff ? (_avEN ? 'Day Off' : 'إجازة') : (_avEN ? 'Working' : 'دوام')}</span>
           </label>
         </div>
         <div class="avail-shifts" id="af-shifts-${i}" style="display:${isOff ? 'none' : 'block'}">
           <div class="avail-shift-row">
-            <span class="shift-label">🌅 الصباحي</span>
+            <span class="shift-label">🌅 ${_avEN ? 'Morning' : 'الصباحي'}</span>
             <div class="shift-times">
               <input type="time" id="af-start-${i}" value="${a?.start_time || '09:00'}">
               <span>–</span>
@@ -511,11 +578,11 @@ function showAvailForm(stylistId, name) {
           <div class="avail-shift2-toggle">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="checkbox" id="af-s2-${i}" ${s2 ? 'checked' : ''} onchange="toggleShift2(${i},this.checked)" style="width:16px;height:16px;accent-color:var(--rose)">
-              <span style="font-size:13px;color:var(--rose-dark);font-weight:600">+ إضافة شيفت مسائي</span>
+              <span style="font-size:13px;color:var(--rose-dark);font-weight:600">+ ${_avEN ? 'Add Evening Shift' : 'إضافة شيفت مسائي'}</span>
             </label>
           </div>
           <div class="avail-shift-row" id="af-s2-row-${i}" style="display:${s2 ? 'flex' : 'none'}">
-            <span class="shift-label">🌙 المسائي</span>
+            <span class="shift-label">🌙 ${_avEN ? 'Evening' : 'المسائي'}</span>
             <div class="shift-times">
               <input type="time" id="af-s2start-${i}" value="${a?.shift2_start || '16:00'}">
               <span>–</span>
@@ -534,7 +601,8 @@ function toggleAvailDay(day, isOff) {
   const shifts = document.getElementById(`af-shifts-${day}`);
   const label = document.getElementById(`af-off-label-${day}`);
   shifts.style.display = isOff ? 'none' : 'block';
-  label.textContent = isOff ? 'إجازة' : 'دوام';
+  const _tdEN = window.VELOUR_LANG === 'en';
+  label.textContent = isOff ? (_tdEN ? 'Day Off' : 'إجازة') : (_tdEN ? 'Working' : 'دوام');
   label.className = `avail-toggle-label ${isOff ? 'off' : 'on'}`;
 }
 
@@ -554,7 +622,7 @@ async function saveAvailability() {
   }));
   try {
     await Api.stylistDash.setAvailability(stAvailStylistId, availability);
-    showToast('تم حفظ مواعيد الدوام');
+    showToast(window.VELOUR_LANG === 'en' ? 'Working hours saved' : 'تم حفظ مواعيد الدوام');
     closeModalById('modal-avail-form');
     await loadStylistDashboard();
     renderTeam();
@@ -575,6 +643,7 @@ function renderMediaGrid(media) {
   if (!grid) return;
   const photos = media.filter(m => m.type === 'photo');
   const video = media.find(m => m.type === 'video');
+  const _mgEN = window.VELOUR_LANG === 'en';
 
   grid.innerHTML = media.map(m => {
     const isVideo = m.type === 'video';
@@ -583,7 +652,7 @@ function renderMediaGrid(media) {
         ${isVideo
           ? `<video src="${mediaUrl(m.url)}" class="media-thumb" muted></video><div class="media-type-badge">vid</div>`
           : `<img src="${mediaUrl(m.url)}" class="media-thumb">`}
-        ${m.is_cover ? '<div class="media-cover-badge">غلاف ✓</div>' : ''}
+        ${m.is_cover ? `<div class="media-cover-badge">${_mgEN ? 'Cover ✓' : 'غلاف ✓'}</div>` : ''}
         <button class="media-delete-btn" onclick="event.stopPropagation();deleteMedia(${m.id})">×</button>
       </div>
     `;
@@ -593,39 +662,41 @@ function renderMediaGrid(media) {
   const photoSlots = 4 - photos.length;
   const videoSlot = video ? 0 : 1;
   for (let i = 0; i < photoSlots; i++) {
-    grid.innerHTML += `<label class="media-add-slot"><input type="file" accept="image/*" style="display:none" onchange="uploadSalonMedia(this)">📷<br><span>صورة</span></label>`;
+    grid.innerHTML += `<label class="media-add-slot"><input type="file" accept="image/*" style="display:none" onchange="uploadSalonMedia(this)">📷<br><span>${_mgEN ? 'Photo' : 'صورة'}</span></label>`;
   }
   if (videoSlot) {
-    grid.innerHTML += `<label class="media-add-slot media-video-slot"><input type="file" accept="video/mp4,video/webm" style="display:none" onchange="uploadSalonMedia(this)">🎬<br><span>فيديو</span></label>`;
+    grid.innerHTML += `<label class="media-add-slot media-video-slot"><input type="file" accept="video/mp4,video/webm" style="display:none" onchange="uploadSalonMedia(this)">🎬<br><span>${_mgEN ? 'Video' : 'فيديو'}</span></label>`;
   }
 }
 
 async function uploadSalonMedia(input) {
   if (!stSalonData || !input.files[0]) return;
   const file = input.files[0];
-  showToast('⏳ جاري رفع الملف...');
+  const _upEN = window.VELOUR_LANG === 'en';
+  showToast(_upEN ? '⏳ Uploading file...' : '⏳ جاري رفع الملف...');
   try {
     const result = await Api.stylistDash.uploadMedia(stSalonData.id, file);
     if (result.error) { showToast(result.error); return; }
-    showToast('تم رفع الملف');
+    showToast(_upEN ? 'File uploaded' : 'تم رفع الملف');
     loadSalonMedia();
-  } catch (e) { showToast('فشل الرفع'); }
+  } catch (e) { showToast(e.message || (_upEN ? 'Upload failed' : 'فشل الرفع')); }
   input.value = '';
 }
 
 async function setCoverMedia(mediaId) {
   try {
     await Api.stylistDash.setCover(mediaId);
-    showToast('تم تعيين الغلاف');
+    showToast(window.VELOUR_LANG === 'en' ? 'Cover photo set' : 'تم تعيين الغلاف');
     loadSalonMedia();
   } catch (e) { showToast(e.message); }
 }
 
 async function deleteMedia(mediaId) {
-  if (!confirm('حذف هذه الصورة؟')) return;
+  const _dmEN = window.VELOUR_LANG === 'en';
+  if (!confirm(_dmEN ? 'Delete this photo?' : 'حذف هذه الصورة؟')) return;
   try {
     await Api.stylistDash.deleteMedia(mediaId);
-    showToast('تم الحذف');
+    showToast(_dmEN ? 'Deleted' : 'تم الحذف');
     loadSalonMedia();
   } catch (e) { showToast(e.message); }
 }
@@ -642,10 +713,11 @@ function showAddOfferForm() {
 }
 
 async function saveOffer() {
+  const _ofEN = window.VELOUR_LANG === 'en';
   const title = document.getElementById('offer-title').value.trim();
-  if (!title) { showToast('أدخلي عنوان العرض'); return; }
+  if (!title) { showToast(_ofEN ? 'Enter offer title' : 'أدخلي عنوان العرض'); return; }
   const btn = document.querySelector('#modal-add-offer .btn-primary');
-  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  btn.disabled = true; btn.textContent = _ofEN ? 'Sending...' : 'جاري الإرسال...';
   try {
     const salonId = currentSalonIdForOffers;
     await Api.stylistDash.addOffer(salonId, {
@@ -655,10 +727,10 @@ async function saveOffer() {
       valid_until: document.getElementById('offer-valid-until').value || null,
     });
     closeModalById('modal-add-offer');
-    showToast('✅ تم إرسال العرض وإشعار الزبونات!');
+    showToast(_ofEN ? '✅ Offer sent & clients notified!' : '✅ تم إرسال العرض وإشعار الزبونات!');
     loadOffers(salonId);
   } catch (e) { showToast('⚠️ ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = 'إرسال العرض 🎁'; }
+  finally { btn.disabled = false; btn.textContent = _ofEN ? 'Send Offer 🎁' : 'إرسال العرض 🎁'; }
 }
 
 async function loadOffers(salonId) {
@@ -666,17 +738,18 @@ async function loadOffers(salonId) {
   const list = document.getElementById('st-offers-list');
   if (!list) return;
   try {
+    const _loEN = window.VELOUR_LANG === 'en';
     const offers = await Api.stylistDash.getOffers(salonId);
     if (!offers.length) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--gray);padding:8px 0">لا توجد عروض نشطة</div>';
+      list.innerHTML = `<div style="font-size:13px;color:var(--gray);padding:8px 0">${_loEN ? 'No active offers' : 'لا توجد عروض نشطة'}</div>`;
       return;
     }
     list.innerHTML = offers.map(o => `
       <div style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:8px;border-right:4px solid var(--rose);display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
           <div style="font-weight:800;font-size:14px">🎁 ${o.title}</div>
-          ${o.discount_percent ? `<div style="font-size:12px;color:var(--rose-dark);margin-top:2px">خصم ${o.discount_percent}%</div>` : ''}
-          ${o.valid_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">صالح حتى ${o.valid_until}</div>` : ''}
+          ${o.discount_percent ? `<div style="font-size:12px;color:var(--rose-dark);margin-top:2px">${_loEN ? `${o.discount_percent}% discount` : `خصم ${o.discount_percent}%`}</div>` : ''}
+          ${o.valid_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">${_loEN ? `Valid until ${o.valid_until}` : `صالح حتى ${o.valid_until}`}</div>` : ''}
         </div>
         <button onclick="deleteOffer(${o.id})" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;flex-shrink:0">🗑</button>
       </div>
@@ -687,7 +760,7 @@ async function loadOffers(salonId) {
 async function deleteOffer(id) {
   try {
     await Api.stylistDash.deleteOffer(id);
-    showToast('تم حذف العرض');
+    showToast(window.VELOUR_LANG === 'en' ? 'Offer deleted' : 'تم حذف العرض');
     loadOffers(currentSalonIdForOffers);
   } catch (e) { showToast('⚠️ ' + e.message); }
 }
@@ -703,7 +776,7 @@ function showBlockSlotForm() {
 
   // Fill stylist dropdown
   const sel = document.getElementById('bs-stylist');
-  sel.innerHTML = '<option value="">اختاري الكوفيرة...</option>';
+  sel.innerHTML = `<option value="">${window.VELOUR_LANG === 'en' ? 'Select stylist...' : 'اختاري الكوفيرة...'}</option>`;
   (stStylistData || []).forEach(st => {
     const opt = document.createElement('option');
     opt.value = st.id;
@@ -722,13 +795,14 @@ async function saveBlockedSlot() {
   const end_time = document.getElementById('bs-end').value;
   const reason = document.getElementById('bs-reason').value;
 
-  if (!stylist_id) { showToast('اختاري الكوفيرة'); return; }
-  if (!date || !start_time || !end_time) { showToast('التاريخ والوقت مطلوبان'); return; }
-  if (start_time >= end_time) { showToast('وقت البداية يجب أن يكون قبل وقت النهاية'); return; }
+  const _bsEN = window.VELOUR_LANG === 'en';
+  if (!stylist_id) { showToast(_bsEN ? 'Select a stylist' : 'اختاري الكوفيرة'); return; }
+  if (!date || !start_time || !end_time) { showToast(_bsEN ? 'Date and time are required' : 'التاريخ والوقت مطلوبان'); return; }
+  if (start_time >= end_time) { showToast(_bsEN ? 'Start time must be before end time' : 'وقت البداية يجب أن يكون قبل وقت النهاية'); return; }
 
   try {
     await Api.stylistDash.addBlockedSlot({ stylist_id: parseInt(stylist_id), date, start_time, end_time, reason });
-    showToast('تم حجب الوقت');
+    showToast(_bsEN ? 'Time blocked' : 'تم حجب الوقت');
     closeModalById('modal-block-slot');
     loadBlockedSlots();
   } catch (e) { showToast(e.message); }
@@ -739,17 +813,18 @@ async function loadBlockedSlots() {
     const blocks = await Api.stylistDash.getBlockedSlots();
     const list = document.getElementById('st-blocked-list');
     if (!list) return;
+    const _blEN = window.VELOUR_LANG === 'en';
     if (!blocks.length) {
-      list.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:8px 0">لا توجد أوقات محجوبة</div>';
+      list.innerHTML = `<div style="color:var(--gray);font-size:13px;padding:8px 0">${_blEN ? 'No blocked slots' : 'لا توجد أوقات محجوبة'}</div>`;
       return;
     }
     list.innerHTML = blocks.map(b => `
       <div class="blocked-slot-item">
         <div class="blocked-slot-info">
-          <div class="blocked-slot-date">👩 ${b.stylist_name || 'كوفيرة'} · 📅 ${formatDateAr(b.date)}</div>
+          <div class="blocked-slot-date">👩 ${b.stylist_name || (_blEN ? 'Stylist' : 'كوفيرة')} · 📅 ${formatDateAr(b.date)}</div>
           <div class="blocked-slot-time">🕐 ${b.start_time} – ${b.end_time}${b.reason ? ' · ' + b.reason : ''}</div>
         </div>
-        <button class="blocked-slot-del" onclick="unblockSlot(${b.id})">فتح</button>
+        <button class="blocked-slot-del" onclick="unblockSlot(${b.id})">${_blEN ? 'Unblock' : 'فتح'}</button>
       </div>
     `).join('');
   } catch (e) {}
@@ -758,7 +833,7 @@ async function loadBlockedSlots() {
 async function unblockSlot(id) {
   try {
     await Api.stylistDash.deleteBlockedSlot(id);
-    showToast('تم فتح الوقت');
+    showToast(window.VELOUR_LANG === 'en' ? 'Time unblocked' : 'تم فتح الوقت');
     loadBlockedSlots();
   } catch (e) { showToast(e.message); }
 }
@@ -766,7 +841,8 @@ async function unblockSlot(id) {
 function formatDateAr(d) {
   if (!d) return '';
   try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    const locale = window.VELOUR_LANG === 'en' ? 'en-US' : 'ar-EG';
+    return new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   } catch { return d; }
 }
 
@@ -775,17 +851,18 @@ async function uploadTeamAvatar(stylistId, input) {
   if (!file) return;
   try {
     const res = await Api.stylistDash.uploadStylistAvatar(stylistId, file);
+    const _taEN = window.VELOUR_LANG === 'en';
     if (res.avatar) {
       // update local data and re-render
       const st = stStylistData.find(s => s.id === stylistId);
       if (st) st.avatar = res.avatar;
       renderTeam();
-      showToast('تم تحديث الصورة ✓');
+      showToast(_taEN ? 'Photo updated ✓' : 'تم تحديث الصورة ✓');
     } else {
-      showToast(res.error || 'فشل رفع الصورة');
+      showToast(res.error || (_taEN ? 'Upload failed' : 'فشل رفع الصورة'));
     }
   } catch (e) {
-    showToast('فشل رفع الصورة');
+    showToast(window.VELOUR_LANG === 'en' ? 'Upload failed' : 'فشل رفع الصورة');
   }
   input.value = '';
 }
@@ -795,16 +872,17 @@ async function uploadStylistAvatar(input) {
   if (!file) return;
   try {
     const res = await Api.stylistDash.uploadAvatar(file);
+    const _saEN = window.VELOUR_LANG === 'en';
     if (res.avatar) {
       currentUser.avatar = res.avatar;
       const avatarEl = document.getElementById('st-profile-avatar');
-      avatarEl.innerHTML = `<img class="avatar-img" src="${res.avatar}" alt="صورتي">`;
-      showToast('تم تحديث صورتك ✓');
+      avatarEl.innerHTML = `<img class="avatar-img" src="${res.avatar}" alt="${_saEN ? 'My photo' : 'صورتي'}">`;
+      showToast(_saEN ? 'Photo updated ✓' : 'تم تحديث صورتك ✓');
     } else {
-      showToast(res.error || 'فشل رفع الصورة');
+      showToast(res.error || (_saEN ? 'Upload failed' : 'فشل رفع الصورة'));
     }
   } catch (e) {
-    showToast('فشل رفع الصورة');
+    showToast(window.VELOUR_LANG === 'en' ? 'Upload failed' : 'فشل رفع الصورة');
   }
   input.value = '';
 }
@@ -823,8 +901,9 @@ function loadStProfile() {
   }
   document.getElementById('st-profile-name').textContent = user.name || '-';
   document.getElementById('st-profile-phone').textContent = user.phone || '';
+  const _prEN = window.VELOUR_LANG === 'en';
   document.getElementById('st-profile-role-badge').textContent =
-    user.role === 'salon_owner' ? 'صاحبة صالون' : 'كوفيرة';
+    user.role === 'salon_owner' ? (_prEN ? 'Salon Owner' : 'صاحبة صالون') : (_prEN ? 'Stylist' : 'كوفيرة');
 
   // Pre-fill edit form
   document.getElementById('st-edit-name').value = user.name || '';
@@ -857,23 +936,25 @@ async function stShowStats() {
     const revenue = bookings.filter(b => b.status === 'confirmed')
       .reduce((s, b) => s + (b.total_price || 0), 0);
 
+    const _ssEN = window.VELOUR_LANG === 'en';
     document.getElementById('st-stats-content').innerHTML = `
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">إجمالي الحجوزات</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#27ae60">${confirmed}</div><div class="stat-label">مؤكدة</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#f39c12">${pending}</div><div class="stat-label">بانتظار</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:#9b59b6">${revenue}₪</div><div class="stat-label">إجمالي الدخل</div></div>
+        <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">${_ssEN ? 'Total Bookings' : 'إجمالي الحجوزات'}</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#27ae60">${confirmed}</div><div class="stat-label">${_ssEN ? 'Confirmed' : 'مؤكدة'}</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#f39c12">${pending}</div><div class="stat-label">${_ssEN ? 'Pending' : 'بانتظار'}</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#9b59b6">${revenue}₪</div><div class="stat-label">${_ssEN ? 'Total Revenue' : 'إجمالي الدخل'}</div></div>
       </div>
     `;
   } catch (e) {
-    document.getElementById('st-stats-content').innerHTML = '<p style="color:#e74c3c">تعذر تحميل الإحصائيات</p>';
+    document.getElementById('st-stats-content').innerHTML = `<p style="color:#e74c3c">${window.VELOUR_LANG === 'en' ? 'Failed to load stats' : 'تعذر تحميل الإحصائيات'}</p>`;
   }
 }
 
 async function stSaveProfile() {
+  const _spEN = window.VELOUR_LANG === 'en';
   const name = document.getElementById('st-edit-name').value.trim();
   const newPass = document.getElementById('st-edit-pass').value;
-  if (!name) { showToast('الاسم مطلوب'); return; }
+  if (!name) { showToast(_spEN ? 'Name is required' : 'الاسم مطلوب'); return; }
 
   try {
     const body = { name };
@@ -887,7 +968,7 @@ async function stSaveProfile() {
       localStorage.setItem('glamora_user', JSON.stringify(user));
     }
 
-    showToast('تم حفظ التغييرات');
+    showToast(_spEN ? 'Changes saved' : 'تم حفظ التغييرات');
     loadStProfile();
     document.getElementById('st-edit-profile-panel').classList.add('hidden');
   } catch (e) {
@@ -926,9 +1007,9 @@ async function saveCategories() {
   try {
     await Api.stylistDash.setCategories(stSalonData.id, selected);
     stSalonData.categories = JSON.stringify(selected);
-    showToast('تم حفظ التخصصات ✓');
+    showToast(window.VELOUR_LANG === 'en' ? 'Specialties saved ✓' : 'تم حفظ التخصصات ✓');
   } catch (e) {
-    showToast('فشل الحفظ');
+    showToast(window.VELOUR_LANG === 'en' ? 'Save failed' : 'فشل الحفظ');
   }
 }
 
@@ -938,9 +1019,10 @@ async function loadStReviews() {
   if (!el) return;
   try {
     const data = await Api.salons.get(stSalonData.id);
+    const _rvEN = window.VELOUR_LANG === 'en';
     const ratings = data.salon_ratings || [];
     if (!ratings.length) {
-      el.innerHTML = '<div style="font-size:13px;color:var(--gray);padding:8px 0">لا توجد تقييمات بعد</div>';
+      el.innerHTML = `<div style="font-size:13px;color:var(--gray);padding:8px 0">${_rvEN ? 'No reviews yet' : 'لا توجد تقييمات بعد'}</div>`;
       return;
     }
     el.innerHTML = ratings.map(r => `
@@ -948,32 +1030,33 @@ async function loadStReviews() {
         <div class="review-header">
           <div class="review-avatar">${(r.client_name||'؟')[0]}</div>
           <div>
-            <div class="review-name">${r.client_name||'زبونة'}</div>
-            <div class="review-date">${new Date(r.created_at).toLocaleDateString('ar-SA')}</div>
+            <div class="review-name">${r.client_name||(_rvEN ? 'Client' : 'زبونة')}</div>
+            <div class="review-date">${new Date(r.created_at).toLocaleDateString(_rvEN ? 'en-US' : 'ar-SA')}</div>
           </div>
           <div style="margin-right:auto;color:#FFB800;font-size:14px">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>
         </div>
         ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
         ${r.reply_text
-          ? `<div class="review-reply"><div class="review-reply-label">💬 ردك</div><div class="review-reply-text">${r.reply_text}</div></div>`
+          ? `<div class="review-reply"><div class="review-reply-label">💬 ${_rvEN ? 'Your reply' : 'ردك'}</div><div class="review-reply-text">${r.reply_text}</div></div>`
           : `<div style="margin-top:8px">
-              <textarea id="reply-input-${r.id}" placeholder="اكتبي ردك على هذا التقييم..." rows="2" class="rating-comment-input" style="font-size:13px"></textarea>
-              <button class="btn-sm btn-sm-primary" style="margin-top:6px;width:100%" onclick="sendReviewReply(${r.id})">إرسال الرد</button>
+              <textarea id="reply-input-${r.id}" placeholder="${_rvEN ? 'Write your reply...' : 'اكتبي ردك على هذا التقييم...'}" rows="2" class="rating-comment-input" style="font-size:13px"></textarea>
+              <button class="btn-sm btn-sm-primary" style="margin-top:6px;width:100%" onclick="sendReviewReply(${r.id})">${_rvEN ? 'Send Reply' : 'إرسال الرد'}</button>
              </div>`
         }
       </div>`).join('');
-  } catch (e) { el.innerHTML = '<div style="color:red;font-size:13px">فشل تحميل التقييمات</div>'; }
+  } catch (e) { el.innerHTML = `<div style="color:red;font-size:13px">${window.VELOUR_LANG === 'en' ? 'Failed to load reviews' : 'فشل تحميل التقييمات'}</div>`; }
 }
 
 async function sendReviewReply(reviewId) {
   const input = document.getElementById(`reply-input-${reviewId}`);
+  const _rrEN = window.VELOUR_LANG === 'en';
   const text = input?.value?.trim();
-  if (!text) { showToast('اكتبي الرد أولاً'); return; }
+  if (!text) { showToast(_rrEN ? 'Write your reply first' : 'اكتبي الرد أولاً'); return; }
   try {
     await Api.stylistDash.replyToReview(reviewId, text);
-    showToast('تم إرسال الرد ✓');
+    showToast(_rrEN ? 'Reply sent ✓' : 'تم إرسال الرد ✓');
     loadStReviews();
-  } catch (e) { showToast('فشل إرسال الرد'); }
+  } catch (e) { showToast(_rrEN ? 'Failed to send reply' : 'فشل إرسال الرد'); }
 }
 
 // ===== 59-61: ANALYTICS =====
@@ -984,14 +1067,15 @@ async function showAnalytics() {
   try {
     analyticsData = await Api.stylistDash.analytics(stSalonData.id);
     renderAnalytics('today');
+    const _anEN = window.VELOUR_LANG === 'en';
     document.getElementById('analytics-top-service').textContent =
-      analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} مرة)` : 'لا توجد بيانات بعد';
+      analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} ${_anEN ? 'times' : 'مرة'})` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
     document.getElementById('analytics-top-hour').textContent =
-      analyticsData.busiest_hour ? `الساعة ${analyticsData.busiest_hour}` : 'لا توجد بيانات بعد';
+      analyticsData.busiest_hour ? `${_anEN ? 'Hour' : 'الساعة'} ${analyticsData.busiest_hour}` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
     document.getElementById('analytics-pending').textContent = analyticsData.bookings.pending;
     document.getElementById('analytics-confirmed').textContent = analyticsData.bookings.confirmed;
     document.getElementById('analytics-completed').textContent = analyticsData.bookings.completed;
-  } catch (e) { showToast('فشل تحميل التحليلات'); }
+  } catch (e) { showToast(window.VELOUR_LANG === 'en' ? 'Failed to load analytics' : 'فشل تحميل التحليلات'); }
 }
 
 function renderAnalytics(period) {
@@ -1013,24 +1097,25 @@ async function showClients() {
   const el = document.getElementById('clients-list');
   el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
+    const _clEN = window.VELOUR_LANG === 'en';
     const { clients } = await Api.stylistDash.clients(stSalonData.id);
-    if (!clients.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>لا توجد زبونات بعد</p></div>'; return; }
+    if (!clients.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>${_clEN ? 'No clients yet' : 'لا توجد زبونات بعد'}</p></div>`; return; }
     el.innerHTML = clients.map(c => {
       const lastB = c.bookings.sort((a, b) => b.date?.localeCompare(a.date))[0];
       const total = c.bookings.filter(b => b.status === 'completed').reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
       return `<div class="client-card">
         <div class="client-card-header">
           <span class="client-name">${c.name}</span>
-          <span class="client-badge">${c.bookings.length} حجز</span>
+          <span class="client-badge">${c.bookings.length} ${_clEN ? 'booking' : 'حجز'}</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="client-last-visit">آخر زيارة: ${lastB?.date || '-'}</span>
-          <span class="client-total">₪${total.toFixed(0)} إجمالي</span>
+          <span class="client-last-visit">${_clEN ? 'Last visit' : 'آخر زيارة'}: ${lastB?.date || '-'}</span>
+          <span class="client-total">₪${total.toFixed(0)} ${_clEN ? 'total' : 'إجمالي'}</span>
         </div>
         ${c.phone ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">📞 ${c.phone}</div>` : ''}
       </div>`;
     }).join('');
-  } catch (e) { el.innerHTML = '<div style="color:red;padding:20px">فشل التحميل</div>'; }
+  } catch (e) { el.innerHTML = `<div style="color:red;padding:20px">${window.VELOUR_LANG === 'en' ? 'Loading failed' : 'فشل التحميل'}</div>`; }
 }
 
 // ===== 62: INVENTORY =====
@@ -1038,8 +1123,9 @@ async function loadInventory() {
   if (!stSalonData?.id) return;
   const el = document.getElementById('st-inventory-list');
   try {
+    const _invEN = window.VELOUR_LANG === 'en';
     const { items } = await Api.stylistDash.getInventory(stSalonData.id);
-    if (!items.length) { el.innerHTML = '<div class="media-hint">لا يوجد منتجات مضافة بعد</div>'; return; }
+    if (!items.length) { el.innerHTML = `<div class="media-hint">${_invEN ? 'No products added yet' : 'لا يوجد منتجات مضافة بعد'}</div>`; return; }
     el.innerHTML = items.map(item => {
       const isLow = parseFloat(item.quantity) <= parseInt(item.low_threshold);
       return `<div class="inventory-item ${isLow ? 'low-stock' : ''}">
@@ -1047,7 +1133,7 @@ async function loadInventory() {
           <div class="inv-name">${item.name}</div>
           <div class="inv-qty">${item.quantity} ${item.unit}</div>
         </div>
-        ${isLow ? `<span class="inv-low-badge">مخزون منخفض ⚠️</span>` : ''}
+        ${isLow ? `<span class="inv-low-badge">${_invEN ? 'Low stock ⚠️' : 'مخزون منخفض ⚠️'}</span>` : ''}
         <div class="inv-actions">
           <button class="inv-action-btn" onclick="editInventoryItem(${JSON.stringify(item).replace(/"/g,"'")})">✏️</button>
           <button class="inv-action-btn" onclick="deleteInventoryItem(${item.id})">🗑️</button>
@@ -1078,27 +1164,29 @@ function editInventoryItem(item) {
 
 async function saveInventoryItem() {
   const id = document.getElementById('inv-edit-id').value;
+  const _invSEN = window.VELOUR_LANG === 'en';
   const data = {
     name: document.getElementById('inv-name').value.trim(),
     quantity: document.getElementById('inv-qty').value,
-    unit: document.getElementById('inv-unit').value.trim() || 'قطعة',
+    unit: document.getElementById('inv-unit').value.trim() || (_invSEN ? 'piece' : 'قطعة'),
     low_threshold: document.getElementById('inv-threshold').value
   };
-  if (!data.name) { showToast('اسم المنتج مطلوب'); return; }
+  if (!data.name) { showToast(_invSEN ? 'Product name is required' : 'اسم المنتج مطلوب'); return; }
   try {
     if (id) { await Api.stylistDash.updateInventory(id, data); }
     else { await Api.stylistDash.addInventory(stSalonData.id, data); }
     document.getElementById('modal-inventory').classList.add('hidden');
-    showToast('تم الحفظ ✓');
+    showToast(_invSEN ? 'Saved ✓' : 'تم الحفظ ✓');
     loadInventory();
-  } catch (e) { showToast('فشل الحفظ'); }
+  } catch (e) { showToast(_invSEN ? 'Save failed' : 'فشل الحفظ'); }
 }
 
 async function deleteInventoryItem(id) {
-  if (!confirm('حذف المنتج؟')) return;
+  const _diEN = window.VELOUR_LANG === 'en';
+  if (!confirm(_diEN ? 'Delete product?' : 'حذف المنتج؟')) return;
   try {
     await Api.stylistDash.deleteInventory(id);
-    showToast('تم الحذف ✓');
+    showToast(_diEN ? 'Deleted ✓' : 'تم الحذف ✓');
     loadInventory();
-  } catch (e) { showToast('فشل الحذف'); }
+  } catch (e) { showToast(_diEN ? 'Delete failed' : 'فشل الحذف'); }
 }

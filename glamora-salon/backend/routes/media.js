@@ -23,11 +23,21 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm'];
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'video/mp4', 'video/quicktime', 'video/webm', 'audio/webm', 'audio/ogg', 'audio/mp4'];
     if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('نوع الملف غير مدعوم'));
+    else cb(new Error('Unsupported file type'));
   }
 });
+
+// Wrapper that converts Multer errors to JSON (prevents HTML 500 responses)
+function handleUpload(field) {
+  return (req, res, next) => {
+    upload.single(field)(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message || 'Upload error' });
+      next();
+    });
+  };
+}
 
 async function uploadToR2(buffer, filename, mimetype) {
   await R2.send(new PutObjectCommand({ Bucket: BUCKET, Key: filename, Body: buffer, ContentType: mimetype }));
@@ -39,7 +49,8 @@ async function deleteFromR2(filename) {
   catch (e) { console.error('R2 delete error:', e.message); }
 }
 
-router.post('/salon/:id/media', authenticate, upload.single('file'), async (req, res) => {
+// ---- Salon gallery photos/video ----
+router.post('/salon/:id/media', authenticate, handleUpload('file'), async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);
     const stylist = await DB.stylists.findOne(st => st.user_id == req.user.id && st.salon_id == salonId);
@@ -54,10 +65,16 @@ router.post('/salon/:id/media', authenticate, upload.single('file'), async (req,
     if (isVideo && videos.length >= 1) return res.status(400).json({ error: 'يمكن رفع فيديو واحد فقط' });
     if (!isVideo && photos.length >= 4) return res.status(400).json({ error: 'يمكن رفع 4 صور فقط' });
 
-    const ext = path.extname(req.file.originalname);
+    const ext = path.extname(req.file.originalname) || '.jpg';
     const filename = `salon_${salonId}_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
 
-    const url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+
     const isCover = !isVideo && photos.length === 0;
     const media = await DB.salon_media.insert({
       salon_id: salonId,
@@ -68,11 +85,12 @@ router.post('/salon/:id/media', authenticate, upload.single('file'), async (req,
     });
     res.status(201).json({ media });
   } catch (e) {
-    console.error('R2 upload error:', e);
-    res.status(500).json({ error: 'فشل رفع الملف' });
+    console.error('Salon media upload error:', e.message, e.stack);
+    res.status(500).json({ error: `فشل رفع الملف: ${e.message}` });
   }
 });
 
+// ---- Set cover photo ----
 router.put('/media/:id/cover', authenticate, async (req, res) => {
   try {
     const mediaId = parseInt(req.params.id);
@@ -92,6 +110,7 @@ router.put('/media/:id/cover', authenticate, async (req, res) => {
   }
 });
 
+// ---- Delete media ----
 router.delete('/media/:id', authenticate, async (req, res) => {
   try {
     const mediaId = parseInt(req.params.id);
@@ -115,7 +134,8 @@ router.delete('/media/:id', authenticate, async (req, res) => {
   }
 });
 
-router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), async (req, res) => {
+// ---- Stylist avatar (by ID, for salon owner uploading team photos) ----
+router.post('/stylist/:stylistId/avatar', authenticate, handleUpload('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
 
@@ -123,7 +143,6 @@ router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), a
     const stylist = await DB.stylists.findOne(s => s.id === stylistId);
     if (!stylist) return res.status(404).json({ error: 'كوفيرة غير موجودة' });
 
-    // allow: same user uploading their own avatar, OR any stylist in the same salon
     const isOwn = stylist.user_id == req.user.id;
     const isSameSalon = await DB.stylists.findOne(s => s.user_id == req.user.id && s.salon_id == stylist.salon_id);
     if (!isOwn && !isSameSalon) return res.status(403).json({ error: 'غير مصرح' });
@@ -135,14 +154,10 @@ router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), a
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
       url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
     } else {
-      // R2 not configured — store as data URL fallback (base64, max ~2MB practical)
-      const b64 = req.file.buffer.toString('base64');
-      url = `data:${req.file.mimetype};base64,${b64}`;
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
-    // Always save to stylists.avatar (works even if no user account linked)
     await query('UPDATE stylists SET avatar=$1 WHERE id=$2', [url, stylistId]);
-    // Also sync to users.avatar when the stylist has a linked account
     if (stylist.user_id) {
       await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, stylist.user_id]);
     }
@@ -153,7 +168,8 @@ router.post('/stylist/:stylistId/avatar', authenticate, upload.single('file'), a
   }
 });
 
-router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, res) => {
+// ---- Stylist avatar (self) ----
+router.post('/stylist/avatar', authenticate, handleUpload('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
 
@@ -164,12 +180,10 @@ router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, 
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
       url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
     } else {
-      const b64 = req.file.buffer.toString('base64');
-      url = `data:${req.file.mimetype};base64,${b64}`;
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     await query('UPDATE users SET avatar=$1 WHERE id=$2', [url, req.user.id]);
-    // Sync to all stylist records linked to this user
     await query('UPDATE stylists SET avatar=$1 WHERE user_id=$2', [url, req.user.id]);
     res.json({ avatar: url });
   } catch (e) {
@@ -178,7 +192,35 @@ router.post('/stylist/avatar', authenticate, upload.single('file'), async (req, 
   }
 });
 
-router.post('/review/photo', authenticate, upload.single('file'), async (req, res) => {
+// ---- Salon profile avatar (cover_url) ----
+router.post('/salon/:salonId/avatar', authenticate, handleUpload('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const salonId = parseInt(req.params.salonId);
+
+    const stylist = await DB.stylists.findOne(st => st.user_id == req.user.id && st.salon_id == salonId);
+    if (!stylist) return res.status(403).json({ error: 'Not authorized' });
+
+    const ext = path.extname(req.file.originalname) || '.jpg';
+    const filename = `salon_avatar_${salonId}_${Date.now()}${ext}`;
+
+    let url;
+    if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
+      url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+    } else {
+      url = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+
+    await query('UPDATE salons SET cover_url=$1 WHERE id=$2', [url, salonId]);
+    res.json({ avatar: url });
+  } catch (e) {
+    console.error('Salon avatar upload error:', e.message);
+    res.status(500).json({ error: `Upload failed: ${e.message}` });
+  }
+});
+
+// ---- Review photo ----
+router.post('/review/photo', authenticate, handleUpload('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
     const ext = path.extname(req.file.originalname) || '.jpg';
@@ -195,8 +237,8 @@ router.post('/review/photo', authenticate, upload.single('file'), async (req, re
   }
 });
 
-// Upload chat image or voice message
-router.post('/chat/upload', authenticate, upload.single('file'), async (req, res) => {
+// ---- Chat image / voice ----
+router.post('/chat/upload', authenticate, handleUpload('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
     const isAudio = req.file.mimetype.startsWith('audio/');
@@ -216,6 +258,7 @@ router.post('/chat/upload', authenticate, upload.single('file'), async (req, res
   }
 });
 
+// ---- Get salon gallery ----
 router.get('/salon/:id/media', async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);

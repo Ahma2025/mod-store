@@ -731,7 +731,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 #screen-stylist .tab.active { display: block; }
 
 .salon-mgmt-card { display: flex; align-items: center; gap: 14px; background: var(--white); border-radius: var(--radius); padding: 18px; margin: 16px; box-shadow: var(--shadow); }
-.salon-mgmt-emoji { font-size: 48px; flex-shrink: 0; }
+.salon-mgmt-emoji { font-size: 48px; flex-shrink: 0; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f5e6f0; }
 .salon-mgmt-details { flex: 1; }
 .salon-mgmt-details h3 { font-size: 18px; font-weight: 700; color: var(--dark); }
 .salon-mgmt-details p { font-size: 13px; color: var(--gray); margin-top: 3px; }

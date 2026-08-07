@@ -1258,17 +1258,15 @@
       <div class="form-group"><label>رقم الهاتف</label><input id="sf-phone" type="tel" placeholder="05xxxxxxxx"></div>
       <div class="form-group"><label>وصف الصالون</label><textarea id="sf-desc" rows="3" placeholder="اكتبي وصفاً مختصراً..."></textarea></div>
       <div class="form-group">
-        <label>أيقونة الصالون</label>
-        <div class="emoji-picker">
-          <span class="ep-item active" onclick="selectSalonEmoji(this,'💅')">💅</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'✨')">✨</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'💎')">💎</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'🌸')">🌸</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'👑')">👑</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'🌺')">🌺</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'🦋')">🦋</span>
-          <span class="ep-item" onclick="selectSalonEmoji(this,'🌟')">🌟</span>
+        <label id="sf-avatar-label">صورة الصالون</label>
+        <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
+          <div id="sf-avatar-preview" onclick="document.getElementById('sf-avatar-input').click()" style="width:80px;height:80px;border-radius:50%;background:var(--cream2);border:2px dashed var(--rose);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;font-size:28px">💅</div>
+          <div>
+            <button type="button" class="btn-secondary" style="font-size:13px;padding:8px 16px" onclick="document.getElementById('sf-avatar-input').click()" id="sf-avatar-btn">📷 اختاري صورة</button>
+            <div style="font-size:11px;color:var(--gray);margin-top:4px" id="sf-avatar-hint">JPG أو PNG · حجم أقصى 5MB</div>
+          </div>
         </div>
+        <input type="file" id="sf-avatar-input" accept="image/*" style="display:none" onchange="previewSalonAvatar(this)">
       </div>
       <div class="form-group">
         <label>موقع الصالون على الخريطة</label>

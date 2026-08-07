@@ -121,9 +121,12 @@ const Api = {
     setAvailability: (stylistId, availability) => apiCall('POST', `/stylist/stylist/${stylistId}/availability`, { availability }),
     bookings: (filter) => apiCall('GET', `/stylist/bookings?filter=${filter || 'all'}`),
     getBookings: (filter) => apiCall('GET', `/stylist/bookings?filter=${filter || 'all'}`),
-    uploadMedia: (salonId, file) => {
+    uploadMedia: async (salonId, file) => {
       const fd = new FormData(); fd.append('file', file);
-      return fetch(`${API}/media/salon/${salonId}/media`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
+      const r = await fetch(`${API}/media/salon/${salonId}/media`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd });
+      const data = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      return data;
     },
     uploadAvatar: (file) => {
       const fd = new FormData(); fd.append('file', file);

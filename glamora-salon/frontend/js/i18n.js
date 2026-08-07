@@ -534,6 +534,9 @@ const TR = {
   'إضافة صالون جديد': 'Add New Salon',
   'تعديل معلومات الصالون': 'Edit Salon Info',
   'أيقونة الصالون': 'Salon Icon',
+  'صورة الصالون': 'Salon Photo',
+  '📷 اختاري صورة': '📷 Choose Photo',
+  'JPG أو PNG · حجم أقصى 5MB': 'JPG or PNG · Max 5MB',
   'الاسم والمدينة والعنوان مطلوبة': 'Name, city and address are required',
   'تم إنشاء الصالون': 'Salon created',
   'مثال: صالون فيلور': 'e.g. Velour Salon',
@@ -741,6 +744,40 @@ const TR = {
   'آخر زيارة': 'Last visit',
   'الساعة': 'At',
   'مرة': 'times',
+
+  // === REGISTRATION / AUTH ===
+  'ما عندك حساب؟': "Don't have an account?",
+  'سنذكّرك عند حلول موعد تجديد لون شعرك': "We'll remind you when it's time to refresh your hair color",
+
+  // === STYLIST DASHBOARD STATIC ===
+  'لم تُسجّلي صالونك بعد': "You haven't registered your salon yet",
+  'أضيفي عرضاً وسيُرسل إشعار فوري لزبوناتك': 'Add an offer and your clients will be notified instantly',
+  'الزبونات': 'Clients',
+  'حجب وقت': 'Block Time',
+  'السبب (اختياري)': 'Reason (optional)',
+  'حجب الوقت 🔒': 'Block Time 🔒',
+
+  // === SERVICE FORM ===
+  'اسم الخدمة *': 'Service Name *',
+  'التصنيف *': 'Category *',
+  'السعر (₪) *': 'Price (₪) *',
+  'المدة (دقيقة) *': 'Duration (min) *',
+  'وصف الخدمة': 'Service Description',
+
+  // === STYLIST / PERSON FORM ===
+  'الاسم *': 'Name *',
+  'رقم الهاتف *': 'Phone *',
+  'سنوات الخبرة': 'Years of Experience',
+  'التخصصات': 'Specialties',
+  'نبذة': 'Bio',
+
+  // === DEMO NAMES (placeholder text) ===
+  'سارة': 'Sarah',
+  'سارة أحمد': 'Sarah Ahmed',
+  'صالون غلامورا': 'Glamora Salon',
+  'رام الله': 'Ramallah',
+  'مريم الكوفيرة': 'Mariam the Stylist',
+  'مثال: بالياج': 'e.g. Balayage',
 };
 
 // ---- Core translation function ----
@@ -778,6 +815,8 @@ window.applyTranslations = function(root) {
       if (!parent) return NodeFilter.FILTER_REJECT;
       const tag = parent.tagName;
       if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(tag)) return NodeFilter.FILTER_REJECT;
+      // Skip elements marked translate="no" (user-entered DB content)
+      if (parent.closest('[translate="no"]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }
   });
@@ -824,10 +863,13 @@ function startObserver() {
     requestAnimationFrame(() => {
       mutations.forEach(m => {
         m.addedNodes.forEach(node => {
-          if (node.nodeType === 1) applyTranslations(node);
-          else if (node.nodeType === 3 && node.textContent.trim()) {
-            const en = TR[node.textContent.trim()];
-            if (en) node.textContent = node.textContent.replace(node.textContent.trim(), en);
+          if (node.nodeType === 1) {
+            if (!node.closest('[translate="no"]')) applyTranslations(node);
+          } else if (node.nodeType === 3 && node.textContent.trim()) {
+            if (!node.parentElement?.closest('[translate="no"]')) {
+              const en = TR[node.textContent.trim()];
+              if (en) node.textContent = node.textContent.replace(node.textContent.trim(), en);
+            }
           }
         });
       });
