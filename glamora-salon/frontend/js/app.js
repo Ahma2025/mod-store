@@ -721,7 +721,9 @@ function renderSalonServices(services) {
   if (!services?.length) { document.getElementById('salon-services-list').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>${_ssEN ? 'No services' : 'لا توجد خدمات'}</h3></div>`; return; }
   document.getElementById('salon-services-list').innerHTML = services.map(s => `
     <div class="service-card" onclick="quickBook(${s.id}, ${s.salon_id})">
-      <div class="service-icon">${categoryIcon(s.category)}</div>
+      <div class="service-icon" style="background:${categoryColor(s.category)}1a;border:1.5px solid ${categoryColor(s.category)}33">
+        <span style="font-size:22px">${categoryIcon(s.category)}</span>
+      </div>
       <div class="service-info">
         <h4 translate="no">${s.name_ar || s.name}</h4>
         <p translate="no">${s.description ? s.description.substring(0,55) + '...' : ''}</p>
@@ -1157,7 +1159,9 @@ function renderWizardServices(services) {
   const selectedIds = new Set((wizardState.services || []).map(s => s.id));
   document.getElementById('wizard-services-list').innerHTML = services.map(s => `
     <div class="wizard-service-item ${selectedIds.has(s.id) ? 'selected' : ''}" onclick="selectWizardService(${JSON.stringify(s).replace(/"/g,"'")})">
-      <div class="service-icon">${categoryIcon(s.category)}</div>
+      <div class="service-icon" style="background:${categoryColor(s.category)}1a;border:1.5px solid ${categoryColor(s.category)}33">
+        <span style="font-size:22px">${categoryIcon(s.category)}</span>
+      </div>
       <div class="service-info">
         <h4 translate="no">${s.name_ar || s.name}</h4>
         <div class="duration">⏱ ${s.duration_minutes} ${window.VELOUR_LANG === 'en' ? 'min' : 'دقيقة'}</div>
@@ -1987,8 +1991,13 @@ function focusSearch() { document.getElementById('search-input')?.focus(); }
 
 // ===== HELPERS =====
 function categoryIcon(cat) {
-  const map = { 'صبغ الشعر': '🎨', 'قص': '✂️', 'علاجات': '💆', 'مكياج': '💄', 'أظافر': '💅', 'تصفيف': '👑' };
+  const map = { 'صبغ الشعر': '🎨', 'قص': '✂️', 'علاجات': '💆', 'مكياج': '💄', 'أظافر': '💅', 'تصفيف': '👑', 'Hair': '✂️', 'Makeup': '💄', 'Nails': '💅', 'Styling': '👑', 'Treatment': '💆', 'Color': '🎨' };
   return map[cat] || '✨';
+}
+
+function categoryColor(cat) {
+  const map = { 'صبغ الشعر': '#C97B8A', 'قص': '#8B6B9E', 'علاجات': '#6B9EA8', 'مكياج': '#C9608A', 'أظافر': '#A8706B', 'تصفيف': '#6B0F2B', 'Hair': '#8B6B9E', 'Makeup': '#C9608A', 'Nails': '#A8706B', 'Styling': '#6B0F2B', 'Treatment': '#6B9EA8', 'Color': '#C97B8A' };
+  return map[cat] || '#6B0F2B';
 }
 
 function statusLabel(s) {
