@@ -50,10 +50,10 @@ jobs:
           cd glamora-salon/android
           chmod +x gradlew
           ./gradlew bundleRelease assembleRelease \
-            -Pandroid.injected.signing.store.file="${GITHUB_WORKSPACE}/glamora-salon/android/app/keystore/velour-release.keystore" \
-            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
-            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+            -Psigning.store.file="${GITHUB_WORKSPACE}/glamora-salon/android/app/keystore/velour-release.keystore" \
+            -Psigning.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Psigning.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Psigning.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4

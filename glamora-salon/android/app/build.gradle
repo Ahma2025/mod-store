@@ -18,10 +18,11 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("D:\\velour-release.jks")
-            storePassword "velour2024"
-            keyAlias "velour"
-            keyPassword "velour2024"
+            def ksPath = findProperty('signing.store.file') ?: "${rootProject.rootDir}/app/keystore/velour-release.keystore"
+            storeFile file(ksPath)
+            storePassword (findProperty('signing.store.password') ?: "velour2024")
+            keyAlias (findProperty('signing.key.alias') ?: "velour")
+            keyPassword (findProperty('signing.key.password') ?: "velour2024")
         }
     }
     buildTypes {
