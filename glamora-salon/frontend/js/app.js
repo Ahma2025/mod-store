@@ -1509,61 +1509,81 @@ function writeReview(id) {
 
 // ===== VOICE PLAYER =====
 let _activeVoiceId = null;
+const WAVE_BARS = 28;
 
-function toggleVoice(vid, url) {
+// Generate random-looking wave heights (seeded per vid so consistent)
+function _waveHeights(vid) {
+  const heights = [];
+  let seed = vid.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  for (let i = 0; i < WAVE_BARS; i++) {
+    seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+    heights.push(30 + (Math.abs(seed) % 70));
+  }
+  return heights;
+}
+
+function _buildWaveBars(vid) {
+  const heights = _waveHeights(vid);
+  return heights.map((h, i) =>
+    `<div class="vp-wave" id="${vid}_w${i}" style="height:${h}%"></div>`
+  ).join('');
+}
+
+function _updateWaves(vid, pct) {
+  const playedCount = Math.floor((pct / 100) * WAVE_BARS);
+  for (let i = 0; i < WAVE_BARS; i++) {
+    const bar = document.getElementById(vid + '_w' + i);
+    if (bar) bar.classList.toggle('played', i < playedCount);
+  }
+}
+
+function toggleVoice(vid) {
   const audio = document.getElementById(vid + '_audio');
   const btn = document.querySelector('#' + vid + ' .vp-btn');
   if (!audio) return;
 
-  // Stop any other playing voice
   if (_activeVoiceId && _activeVoiceId !== vid) {
     const other = document.getElementById(_activeVoiceId + '_audio');
     if (other) { other.pause(); other.currentTime = 0; }
     const otherBtn = document.querySelector('#' + _activeVoiceId + ' .vp-btn');
-    if (otherBtn) otherBtn.textContent = '▶';
-    document.getElementById(_activeVoiceId + '_prog').style.width = '0%';
+    if (otherBtn) otherBtn.innerHTML = '&#9654;';
+    _updateWaves(_activeVoiceId, 0);
   }
 
   if (audio.paused) {
-    // iOS requires AudioContext unlock on user gesture
-    if (window._audioCtx && window._audioCtx.state === 'suspended') {
-      window._audioCtx.resume();
-    }
+    if (window._audioCtx && window._audioCtx.state === 'suspended') window._audioCtx.resume();
     audio.load();
     audio.play().catch(() => {});
-    btn.textContent = '⏸';
+    btn.innerHTML = '&#9646;&#9646;';
     _activeVoiceId = vid;
   } else {
     audio.pause();
-    btn.textContent = '▶';
+    btn.innerHTML = '&#9654;';
   }
 }
 
 function updateVoiceProgress(vid) {
   const audio = document.getElementById(vid + '_audio');
-  const prog = document.getElementById(vid + '_prog');
   const timeEl = document.getElementById(vid + '_time');
-  if (!audio || !prog) return;
+  if (!audio) return;
   const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-  prog.style.width = pct + '%';
-  timeEl.textContent = fmtVoiceTime(audio.currentTime);
+  _updateWaves(vid, pct);
+  if (timeEl) timeEl.textContent = fmtVoiceTime(audio.currentTime);
 }
 
 function showVoiceDuration(vid) {
   const audio = document.getElementById(vid + '_audio');
   const timeEl = document.getElementById(vid + '_time');
-  if (audio && timeEl && audio.duration && !isNaN(audio.duration)) {
+  if (audio && timeEl && audio.duration && !isNaN(audio.duration))
     timeEl.textContent = fmtVoiceTime(audio.duration);
-  }
 }
 
 function resetVoice(vid) {
   const btn = document.querySelector('#' + vid + ' .vp-btn');
-  const prog = document.getElementById(vid + '_prog');
-  const timeEl = document.getElementById(vid + '_time');
-  if (btn) btn.textContent = '▶';
-  if (prog) prog.style.width = '0%';
+  if (btn) btn.innerHTML = '&#9654;';
+  _updateWaves(vid, 0);
   const audio = document.getElementById(vid + '_audio');
+  const timeEl = document.getElementById(vid + '_time');
   if (timeEl && audio) timeEl.textContent = fmtVoiceTime(audio.duration || 0);
   _activeVoiceId = null;
 }
@@ -1573,7 +1593,7 @@ function seekVoice(e, vid) {
   const bar = e.currentTarget;
   if (!audio || !audio.duration) return;
   const rect = bar.getBoundingClientRect();
-  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  const x = (e.touches ? e.touches[0].clientX : e.clientX);
   const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
   audio.currentTime = ratio * audio.duration;
 }
@@ -1591,7 +1611,6 @@ document.addEventListener('touchstart', function unlockAudio() {
     try { window._audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   }
   if (window._audioCtx && window._audioCtx.state === 'suspended') window._audioCtx.resume();
-  document.removeEventListener('touchstart', unlockAudio);
 }, { once: true });
 
 // ===== CHAT =====
@@ -1653,12 +1672,12 @@ function buildMsgHtml(msg) {
     const vid = 'va_' + (msg.id || Date.now());
     bubble = `
       <div class="voice-player" id="${vid}">
-        <button class="vp-btn" onclick="toggleVoice('${vid}','${msg.media_url}')">▶</button>
-        <div class="vp-bar" onclick="seekVoice(event,'${vid}')">
-          <div class="vp-progress" id="${vid}_prog"></div>
+        <button class="vp-btn" onclick="toggleVoice('${vid}')">&#9654;</button>
+        <div class="vp-middle">
+          <div class="vp-waves" onclick="seekVoice(event,'${vid}')">${_buildWaveBars(vid)}</div>
+          <span class="vp-time" id="${vid}_time">0:00</span>
         </div>
-        <span class="vp-time" id="${vid}_time">0:00</span>
-        <audio id="${vid}_audio" src="${msg.media_url}" preload="none"
+        <audio id="${vid}_audio" src="${msg.media_url}" preload="metadata"
                ontimeupdate="updateVoiceProgress('${vid}')"
                onended="resetVoice('${vid}')"
                onloadedmetadata="showVoiceDuration('${vid}')"></audio>

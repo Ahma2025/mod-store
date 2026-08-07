@@ -489,14 +489,44 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .msg-bubble-media { padding: 4px; }
 .chat-img { max-width: 220px; max-height: 220px; border-radius: 14px; display: block; cursor: zoom-in; object-fit: cover; }
 .chat-audio { max-width: 220px; height: 40px; border-radius: 20px; outline: none; }
-.voice-player { display: flex; align-items: center; gap: 8px; min-width: 190px; max-width: 230px; padding: 4px 0; }
-.vp-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
-.vp-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.35); border-radius: 4px; position: relative; cursor: pointer; }
-.msg-wrap.them .vp-bar { background: rgba(0,0,0,0.15); }
-.vp-progress { height: 100%; background: white; border-radius: 4px; width: 0%; transition: width 0.1s linear; pointer-events: none; }
-.msg-wrap.them .vp-progress { background: var(--primary); }
-.vp-time { font-size: 11px; color: rgba(255,255,255,0.85); flex-shrink: 0; min-width: 28px; }
-.msg-wrap.them .vp-time { color: var(--gray); }
+/* Voice player — Messenger style */
+.voice-player {
+  display: flex; align-items: center; gap: 10px;
+  min-width: 200px; max-width: 240px;
+  padding: 10px 14px;
+  border-radius: 22px;
+  background: #6B0F2B;
+  margin: -8px -12px;
+}
+.msg-wrap.them .voice-player {
+  background: #f0e0e6;
+}
+.vp-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: white; color: #6B0F2B;
+  border: none; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.msg-wrap.them .vp-btn { background: #6B0F2B; color: white; }
+.vp-btn:active { transform: scale(0.93); }
+.vp-middle { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.vp-waves {
+  display: flex; align-items: center; gap: 2px; height: 22px; cursor: pointer;
+}
+.vp-wave {
+  width: 3px; border-radius: 3px;
+  background: rgba(255,255,255,0.4);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.msg-wrap.them .vp-wave { background: rgba(107,15,43,0.25); }
+.vp-wave.played { background: white; }
+.msg-wrap.them .vp-wave.played { background: #6B0F2B; }
+.vp-time { font-size: 11px; color: rgba(255,255,255,0.75); }
+.msg-wrap.them .vp-time { color: #6B0F2B; opacity: 0.7; }
 /* Seen tick */
 .msg-seen { font-size: 10px; color: var(--gray); margin-right: 4px; }
 .msg-seen.seen { color: var(--rose); }
