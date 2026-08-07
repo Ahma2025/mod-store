@@ -16,7 +16,10 @@ function showScreen(id) {
 
   // rAF ensures display:block is painted before the class (and transition) fires
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => target.classList.add('active'));
+    requestAnimationFrame(() => {
+      target.classList.add('active');
+      if (window.VELOUR_LANG === 'en') applyTranslations(target);
+    });
   });
 
   if (id !== 'splash' && id !== 'onboard' && id !== 'login' && id !== 'register') {

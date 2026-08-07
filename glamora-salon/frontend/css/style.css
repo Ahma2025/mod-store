@@ -1080,3 +1080,54 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .inv-low-badge { font-size: 11px; background: #FF9800; color: white; padding: 2px 7px; border-radius: 20px; }
 .inv-actions { display: flex; gap: 6px; }
 .inv-action-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--gray-light); font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--white); }
+
+/* ===== LANGUAGE TOGGLE ===== */
+.lang-toggle-btn { background: rgba(255,255,255,0.15); color: white; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 16px; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'El Messiri', sans-serif; letter-spacing: 0.5px; }
+.lang-toggle-btn:active { opacity: 0.8; }
+
+/* ===== LTR LAYOUT (English mode) ===== */
+[lang="en"] { font-family: 'Playfair Display', 'El Messiri', sans-serif; }
+[lang="en"] .bottom-nav { direction: ltr; }
+[lang="en"] .page-header { direction: ltr; }
+[lang="en"] .page-header h2 { text-align: left; }
+[lang="en"] .section-header { direction: ltr; }
+[lang="en"] .section-header h3 { text-align: left; }
+[lang="en"] .booking-summary { direction: ltr; }
+[lang="en"] .summary-row { flex-direction: row; }
+[lang="en"] .profile-menu-item { direction: ltr; }
+[lang="en"] .menu-text { text-align: left; }
+[lang="en"] .chat-input-bar { direction: ltr; }
+[lang="en"] #chat-input { text-align: left; direction: ltr; }
+[lang="en"] .wizard-header { direction: ltr; }
+[lang="en"] .form-group label { text-align: left; display: block; }
+[lang="en"] .auth-body { direction: ltr; }
+[lang="en"] .auth-body h2 { text-align: left; }
+[lang="en"] .auth-sub { text-align: left; }
+[lang="en"] .auth-switch { text-align: left; }
+[lang="en"] .home-header { direction: ltr; }
+[lang="en"] .header-greeting p, [lang="en"] .header-greeting h2 { text-align: left; }
+[lang="en"] .search-tagline { text-align: left; }
+[lang="en"] .mgmt-section-header { direction: ltr; }
+[lang="en"] .salon-tabs { direction: ltr; }
+[lang="en"] .booking-tabs { direction: ltr; }
+[lang="en"] .analytics-period-tabs { direction: ltr; }
+[lang="en"] .client-card { direction: ltr; }
+[lang="en"] .inventory-item { direction: ltr; }
+[lang="en"] .beauty-card { direction: ltr; }
+[lang="en"] .profile-header-bg { direction: ltr; }
+[lang="en"] .loyalty-card { direction: ltr; }
+[lang="en"] .role-select { direction: ltr; }
+[lang="en"] .wizard-nav-btns { direction: ltr; }
+[lang="en"] .onboard-slides { direction: ltr; }
+[lang="en"] .onboard-slides h2, [lang="en"] .onboard-slides p { text-align: center; }
+[lang="en"] .notif-item { direction: ltr; }
+[lang="en"] .booking-card { direction: ltr; }
+[lang="en"] .conversation-item { direction: ltr; }
+[lang="en"] .chat-messages { direction: ltr; }
+[lang="en"] .msg.mine { margin-left: auto; margin-right: 0; }
+[lang="en"] .msg.theirs { margin-right: auto; margin-left: 0; }
+[lang="en"] .salon-mgmt-card { direction: ltr; }
+[lang="en"] .analytics-info-card { direction: ltr; }
+[lang="en"] .calc-options { direction: ltr; }
+[lang="en"] .sub-ratings { direction: ltr; }
+[lang="en"] .rating-widget { direction: ltr; }
