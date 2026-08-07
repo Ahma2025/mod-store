@@ -135,12 +135,13 @@ router.post('/ai-hairstyle', authenticate, async (req, res) => {
     }
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      model: 'claude-opus-5',
+      max_tokens: 3000, // Opus 5 يشغّل التفكير تلقائياً ويشارك ميزانية max_tokens — نرفعها لضمان اكتمال الرد
       messages,
     });
 
-    const text = response.content[0]?.text || '';
+    // Opus 5 يعيد بلوك تفكير قبل النص، فنبحث عن بلوك النص بدل أخذ أول عنصر
+    const text = (response.content.find(b => b.type === 'text') || {}).text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.json(getFallbackSuggestions(face_shape || 'oval'));
     res.json(JSON.parse(jsonMatch[0]));

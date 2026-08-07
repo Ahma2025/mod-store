@@ -2063,7 +2063,7 @@ function formatTime(dateStr) {
 let beautyProfileData = null;
 
 async function showBeautyProfile() {
-  showScreen('screen-beauty-profile');
+  showScreen('beauty-profile');
   try {
     const data = await Api.beauty.getProfile();
     beautyProfileData = data;

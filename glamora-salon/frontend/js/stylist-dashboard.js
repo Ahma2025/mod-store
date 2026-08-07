@@ -1062,7 +1062,7 @@ async function sendReviewReply(reviewId) {
 // ===== 59-61: ANALYTICS =====
 let analyticsData = null;
 async function showAnalytics() {
-  showScreen('screen-analytics');
+  showScreen('analytics');
   if (!stSalonData?.id) return;
   try {
     analyticsData = await Api.stylistDash.analytics(stSalonData.id);
@@ -1092,7 +1092,7 @@ function switchAnalyticsPeriod(period, el) {
 
 // ===== 64: CLIENTS =====
 async function showClients() {
-  showScreen('screen-clients');
+  showScreen('clients');
   if (!stSalonData?.id) return;
   const el = document.getElementById('clients-list');
   el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
