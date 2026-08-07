@@ -1007,7 +1007,7 @@ function coverSliderGoTo(idx) {
   if (!_coverSliderState) return;
   _coverSliderState.cur = idx;
   const track = document.getElementById('cover-slider-track');
-  if (track) track.style.transform = `translateX(${idx * 100}%)`;
+  if (track) track.style.transform = `translateX(-${idx * 100}%)`;
   document.querySelectorAll('.cover-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
 
