@@ -489,6 +489,14 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .msg-bubble-media { padding: 4px; }
 .chat-img { max-width: 220px; max-height: 220px; border-radius: 14px; display: block; cursor: zoom-in; object-fit: cover; }
 .chat-audio { max-width: 220px; height: 40px; border-radius: 20px; outline: none; }
+.voice-player { display: flex; align-items: center; gap: 8px; min-width: 190px; max-width: 230px; padding: 4px 0; }
+.vp-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+.vp-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.35); border-radius: 4px; position: relative; cursor: pointer; }
+.msg-wrap.them .vp-bar { background: rgba(0,0,0,0.15); }
+.vp-progress { height: 100%; background: white; border-radius: 4px; width: 0%; transition: width 0.1s linear; pointer-events: none; }
+.msg-wrap.them .vp-progress { background: var(--primary); }
+.vp-time { font-size: 11px; color: rgba(255,255,255,0.85); flex-shrink: 0; min-width: 28px; }
+.msg-wrap.them .vp-time { color: var(--gray); }
 /* Seen tick */
 .msg-seen { font-size: 10px; color: var(--gray); margin-right: 4px; }
 .msg-seen.seen { color: var(--rose); }

@@ -1507,6 +1507,93 @@ function writeReview(id) {
   }
 }
 
+// ===== VOICE PLAYER =====
+let _activeVoiceId = null;
+
+function toggleVoice(vid, url) {
+  const audio = document.getElementById(vid + '_audio');
+  const btn = document.querySelector('#' + vid + ' .vp-btn');
+  if (!audio) return;
+
+  // Stop any other playing voice
+  if (_activeVoiceId && _activeVoiceId !== vid) {
+    const other = document.getElementById(_activeVoiceId + '_audio');
+    if (other) { other.pause(); other.currentTime = 0; }
+    const otherBtn = document.querySelector('#' + _activeVoiceId + ' .vp-btn');
+    if (otherBtn) otherBtn.textContent = '▶';
+    document.getElementById(_activeVoiceId + '_prog').style.width = '0%';
+  }
+
+  if (audio.paused) {
+    // iOS requires AudioContext unlock on user gesture
+    if (window._audioCtx && window._audioCtx.state === 'suspended') {
+      window._audioCtx.resume();
+    }
+    audio.load();
+    audio.play().catch(() => {});
+    btn.textContent = '⏸';
+    _activeVoiceId = vid;
+  } else {
+    audio.pause();
+    btn.textContent = '▶';
+  }
+}
+
+function updateVoiceProgress(vid) {
+  const audio = document.getElementById(vid + '_audio');
+  const prog = document.getElementById(vid + '_prog');
+  const timeEl = document.getElementById(vid + '_time');
+  if (!audio || !prog) return;
+  const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+  prog.style.width = pct + '%';
+  timeEl.textContent = fmtVoiceTime(audio.currentTime);
+}
+
+function showVoiceDuration(vid) {
+  const audio = document.getElementById(vid + '_audio');
+  const timeEl = document.getElementById(vid + '_time');
+  if (audio && timeEl && audio.duration && !isNaN(audio.duration)) {
+    timeEl.textContent = fmtVoiceTime(audio.duration);
+  }
+}
+
+function resetVoice(vid) {
+  const btn = document.querySelector('#' + vid + ' .vp-btn');
+  const prog = document.getElementById(vid + '_prog');
+  const timeEl = document.getElementById(vid + '_time');
+  if (btn) btn.textContent = '▶';
+  if (prog) prog.style.width = '0%';
+  const audio = document.getElementById(vid + '_audio');
+  if (timeEl && audio) timeEl.textContent = fmtVoiceTime(audio.duration || 0);
+  _activeVoiceId = null;
+}
+
+function seekVoice(e, vid) {
+  const audio = document.getElementById(vid + '_audio');
+  const bar = e.currentTarget;
+  if (!audio || !audio.duration) return;
+  const rect = bar.getBoundingClientRect();
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+  audio.currentTime = ratio * audio.duration;
+}
+
+function fmtVoiceTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+// Unlock AudioContext on first touch (iOS fix)
+document.addEventListener('touchstart', function unlockAudio() {
+  if (!window._audioCtx) {
+    try { window._audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  if (window._audioCtx && window._audioCtx.state === 'suspended') window._audioCtx.resume();
+  document.removeEventListener('touchstart', unlockAudio);
+}, { once: true });
+
 // ===== CHAT =====
 let voiceRecorder = null;
 let voiceChunks = [];
@@ -1563,7 +1650,19 @@ function buildMsgHtml(msg) {
   if (type === 'image') {
     bubble = `<img class="chat-img" src="${msg.media_url}" onclick="viewChatImage('${msg.media_url}')" loading="lazy">`;
   } else if (type === 'voice') {
-    bubble = `<audio class="chat-audio" controls src="${msg.media_url}" preload="metadata"></audio>`;
+    const vid = 'va_' + (msg.id || Date.now());
+    bubble = `
+      <div class="voice-player" id="${vid}">
+        <button class="vp-btn" onclick="toggleVoice('${vid}','${msg.media_url}')">▶</button>
+        <div class="vp-bar" onclick="seekVoice(event,'${vid}')">
+          <div class="vp-progress" id="${vid}_prog"></div>
+        </div>
+        <span class="vp-time" id="${vid}_time">0:00</span>
+        <audio id="${vid}_audio" src="${msg.media_url}" preload="none"
+               ontimeupdate="updateVoiceProgress('${vid}')"
+               onended="resetVoice('${vid}')"
+               onloadedmetadata="showVoiceDuration('${vid}')"></audio>
+      </div>`;
   } else {
     bubble = escapeHtml(msg.content);
   }
