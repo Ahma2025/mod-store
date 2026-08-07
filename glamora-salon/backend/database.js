@@ -244,6 +244,20 @@ async function initDatabase() {
       unit TEXT DEFAULT 'قطعة',
       low_threshold INTEGER DEFAULT 2
     )`,
+    `CREATE TABLE IF NOT EXISTS beauty_products (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      salon_id INTEGER,
+      category TEXT NOT NULL,
+      name TEXT NOT NULL,
+      brand TEXT DEFAULT '',
+      image_url TEXT,
+      tags TEXT DEFAULT '[]',
+      description TEXT DEFAULT '',
+      how_to_use TEXT DEFAULT '',
+      price NUMERIC(10,2),
+      is_active INTEGER DEFAULT 1
+    )`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }
@@ -622,6 +636,38 @@ const DB = {
       const matched = rows(r.rows).filter(filter);
       for (const b of matched) {
         await query('DELETE FROM stylist_blocked_slots WHERE id=$1', [b.id]);
+      }
+    },
+  },
+
+  beauty_products: {
+    insert: async (data) => {
+      const { salon_id = null, category, name, brand = '', image_url = null, tags = '[]', description = '', how_to_use = '', price = null, is_active = 1 } = data;
+      const r = await query(
+        `INSERT INTO beauty_products (salon_id,category,name,brand,image_url,tags,description,how_to_use,price,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [salon_id, category, name, brand, image_url, tags, description, how_to_use, price, is_active]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => {
+      const r = await query('SELECT * FROM beauty_products');
+      return rows(r.rows).filter(filter);
+    },
+    findOne: async (filter) => {
+      const r = await query('SELECT * FROM beauty_products');
+      return rows(r.rows).find(filter) || null;
+    },
+    remove: async (filter) => {
+      const r = await query('SELECT * FROM beauty_products');
+      const matched = rows(r.rows).filter(filter);
+      for (const p of matched) await query('DELETE FROM beauty_products WHERE id=$1', [p.id]);
+    },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM beauty_products');
+      const matched = rows(r.rows).filter(filter);
+      for (const p of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE beauty_products SET ${fields} WHERE id=$1`, [p.id, ...Object.values(data)]);
       }
     },
   },

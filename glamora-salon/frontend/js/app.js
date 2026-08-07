@@ -2176,6 +2176,128 @@ function _beautyFmt(t) {
     .replace(/\n/g, '<br>');
 }
 
+function _esc(t) {
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _catEmoji(cat) {
+  return ({ skincare: '🧴', nails: '💅', makeup: '💄', hair: '💇' })[cat] || '✨';
+}
+
+function appendBeautyProducts(products) {
+  const box = document.getElementById('beauty-chat-messages');
+  if (!box) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'beauty-products-row';
+  wrap.innerHTML = products.map(p => {
+    const img = p.image_url
+      ? `<img class="bp-img" src="${_esc(p.image_url)}">`
+      : `<div class="bp-img bp-img-ph">${_catEmoji(p.category)}</div>`;
+    const price = (p.price != null && p.price !== '') ? `<div class="bp-price">${_esc(p.price)} ₪</div>` : '';
+    const how = p.how_to_use ? `<div class="bp-how"><b>طريقة الاستخدام:</b> ${_beautyFmt(p.how_to_use)}</div>` : '';
+    const desc = p.description ? `<div class="bp-desc">${_beautyFmt(p.description)}</div>` : '';
+    const brand = p.brand ? ` <span class="bp-brand">${_esc(p.brand)}</span>` : '';
+    return `<div class="beauty-product-card">
+      ${img}
+      <div class="bp-body">
+        <div class="bp-name">${_esc(p.name)}${brand}</div>
+        ${desc}${how}${price}
+      </div>
+    </div>`;
+  }).join('');
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ===== Beauty products admin (stylist) =====
+let bpNewImageUrl = null;
+
+async function uploadBeautyProductImg(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const label = document.getElementById('bp-upload-text');
+  if (label) label.textContent = '⏳ جاري الرفع...';
+  try {
+    const url = await Api.beauty.uploadProductImage(file);
+    bpNewImageUrl = url;
+    const img = document.getElementById('bp-new-img');
+    if (img) { img.src = url; img.classList.remove('hidden'); }
+    if (label) label.textContent = '✅ تم رفع الصورة (اضغطي للتغيير)';
+  } catch (e) {
+    if (label) label.textContent = '📷 اضغطي لإضافة صورة المنتج';
+    showToast('⚠️ فشل رفع الصورة');
+  }
+}
+
+async function addBeautyProduct() {
+  const name = (document.getElementById('bp-new-name').value || '').trim();
+  const category = document.getElementById('bp-new-category').value;
+  if (!name) { showToast('اكتبي اسم المنتج'); return; }
+  const tagsRaw = (document.getElementById('bp-new-tags').value || '').trim();
+  const tags = tagsRaw ? tagsRaw.split(/[،,]/).map(s => s.trim()).filter(Boolean) : [];
+  const priceRaw = (document.getElementById('bp-new-price').value || '').trim();
+  const btn = document.getElementById('bp-add-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الإضافة...';
+  try {
+    await Api.beauty.addProduct({
+      category, name,
+      brand: (document.getElementById('bp-new-brand').value || '').trim(),
+      tags,
+      description: (document.getElementById('bp-new-desc').value || '').trim(),
+      how_to_use: (document.getElementById('bp-new-how').value || '').trim(),
+      price: priceRaw ? parseFloat(priceRaw) : null,
+      image_url: bpNewImageUrl,
+    });
+    showToast('✅ تمت إضافة المنتج');
+    ['bp-new-name', 'bp-new-brand', 'bp-new-tags', 'bp-new-desc', 'bp-new-how', 'bp-new-price'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    bpNewImageUrl = null;
+    const img = document.getElementById('bp-new-img'); if (img) img.classList.add('hidden');
+    const label = document.getElementById('bp-upload-text'); if (label) label.textContent = '📷 اضغطي لإضافة صورة المنتج';
+    loadBeautyProductsAdmin();
+  } catch (e) {
+    showToast('⚠️ فشل إضافة المنتج');
+  } finally {
+    btn.disabled = false; btn.textContent = '➕ إضافة المنتج';
+  }
+}
+
+async function loadBeautyProductsAdmin() {
+  const list = document.getElementById('bp-admin-list');
+  if (list) list.innerHTML = '<p style="text-align:center;color:#a08a94;padding:12px">⏳ جاري التحميل...</p>';
+  try {
+    const products = await Api.beauty.listProducts();
+    if (!products || !products.length) {
+      if (list) list.innerHTML = '<p style="text-align:center;color:#a08a94;padding:12px">ما في منتجات بعد — أضيفي أول منتج ✨</p>';
+      return;
+    }
+    if (list) list.innerHTML = products.map(p => {
+      const img = p.image_url ? `<img class="bp-img" src="${_esc(p.image_url)}">` : `<div class="bp-img bp-img-ph">${_catEmoji(p.category)}</div>`;
+      const price = (p.price != null && p.price !== '') ? `<div class="bp-price">${_esc(p.price)} ₪</div>` : '';
+      return `<div class="beauty-product-card" style="margin-bottom:10px">
+        ${img}
+        <div class="bp-body">
+          <div class="bp-name">${_esc(p.name)}${p.brand ? ` <span class="bp-brand">${_esc(p.brand)}</span>` : ''}</div>
+          ${p.description ? `<div class="bp-desc">${_beautyFmt(p.description)}</div>` : ''}
+          ${price}
+        </div>
+        <button onclick="deleteBeautyProduct(${p.id})" title="حذف" style="border:none;background:none;color:#e05a6a;font-size:20px;cursor:pointer;align-self:flex-start">🗑️</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    if (list) list.innerHTML = '<p style="text-align:center;color:#e05a6a;padding:12px">⚠️ خطأ في التحميل</p>';
+  }
+}
+
+async function deleteBeautyProduct(id) {
+  if (!confirm('حذف هذا المنتج؟')) return;
+  try {
+    await Api.beauty.deleteProduct(id);
+    loadBeautyProductsAdmin();
+  } catch (e) {
+    showToast('⚠️ فشل الحذف');
+  }
+}
+
 function appendBeautyMsg(who, text, imgSrc) {
   const box = document.getElementById('beauty-chat-messages');
   if (!box) return null;
@@ -2219,6 +2341,7 @@ async function sendBeautyChat() {
     if (typing) typing.remove();
     const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
     appendBeautyMsg('them', reply);
+    if (res && Array.isArray(res.products) && res.products.length) appendBeautyProducts(res.products);
     beautyChatHistory.push({ role: 'assistant', content: reply });
   } catch (e) {
     if (typing) typing.remove();

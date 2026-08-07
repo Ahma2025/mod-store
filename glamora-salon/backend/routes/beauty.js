@@ -206,7 +206,7 @@ router.post('/chat', authenticate, async (req, res) => {
     const Anthropic = require('@anthropic-ai/sdk');
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const system = `أنتِ "مستشارة الجمال" الذكية في تطبيق صالون نسائي فاخر اسمه Velour. تتحدثين مع الزبونة بالعربية بأسلوب دافئ وصديق، مثل صديقة خبيرة في التجميل تهتم فيها.
+    const baseSystem = `أنتِ "مستشارة الجمال" الذكية في تطبيق صالون نسائي فاخر اسمه Velour. تتحدثين مع الزبونة بالعربية بأسلوب دافئ وصديق، مثل صديقة خبيرة في التجميل تهتم فيها.
 
 تخصصك يغطي أربعة مجالات:
 - 💅 الأظافر: أشكال وألوان ومانيكير ونيل آرت يناسبها
@@ -222,6 +222,18 @@ router.post('/chat', authenticate, async (req, res) => {
 - التنسيق: استخدمي نقاط بسيطة (-) و**تعريض** للكلمات المهمة فقط. لا تستخدمي جداول (tables) أبداً لأن الرد يظهر في فقاعة محادثة ضيقة على الجوال — استبدلي أي جدول بقائمة نقاط.
 - إذا سألت عن شيء خارج مجال الجمال، أعيديها بلطف لتخصصك.
 - عند المناسب، شجعيها بلطف على حجز موعد في الصالون.`;
+
+    // load active product catalog so the AI can recommend real products (shown as cards)
+    let catalog = [];
+    try { catalog = (await DB.beauty_products.find(p => p.is_active !== 0)) || []; } catch { catalog = []; }
+    let system = baseSystem;
+    if (catalog.length) {
+      const list = catalog.map(p => {
+        let tg = ''; try { tg = (JSON.parse(p.tags || '[]') || []).join('، '); } catch {}
+        return `#${p.id} [${p.category}] ${p.name}${p.brand ? (' - ' + p.brand) : ''}${tg ? (' (يناسب: ' + tg + ')') : ''}`;
+      }).join('\n');
+      system += `\n\nكتالوج منتجات الصالون المتاحة:\n${list}\n\nإذا نصحتِ بمنتجات محددة من هذا الكتالوج فقط، أنهي ردك بسطر مستقل بالضبط بهذا الشكل: [[PRODUCTS: 3, 7]] يحتوي أرقام المنتجات المناسبة من الكتالوج (بحد أقصى 4). لا تخترعي أرقاماً غير موجودة. إذا لا يوجد منتج مناسب أو السؤال لا يخص المنتجات، لا تضيفي هذا السطر.`;
+    }
 
     // keep the last 12 turns to bound cost/latency
     const trimmed = messages.slice(-12);
@@ -250,12 +262,69 @@ router.post('/chat', authenticate, async (req, res) => {
       messages: anthMessages,
     });
 
-    const reply = (response.content.find(b => b.type === 'text') || {}).text
+    let reply = (response.content.find(b => b.type === 'text') || {}).text
       || 'عذراً، ما قدرت أرد الآن. جربي مرة ثانية.';
-    res.json({ reply });
+
+    // extract recommended products from the [[PRODUCTS: ...]] marker and hydrate as cards
+    let products = [];
+    const mk = reply.match(/\[\[\s*PRODUCTS\s*:\s*([0-9,\s]+)\]\]/i);
+    if (mk) {
+      const ids = mk[1].split(',').map(s => parseInt(s.trim(), 10)).filter(n => n);
+      products = catalog.filter(p => ids.includes(p.id)).slice(0, 4).map(p => ({
+        id: p.id, category: p.category, name: p.name, brand: p.brand,
+        image_url: p.image_url, description: p.description, how_to_use: p.how_to_use, price: p.price,
+      }));
+      reply = reply.replace(mk[0], '').trim();
+    }
+
+    res.json({ reply, products });
   } catch (e) {
     console.error('beauty chat error:', e.message);
     res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+  }
+});
+
+// ===== Beauty product catalog (managed by stylists, recommended by the AI) =====
+
+// GET /api/beauty/products — list active products (any authenticated user)
+router.get('/products', authenticate, async (req, res) => {
+  try {
+    const all = (await DB.beauty_products.find(p => p.is_active !== 0)) || [];
+    all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json(all);
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+// POST /api/beauty/products — add a product (stylists only)
+router.post('/products', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'stylist' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'غير مصرح' });
+    }
+    const { category, name, brand = '', image_url = null, tags = [], description = '', how_to_use = '', price = null, salon_id = null } = req.body;
+    if (!category || !name) return res.status(400).json({ error: 'الفئة والاسم مطلوبان' });
+    const tagsStr = Array.isArray(tags) ? JSON.stringify(tags) : (typeof tags === 'string' ? tags : '[]');
+    const p = await DB.beauty_products.insert({ salon_id, category, name, brand, image_url, tags: tagsStr, description, how_to_use, price });
+    res.json(p);
+  } catch (e) {
+    console.error('add product error:', e.message);
+    res.status(500).json({ error: 'خطأ في الإضافة' });
+  }
+});
+
+// DELETE /api/beauty/products/:id — remove a product (stylists only)
+router.delete('/products/:id', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'stylist' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'غير مصرح' });
+    }
+    const id = parseInt(req.params.id, 10);
+    await DB.beauty_products.remove(p => p.id === id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ في الحذف' });
   }
 });
 

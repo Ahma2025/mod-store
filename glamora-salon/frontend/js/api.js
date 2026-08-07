@@ -101,6 +101,17 @@ const Api = {
     youMightLike: () => apiCall('GET', '/beauty/you-might-like'),
     aiHairstyle: (image_base64, face_shape) => apiCall('POST', '/beauty/ai-hairstyle', { image_base64, face_shape }),
     chat: (messages, image_base64) => apiCall('POST', '/beauty/chat', { messages, image_base64 }),
+    listProducts: () => apiCall('GET', '/beauty/products'),
+    addProduct: (data) => apiCall('POST', '/beauty/products', data),
+    deleteProduct: (id) => apiCall('DELETE', '/beauty/products/' + id),
+    uploadProductImage: async (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(API + '/media/chat/upload', { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd });
+      const d = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+      if (!r.ok) throw new Error(d.error || 'فشل رفع الصورة');
+      return d.url;
+    },
     scheduleReminder: (weeks) => apiCall('POST', '/beauty/schedule-reminder', { weeks }),
   },
   stylistDash: {

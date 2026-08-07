@@ -726,6 +726,43 @@
     </div>
   </div>
 
+  <!-- ======= BEAUTY PRODUCTS ADMIN (AI advisor catalog) ======= -->
+  <div id="screen-beauty-products" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>🧴 منتجات المستشار AI</h2>
+    </div>
+    <div class="home-content" style="padding:16px">
+      <div class="beauty-card">
+        <h4 class="beauty-section-title">➕ إضافة منتج</h4>
+        <p style="font-size:12.5px;color:#a08a94;margin-bottom:10px">المنتجات الي تضيفيها هون بيقترحها الذكاء الاصطناعي على الزبونات حسب حالتهن، بصورها وشرحها.</p>
+        <label class="bp-upload" id="bp-upload-label">
+          <img id="bp-new-img" class="hidden">
+          <span id="bp-upload-text">📷 اضغطي لإضافة صورة المنتج</span>
+          <input type="file" id="bp-new-file" accept="image/*" onchange="uploadBeautyProductImg(this)" style="display:none">
+        </label>
+        <select id="bp-new-category" class="bp-input">
+          <option value="skincare">🧴 بشرة</option>
+          <option value="nails">💅 أظافر</option>
+          <option value="makeup">💄 مكياج</option>
+          <option value="hair">💇 شعر</option>
+        </select>
+        <input id="bp-new-name" class="bp-input" placeholder="اسم المنتج *">
+        <input id="bp-new-brand" class="bp-input" placeholder="الماركة (اختياري)">
+        <input id="bp-new-tags" class="bp-input" placeholder="مناسب لـ (افصلي بفاصلة): بشرة دهنية، تفتيح...">
+        <textarea id="bp-new-desc" class="bp-input" rows="2" placeholder="وصف قصير للمنتج"></textarea>
+        <textarea id="bp-new-how" class="bp-input" rows="2" placeholder="طريقة الاستخدام"></textarea>
+        <input id="bp-new-price" class="bp-input" type="number" inputmode="decimal" placeholder="السعر (₪) — اختياري">
+        <button class="btn-primary full" id="bp-add-btn" onclick="addBeautyProduct()">➕ إضافة المنتج</button>
+      </div>
+      <div class="beauty-card" style="margin-top:12px">
+        <h4 class="beauty-section-title">📦 المنتجات الحالية</h4>
+        <div id="bp-admin-list"></div>
+      </div>
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
   <!-- ======= HAIR COLOR CALCULATOR ======= -->
   <div id="screen-color-calc" class="screen slide-up">
     <div class="page-header">
@@ -942,6 +979,9 @@
             </button>
             <button class="analytics-quick-btn" onclick="showClients()">
               <span>👥</span><span>الزبونات</span>
+            </button>
+            <button class="analytics-quick-btn" onclick="showScreen('beauty-products'); loadBeautyProductsAdmin()">
+              <span>🧴</span><span>منتجات المستشار AI</span>
             </button>
           </div>
 
