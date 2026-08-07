@@ -12,7 +12,8 @@ function showScreen(id) {
   if (!target) return;
 
   all.forEach(s => s.classList.remove('active'));
-  target.style.display = 'block';
+  const flexScreens = ['login', 'register'];
+  target.style.display = flexScreens.includes(id) ? 'flex' : 'block';
 
   // rAF ensures display:block is painted before the class (and transition) fires
   requestAnimationFrame(() => {
