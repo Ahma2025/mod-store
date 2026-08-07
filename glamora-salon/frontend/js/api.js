@@ -68,7 +68,7 @@ const Api = {
   bookings: {
     my: () => apiCall('GET', '/bookings/my'),
     stylist: (date) => apiCall('GET', `/bookings/stylist${date ? '?date=' + date : ''}`),
-    slots: (stylist_id, date, service_id) => apiCall('GET', `/bookings/available-slots?stylist_id=${stylist_id}&date=${date}&service_id=${service_id}`),
+    slots: (stylist_id, date, service_id, total_duration) => apiCall('GET', `/bookings/available-slots?stylist_id=${stylist_id}&date=${date}${service_id ? '&service_id=' + service_id : ''}${total_duration ? '&total_duration=' + total_duration : ''}`),
     create: (data) => apiCall('POST', '/bookings', data),
     updateStatus: (id, status) => apiCall('PUT', `/bookings/${id}/status`, { status }),
     review: (id, rating, comment) => apiCall('POST', `/bookings/${id}/review`, { rating, comment }),

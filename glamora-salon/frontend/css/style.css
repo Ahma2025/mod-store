@@ -416,9 +416,13 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .wizard-service-cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
 .wizard-service-cats::-webkit-scrollbar { display: none; }
 .wizard-services { display: flex; flex-direction: column; gap: 10px; }
-.wizard-service-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--white); border-radius: var(--radius-sm); border: 2px solid var(--gray-light); cursor: pointer; transition: all 0.2s; }
+.wizard-service-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--white); border-radius: var(--radius-sm); border: 2px solid var(--gray-light); cursor: pointer; transition: all 0.2s; position: relative; }
 .wizard-service-item.selected { border-color: var(--rose); background: rgba(201,114,138,0.06); }
 .wizard-service-item:active { border-color: var(--rose); }
+.service-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--gray-light); display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; flex-shrink: 0; margin-right: auto; transition: all 0.2s; }
+.service-check.checked { background: var(--rose); border-color: var(--rose); color: white; }
+.selected-services-bar { display: flex; justify-content: space-between; align-items: center; background: var(--rose); color: white; padding: 10px 16px; border-radius: var(--radius-sm); margin-top: 12px; font-size: 14px; font-weight: 600; }
+#wizard-services-footer.hidden { display: none; }
 .wizard-stylists { display: flex; flex-direction: column; gap: 12px; }
 .wizard-stylist-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--white); border-radius: var(--radius-sm); border: 2px solid var(--gray-light); cursor: pointer; transition: all 0.2s; }
 .wizard-stylist-item.selected { border-color: var(--rose); background: rgba(201,114,138,0.06); }

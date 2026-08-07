@@ -37,15 +37,20 @@ router.get('/my', authenticate, async (req, res) => {
 
 router.get('/available-slots', async (req, res) => {
   try {
-    const { stylist_id, date, service_id } = req.query;
+    const { stylist_id, date, service_id, total_duration } = req.query;
     if (!stylist_id || !date) return res.status(400).json({ error: 'بيانات ناقصة' });
 
     const dayOfWeek = new Date(date).getDay();
     const avail = await DB.stylist_availability.findOne(a => a.stylist_id === parseInt(stylist_id) && a.day_of_week === dayOfWeek);
     if (!avail || avail.is_off) return res.json({ slots: [], reason: 'day_off' });
 
-    const service = service_id ? await DB.services.findOne(s => s.id === parseInt(service_id)) : null;
-    const duration = service?.duration_minutes || 60;
+    let duration;
+    if (total_duration) {
+      duration = parseInt(total_duration);
+    } else {
+      const service = service_id ? await DB.services.findOne(s => s.id === parseInt(service_id)) : null;
+      duration = service?.duration_minutes || 60;
+    }
 
     const activeBookings = await DB.bookings.find(b =>
       b.stylist_id === parseInt(stylist_id) &&
@@ -98,34 +103,53 @@ function minToTime(m) { return `${String(Math.floor(m / 60)).padStart(2, '0')}:$
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { stylist_id, service_id, salon_id, booking_date, booking_time, notes } = req.body;
-    if (!stylist_id || !service_id || !salon_id || !booking_date || !booking_time)
+    const { stylist_id, service_id, service_ids, salon_id, booking_date, booking_time, notes } = req.body;
+    if (!stylist_id || !salon_id || !booking_date || !booking_time)
       return res.status(400).json({ error: 'يرجى تعبئة جميع الحقول المطلوبة' });
 
-    const service = await DB.services.findOne(s => s.id === parseInt(service_id));
-    if (!service) return res.status(404).json({ error: 'الخدمة غير موجودة' });
+    // Support both single service_id and multiple service_ids array
+    const ids = service_ids?.length ? service_ids.map(Number) : [parseInt(service_id)];
+    if (!ids.length || ids.some(isNaN)) return res.status(400).json({ error: 'يرجى اختيار خدمة واحدة على الأقل' });
 
-    const conflict = await DB.bookings.find(b =>
+    const services = await Promise.all(ids.map(id => DB.services.findOne(s => s.id === id)));
+    if (services.some(s => !s)) return res.status(404).json({ error: 'إحدى الخدمات غير موجودة' });
+
+    const totalDuration = services.reduce((sum, s) => sum + (s.duration_minutes || 60), 0);
+    const totalPrice = services.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+    const primaryService = services[0];
+
+    // Conflict check: any existing booking overlaps with [booking_time, booking_time + totalDuration]
+    const activeBookings = await DB.bookings.find(b =>
       b.stylist_id === parseInt(stylist_id) &&
       b.booking_date === booking_date &&
-      b.booking_time === booking_time &&
       (b.status === 'pending' || b.status === 'confirmed')
     );
-    if (conflict.length > 0) return res.status(409).json({ error: 'هذا الوقت محجوز، اختاري وقتاً آخر' });
+    const newStart = timeToMin(booking_time);
+    const newEnd = newStart + totalDuration;
+    for (const b of activeBookings) {
+      const existDur = b.total_duration || 60;
+      const bStart = timeToMin(b.booking_time);
+      const bEnd = bStart + existDur;
+      if (newStart < bEnd && newEnd > bStart) {
+        return res.status(409).json({ error: 'هذا الوقت محجوز، اختاري وقتاً آخر' });
+      }
+    }
 
     const booking = await DB.bookings.insert({
       client_id: req.user.id,
       stylist_id: parseInt(stylist_id),
-      service_id: parseInt(service_id),
+      service_id: primaryService.id,
+      service_ids: JSON.stringify(ids),
       salon_id: parseInt(salon_id),
       booking_date,
       booking_time,
       notes: notes || null,
-      total_price: service.price,
+      total_duration: totalDuration,
+      total_price: totalPrice,
       status: 'pending'
     });
 
-    const serviceName = service.name_ar || service.name;
+    const serviceName = services.map(s => s.name_ar || s.name).join(' + ');
     const user = await DB.users.findOne(u => u.id === req.user.id);
     const io = req.io;
 

@@ -1097,7 +1097,7 @@ function switchSalonTab(name, btn) {
 
 // ===== BOOKING WIZARD =====
 function quickBook(serviceId, salonId) {
-  wizardState = { step: 1, service: null, stylist: null, date: null, time: null, salonId: salonId || null };
+  wizardState = { step: 1, services: [], stylist: null, date: null, time: null, salonId: salonId || null };
   showScreen('booking-wizard');
   loadWizardStep1(salonId);
 
@@ -1108,7 +1108,7 @@ function quickBook(serviceId, salonId) {
 }
 
 function openStylistBooking(stylistId) {
-  wizardState = { step: 1, service: null, stylist: null, date: null, time: null, salonId: null, preStylest: stylistId };
+  wizardState = { step: 1, services: [], stylist: null, date: null, time: null, salonId: null, preStylest: stylistId };
   showScreen('booking-wizard');
   loadWizardStep1(null);
 }
@@ -1139,16 +1139,23 @@ async function loadWizardStep1(salonId) {
 }
 
 function renderWizardServices(services) {
+  const selectedIds = new Set((wizardState.services || []).map(s => s.id));
   document.getElementById('wizard-services-list').innerHTML = services.map(s => `
-    <div class="wizard-service-item ${wizardState.service?.id === s.id ? 'selected' : ''}" onclick="selectWizardService(${JSON.stringify(s).replace(/"/g,"'")})">
+    <div class="wizard-service-item ${selectedIds.has(s.id) ? 'selected' : ''}" onclick="selectWizardService(${JSON.stringify(s).replace(/"/g,"'")})">
       <div class="service-icon">${categoryIcon(s.category)}</div>
       <div class="service-info">
         <h4>${s.name_ar || s.name}</h4>
         <div class="duration">⏱ ${s.duration_minutes} دقيقة</div>
       </div>
       <div class="service-price">₪${s.price}</div>
+      <div class="service-check ${selectedIds.has(s.id) ? 'checked' : ''}">✓</div>
     </div>
-  `).join('');
+  `).join('') + `<div id="wizard-services-footer" class="${(wizardState.services||[]).length ? '' : 'hidden'}">
+    <div class="selected-services-bar">
+      <span id="selected-svcs-count">${(wizardState.services||[]).length} خدمة</span>
+      <span id="selected-svcs-total">⏱ ${(wizardState.services||[]).reduce((s,x)=>s+x.duration_minutes,0)} د · ₪${(wizardState.services||[]).reduce((s,x)=>s+parseFloat(x.price||0),0)}</span>
+    </div>
+  </div>`;
 }
 
 function filterWizardServices(el, cat, services) {
@@ -1161,9 +1168,19 @@ function filterWizardServices(el, cat, services) {
 
 function selectWizardService(svc) {
   if (typeof svc === 'string') { try { svc = JSON.parse(svc.replace(/'/g,'"')); } catch {} }
-  wizardState.service = svc;
-  document.querySelectorAll('.wizard-service-item').forEach(el => el.classList.remove('selected'));
-  event?.currentTarget?.classList.add('selected');
+  if (!wizardState.services) wizardState.services = [];
+  const idx = wizardState.services.findIndex(s => s.id === svc.id);
+  if (idx >= 0) {
+    wizardState.services.splice(idx, 1);
+  } else {
+    wizardState.services.push(svc);
+  }
+  // Re-render to reflect new selection
+  const src = window._wizardServices || [];
+  const activeChip = document.querySelector('#wizard-cats .svc-filter-chip.active');
+  const cat = activeChip?.textContent?.trim();
+  const filtered = (cat && cat !== 'الكل') ? src.filter(s => categoryIcon(s.category) + ' ' + s.category === cat || s.category === cat) : src;
+  renderWizardServices(filtered.length ? filtered : src);
   updateWizardSummary();
 }
 
@@ -1260,7 +1277,8 @@ async function selectCalDay(el, dateStr) {
   slotsEl.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
 
   try {
-    const { slots } = await Api.bookings.slots(wizardState.stylist.id, dateStr, wizardState.service.id);
+    const totalDuration = (wizardState.services || []).reduce((s, x) => s + (x.duration_minutes || 60), 0) || 60;
+    const { slots } = await Api.bookings.slots(wizardState.stylist.id, dateStr, null, totalDuration);
     if (!slots?.length) { slotsEl.innerHTML = '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد مواعيد متاحة في هذا اليوم</p>'; return; }
     slotsEl.innerHTML = slots.map(s => `
       <button class="slot-btn ${s.available ? 'available' : 'unavailable'}"
@@ -1282,8 +1300,8 @@ function renderBookingSummary() {
   const s = wizardState;
   document.getElementById('booking-summary').innerHTML = `
     <div class="summary-row">
-      <span class="summary-label">الخدمة</span>
-      <span class="summary-value">${s.service?.name_ar || s.service?.name || '-'}</span>
+      <span class="summary-label">الخدمات</span>
+      <span class="summary-value">${(s.services||[]).map(x => x.name_ar || x.name).join(' + ') || '-'}</span>
     </div>
     <div class="summary-row">
       <span class="summary-label">الكوفيرة</span>
@@ -1298,12 +1316,12 @@ function renderBookingSummary() {
       <span class="summary-value">${s.time || '-'}</span>
     </div>
     <div class="summary-row">
-      <span class="summary-label">المدة</span>
-      <span class="summary-value">${s.service?.duration_minutes || '-'} دقيقة</span>
+      <span class="summary-label">المدة الإجمالية</span>
+      <span class="summary-value">${(s.services||[]).reduce((t,x)=>t+(x.duration_minutes||0),0) || '-'} دقيقة</span>
     </div>
     <div class="summary-row summary-price">
       <span class="summary-label">السعر الإجمالي</span>
-      <span class="summary-value">₪${s.service?.price || '0'}</span>
+      <span class="summary-value">₪${(s.services||[]).reduce((t,x)=>t+parseFloat(x.price||0),0) || '0'}</span>
     </div>
   `;
 }
@@ -1316,13 +1334,14 @@ function updateWizardSummary() {
   if (s.stylist) parts.push(s.stylist.name);
   if (s.date) parts.push(s.date);
   if (s.time) parts.push(s.time);
+  if (s.services?.length) parts.unshift(s.services.map(x => x.name_ar || x.name).join(' + '));
   if (parts.length) { el.textContent = parts.join(' · '); el.classList.remove('hidden'); }
   else el.classList.add('hidden');
 }
 
 function wizardNext() {
   const s = wizardState;
-  if (s.step === 1 && !s.service) { showToast('⚠️ اختاري خدمة أولاً'); return; }
+  if (s.step === 1 && !(s.services?.length)) { showToast('⚠️ اختاري خدمة واحدة على الأقل'); return; }
   if (s.step === 2 && !s.stylist) { showToast('⚠️ اختاري الكوفيرة'); return; }
   if (s.step === 3 && (!s.date || !s.time)) { showToast('⚠️ اختاري التاريخ والوقت'); return; }
 
@@ -1356,7 +1375,7 @@ function wizardPrev() {
 
 async function confirmBooking() {
   const s = wizardState;
-  if (!s.service || !s.stylist || !s.date || !s.time || !s.salonId) {
+  if (!s.services?.length || !s.stylist || !s.date || !s.time || !s.salonId) {
     showToast('⚠️ بيانات الحجز غير مكتملة'); return;
   }
 
@@ -1368,18 +1387,20 @@ async function confirmBooking() {
     const notes = document.getElementById('booking-notes').value;
     const { booking, points_earned } = await Api.bookings.create({
       stylist_id: s.stylist.id,
-      service_id: s.service.id,
+      service_id: s.services[0].id,
+      service_ids: s.services.map(x => x.id),
       salon_id: s.salonId,
       booking_date: s.date,
       booking_time: s.time,
       notes
     });
 
-    document.getElementById('success-msg').textContent = `${s.service.name_ar || s.service.name} · ${formatDateAr(s.date)} · ${s.time}`;
+    const svcsLabel = s.services.map(x => x.name_ar || x.name).join(' + ');
+    document.getElementById('success-msg').textContent = `${svcsLabel} · ${formatDateAr(s.date)} · ${s.time}`;
     document.getElementById('success-points').textContent = `بانتظار موافقة الكوفيرة - ستصلك إشعار عند التأكيد`;
     document.getElementById('modal-success').classList.remove('hidden');
 
-    wizardState = { step: 1, service: null, stylist: null, date: null, time: null, salonId: null };
+    wizardState = { step: 1, services: [], stylist: null, date: null, time: null, salonId: null };
   } catch (e) {
     showToast('⚠️ ' + e.message);
   } finally {

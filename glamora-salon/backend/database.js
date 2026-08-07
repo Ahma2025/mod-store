@@ -232,6 +232,9 @@ async function initDatabase() {
       valid_until TEXT,
       is_active INTEGER DEFAULT 1
     )`,
+    `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_ids TEXT`,
+    `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_duration INTEGER`,
+    `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_price NUMERIC(10,2)`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }
