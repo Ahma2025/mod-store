@@ -100,6 +100,7 @@ const Api = {
     recommendations: () => apiCall('GET', '/beauty/recommendations'),
     youMightLike: () => apiCall('GET', '/beauty/you-might-like'),
     aiHairstyle: (image_base64, face_shape) => apiCall('POST', '/beauty/ai-hairstyle', { image_base64, face_shape }),
+    chat: (messages, image_base64) => apiCall('POST', '/beauty/chat', { messages, image_base64 }),
     scheduleReminder: (weeks) => apiCall('POST', '/beauty/schedule-reminder', { weeks }),
   },
   stylistDash: {

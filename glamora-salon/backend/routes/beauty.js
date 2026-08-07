@@ -192,4 +192,70 @@ router.post('/schedule-reminder', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/beauty/chat — conversational AI beauty advisor (Opus 5, vision, multi-turn)
+router.post('/chat', authenticate, async (req, res) => {
+  try {
+    const { messages, image_base64 } = req.body;
+    if (!Array.isArray(messages) || !messages.length) {
+      return res.status(400).json({ error: 'لا توجد رسائل' });
+    }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: 'خدمة الذكاء الاصطناعي غير متاحة حالياً' });
+    }
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const system = `أنتِ "مستشارة الجمال" الذكية في تطبيق صالون نسائي فاخر اسمه Velour. تتحدثين مع الزبونة بالعربية بأسلوب دافئ وصديق، مثل صديقة خبيرة في التجميل تهتم فيها.
+
+تخصصك يغطي أربعة مجالات:
+- 💅 الأظافر: أشكال وألوان ومانيكير ونيل آرت يناسبها
+- 💄 المكياج: ألوان وتقنيات تبرز جمالها حسب ملامحها ولون بشرتها
+- 💇 الشعر: قصات وألوان وتسريحات تناسب شكل وجهها ونوع شعرها
+- 🧴 البشرة: تحليل نوع البشرة، روتين عناية، ومنتجات مناسبة
+
+قواعد مهمة:
+- إذا أرسلت الزبونة صورة، حللي ملامحها بدقة (شكل الوجه، لون البشرة، نوع/لون الشعر، حالة الأظافر) واذكري ملاحظاتك بلطف قبل النصائح.
+- أعطي نصائح شخصية ومحددة لها هي بالذات، واشرحي دائماً "ليش" هذا يناسبها.
+- كوني عملية: خطوات واضحة قابلة للتنفيذ.
+- ردودك مرتبة ومركزة (نقاط وإيموجي)، دافئة لكن ليست طويلة مملة.
+- إذا سألت عن شيء خارج مجال الجمال، أعيديها بلطف لتخصصك.
+- عند المناسب، شجعيها بلطف على حجز موعد في الصالون.`;
+
+    // keep the last 12 turns to bound cost/latency
+    const trimmed = messages.slice(-12);
+    const anthMessages = trimmed.map((m, i) => {
+      const role = m.role === 'assistant' ? 'assistant' : 'user';
+      // attach the image only to the most recent user turn
+      if (image_base64 && i === trimmed.length - 1 && role === 'user') {
+        const mediaType = image_base64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const b64 = image_base64.replace(/^data:image\/\w+;base64,/, '');
+        return {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: String(m.content || 'حللي صورتي وأعطيني نصائح.') },
+          ],
+        };
+      }
+      return { role, content: String(m.content || '') };
+    });
+
+    const response = await client.messages.create({
+      model: 'claude-opus-5',
+      max_tokens: 2000,
+      output_config: { effort: 'medium' },
+      system,
+      messages: anthMessages,
+    });
+
+    const reply = (response.content.find(b => b.type === 'text') || {}).text
+      || 'عذراً، ما قدرت أرد الآن. جربي مرة ثانية.';
+    res.json({ reply });
+  } catch (e) {
+    console.error('beauty chat error:', e.message);
+    res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+  }
+});
+
 module.exports = router;

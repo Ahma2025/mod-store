@@ -322,8 +322,8 @@
         <div class="profile-menu-item" onclick="showScreen('ai-hairstyle'); loadAiScreen()">
           <span class="menu-icon">✨</span>
           <div class="menu-text">
-            <span>مستشارة التسريحة AI</span>
-            <span class="menu-sub">ارفعي صورتك واحصلي على توصيات ذكية</span>
+            <span>مستشارة الجمال AI</span>
+            <span class="menu-sub">حللي صورتك واسألي عن أظافرك ومكياجك وشعرك وبشرتك</span>
           </div>
           <span class="menu-arrow">›</span>
         </div>
@@ -702,51 +702,27 @@
 
   <!-- ======= AI HAIRSTYLE ======= -->
   <div id="screen-ai-hairstyle" class="screen slide-up">
-    <div class="page-header">
+    <div class="chat-header">
       <button class="back-btn" onclick="goBack()">←</button>
-      <h2>🤖 مستشارة التسريحة</h2>
+      <div class="chat-header-info">
+        <div class="chat-avatar">✨</div>
+        <div>
+          <h3>مستشارة الجمال AI</h3>
+          <p class="chat-status">خبيرة تجميل • ذكاء اصطناعي</p>
+        </div>
+      </div>
     </div>
-    <div class="home-content" style="padding:16px">
-      <div class="beauty-card ai-intro-card">
-        <div class="ai-icon-big">✨</div>
-        <h3>اكتشفي التسريحة المناسبة لك</h3>
-        <p>ارفعي صورة وجهك أو اختاري شكل وجهك وسنقترح تسريحات ولون شعر يناسبك</p>
-      </div>
-
-      <div class="beauty-card">
-        <h4 class="beauty-section-title">📸 صورة وجهك (اختياري)</h4>
-        <div id="ai-face-preview-wrap" class="ai-face-preview-wrap">
-          <img id="ai-face-preview" class="hidden" style="max-width:100%;border-radius:12px;margin-bottom:8px">
-          <label class="ai-upload-btn">
-            📷 رفع صورة وجهك
-            <input type="file" id="ai-face-input" accept="image/*" onchange="previewAiFace(this)" style="display:none">
-          </label>
-        </div>
-      </div>
-
-      <div class="beauty-card">
-        <h4 class="beauty-section-title">أو اختاري شكل وجهك</h4>
-        <div class="face-shape-grid">
-          <div class="face-shape-btn" data-shape="oval" onclick="selectFaceShape(this)">🥚 بيضاوي</div>
-          <div class="face-shape-btn" data-shape="round" onclick="selectFaceShape(this)">⭕ مستدير</div>
-          <div class="face-shape-btn" data-shape="square" onclick="selectFaceShape(this)">⬜ مربع</div>
-          <div class="face-shape-btn" data-shape="heart" onclick="selectFaceShape(this)">🩷 قلب</div>
-        </div>
-      </div>
-
-      <button class="btn-primary full" id="ai-analyze-btn" onclick="runAiHairstyle()">✨ احصلي على توصياتك</button>
-
-      <div id="ai-results" class="hidden" style="margin-top:16px">
-        <div class="beauty-card">
-          <h4 class="beauty-section-title">💇 تسريحات مقترحة</h4>
-          <div id="ai-hairstyles-list"></div>
-        </div>
-        <div class="beauty-card" style="margin-top:12px">
-          <h4 class="beauty-section-title">🎨 ألوان مقترحة</h4>
-          <div id="ai-colors-list"></div>
-        </div>
-      </div>
-      <div style="height:30px"></div>
+    <div id="beauty-chat-messages" class="chat-messages"></div>
+    <div id="beauty-chat-attach-preview" class="beauty-attach-chip hidden">
+      <img id="ai-face-preview">
+      <span>📎 صورة مرفقة</span>
+      <button type="button" onclick="clearBeautyAttach()" aria-label="حذف الصورة">✕</button>
+    </div>
+    <div class="chat-input-bar">
+      <button class="chat-media-btn" type="button" onclick="document.getElementById('ai-face-input').click()" title="إرسال صورة">📷</button>
+      <input type="file" id="ai-face-input" accept="image/*" onchange="previewAiFace(this)" style="display:none">
+      <input type="text" id="beauty-chat-input" placeholder="اسألي عن أظافرك، مكياجك، شعرك، بشرتك..." onkeydown="if(event.key==='Enter')sendBeautyChat()" style="text-align:right;direction:rtl;">
+      <button class="send-btn" type="button" onclick="sendBeautyChat()">➤</button>
     </div>
   </div>
 

@@ -2156,17 +2156,75 @@ async function checkBeautyReminder() {
 let aiFaceBase64 = null;
 let aiSelectedShape = null;
 
+let beautyChatHistory = [];
+let beautyChatBusy = false;
+
 function loadAiScreen() {
+  beautyChatHistory = [];
   aiFaceBase64 = null;
-  aiSelectedShape = null;
-  document.getElementById('ai-face-preview').classList.add('hidden');
-  document.getElementById('ai-results').classList.add('hidden');
-  document.querySelectorAll('.face-shape-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('ai-analyze-btn').disabled = false;
-  // Pre-fill shape from beauty profile
-  if (beautyProfileData?.face_shape) {
-    const btn = document.querySelector(`.face-shape-btn[data-shape="${beautyProfileData.face_shape}"]`);
-    if (btn) { btn.classList.add('selected'); aiSelectedShape = beautyProfileData.face_shape; }
+  beautyChatBusy = false;
+  const box = document.getElementById('beauty-chat-messages');
+  if (box) box.innerHTML = '';
+  clearBeautyAttach();
+  appendBeautyMsg('them', 'أهلاً حبيبتي! 💖 أنا مستشارة الجمال الذكية. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨');
+}
+
+function _beautyFmt(t) {
+  return String(t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function appendBeautyMsg(who, text, imgSrc) {
+  const box = document.getElementById('beauty-chat-messages');
+  if (!box) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap ' + (who === 'me' ? 'me' : 'them');
+  let html = '';
+  if (imgSrc) html += `<img class="chat-img" src="${imgSrc}" style="margin-bottom:6px">`;
+  if (text) html += `<div class="msg-bubble">${_beautyFmt(text)}</div>`;
+  wrap.innerHTML = html;
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+  return wrap;
+}
+
+function clearBeautyAttach() {
+  aiFaceBase64 = null;
+  const chip = document.getElementById('beauty-chat-attach-preview');
+  if (chip) chip.classList.add('hidden');
+  const inp = document.getElementById('ai-face-input');
+  if (inp) inp.value = '';
+}
+
+async function sendBeautyChat() {
+  if (beautyChatBusy) return;
+  const input = document.getElementById('beauty-chat-input');
+  const text = (input.value || '').trim();
+  const img = aiFaceBase64;
+  if (!text && !img) return;
+
+  beautyChatBusy = true;
+  appendBeautyMsg('me', text, img);
+  input.value = '';
+  beautyChatHistory.push({ role: 'user', content: text || 'حللي صورتي وأعطيني نصائح.' });
+
+  const sentImg = img;
+  clearBeautyAttach();
+  const typing = appendBeautyMsg('them', '⏳ ...');
+
+  try {
+    const res = await Api.beauty.chat(beautyChatHistory, sentImg);
+    if (typing) typing.remove();
+    const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
+    appendBeautyMsg('them', reply);
+    beautyChatHistory.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    if (typing) typing.remove();
+    appendBeautyMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
+  } finally {
+    beautyChatBusy = false;
   }
 }
 
@@ -2187,8 +2245,9 @@ function previewAiFace(input) {
       canvas.getContext('2d').drawImage(tmp, 0, 0, w, h);
       aiFaceBase64 = canvas.toDataURL('image/jpeg', 0.85);
       const img = document.getElementById('ai-face-preview');
-      img.src = aiFaceBase64;
-      img.classList.remove('hidden');
+      if (img) img.src = aiFaceBase64;
+      const chip = document.getElementById('beauty-chat-attach-preview');
+      if (chip) chip.classList.remove('hidden');
     };
     tmp.onerror = () => showToast(window.VELOUR_LANG === 'en' ? '⚠️ Could not read image' : '⚠️ تعذّر قراءة الصورة');
     tmp.src = e.target.result;
