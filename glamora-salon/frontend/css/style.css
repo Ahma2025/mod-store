@@ -479,6 +479,24 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .bp-input:focus { border-color: var(--rose); }
 .bp-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; border: 1.5px dashed var(--rose-light); border-radius: 12px; margin-bottom: 10px; cursor: pointer; color: #a08a94; font-size: 13px; }
 .bp-upload img { max-width: 120px; max-height: 120px; border-radius: 10px; object-fit: cover; }
+
+/* ===== High-perf load: coordinated reveal motion + skeletons ===== */
+@keyframes velRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.vel-reveal > * { animation: velRise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.vel-reveal > *:nth-child(1) { animation-delay: 0s; }
+.vel-reveal > *:nth-child(2) { animation-delay: 0.06s; }
+.vel-reveal > *:nth-child(3) { animation-delay: 0.12s; }
+.vel-reveal > *:nth-child(4) { animation-delay: 0.18s; }
+.vel-reveal > *:nth-child(5) { animation-delay: 0.24s; }
+.vel-reveal > *:nth-child(6) { animation-delay: 0.30s; }
+.vel-reveal > *:nth-child(n+7) { animation-delay: 0.34s; }
+.skel { position: relative; overflow: hidden; background: #efe6ea; border-radius: 12px; }
+.skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); animation: velShimmer 1.3s infinite; }
+@keyframes velShimmer { 100% { transform: translateX(100%); } }
+.skel-featured { width: 300px; height: 150px; flex-shrink: 0; margin-inline-end: 12px; }
+.skel-hcard { width: 150px; height: 168px; flex-shrink: 0; margin-inline-end: 10px; }
+.skel-row { width: 100%; height: 88px; margin-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) { .vel-reveal > * { animation: none; } }
 .chat-header { flex-shrink: 0; background: var(--white); padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 16px 14px; border-bottom: 1px solid var(--gray-light); display: flex; align-items: center; gap: 12px; z-index: 10; }
 .chat-header-info { display: flex; align-items: center; gap: 10px; }
 .chat-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: white; flex-shrink: 0; }

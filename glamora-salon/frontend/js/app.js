@@ -425,17 +425,65 @@ function togglePass(id) {
 }
 
 // ===== HOME =====
+let _homeRevealed = false;
+
+function _getSalonsCache() { try { return JSON.parse(localStorage.getItem('velour_salons_cache') || 'null'); } catch { return null; } }
+function _setSalonsCache(s) { try { localStorage.setItem('velour_salons_cache', JSON.stringify(s)); } catch {} }
+
+function _revealHome() {
+  const sc = document.getElementById('home-scroll');
+  if (sc && !_homeRevealed) { _homeRevealed = true; sc.classList.add('vel-reveal'); }
+}
+
+function _paintHome(salons) {
+  renderFeaturedSalons(salons);
+  renderHomeTopRated(salons);
+  renderSalonsList([...salons].sort((a, b) => b.id - a.id));
+}
+
+function _showHomeSkeletons() {
+  const f = document.getElementById('featured-salons');
+  if (f) f.innerHTML = Array.from({ length: 3 }).map(() => '<div class="skel skel-featured"></div>').join('');
+  const t = document.getElementById('home-top-rated-list');
+  if (t) t.innerHTML = Array.from({ length: 4 }).map(() => '<div class="skel skel-hcard"></div>').join('');
+  const l = document.getElementById('salons-list');
+  if (l) l.innerHTML = Array.from({ length: 4 }).map(() => '<div class="skel skel-row"></div>').join('');
+  _revealHome();
+}
+
+function _renderNearYouFromCache() {
+  let html = null;
+  try { html = localStorage.getItem('velour_nearyou_cache'); } catch {}
+  if (!html) return;
+  const section = document.getElementById('section-near-you');
+  const el = document.getElementById('home-near-list');
+  if (section && el) { el.innerHTML = html; section.style.display = ''; }
+}
+
 async function loadHome() {
+  _homeRevealed = false;
+  // 1) instant paint from cache (zero wait) — or elegant skeletons on first-ever open
+  const cached = _getSalonsCache();
+  if (cached && cached.length) {
+    allSalonsCache = cached;
+    _paintHome(cached);
+    _renderNearYouFromCache();
+    _revealHome();
+  } else {
+    _showHomeSkeletons();
+  }
+  // 2) refresh silently in the background
   try {
     const salons = await Api.salons.list();
     allSalonsCache = salons;
-    renderFeaturedSalons(salons);
-    renderHomeTopRated(salons);
-    renderSalonsList([...salons].sort((a,b) => b.id - a.id));
+    _setSalonsCache(salons);
+    _paintHome(salons);
+    _revealHome();
     loadNotifBadge();
     loadHomeNearYou(salons);
   } catch (e) {
     console.error(e);
+    _revealHome();
   }
 }
 
@@ -484,6 +532,7 @@ async function loadHomeNearYou(salons) {
       const d = s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم';
       return homeSalonCard(s, d);
     }).join('');
+    try { localStorage.setItem('velour_nearyou_cache', el.innerHTML); } catch {}
   } catch {}
 }
 

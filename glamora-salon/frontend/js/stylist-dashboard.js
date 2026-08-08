@@ -23,23 +23,46 @@ async function enterStylistDashboard(user) {
   if (typeof initFirebaseNotifications === 'function') initFirebaseNotifications();
 }
 
+let _stDashRevealed = false;
+
+function _revealStDash() {
+  const el = document.getElementById('st-salon-info');
+  if (el && !_stDashRevealed) { _stDashRevealed = true; el.classList.add('vel-reveal'); }
+}
+
+function _applyDashData(data) {
+  stSalonData = data.salon;
+  stStylistData = data.stylists || [];
+  stMyStyleistId = data.my_stylist?.id || null;
+  if (!stSalonData) {
+    document.getElementById('st-no-salon').classList.remove('hidden');
+    document.getElementById('st-salon-info').classList.add('hidden');
+  } else {
+    document.getElementById('st-no-salon').classList.add('hidden');
+    document.getElementById('st-salon-info').classList.remove('hidden');
+    renderSalonHeader();
+    renderHours();
+    renderCategories();
+    renderServices();
+  }
+}
+
 async function loadStylistDashboard() {
+  _stDashRevealed = false;
+  // instant paint from cache (zero wait)
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('velour_dash_cache') || 'null'); } catch {}
+  if (cached && cached.salon) {
+    _applyDashData(cached);
+    _revealStDash();
+  }
+  // refresh silently
   try {
     const data = await Api.stylistDash.mySalon();
-    stSalonData = data.salon;
-    stStylistData = data.stylists || [];
-    stMyStyleistId = data.my_stylist?.id || null;
-
-    if (!stSalonData) {
-      document.getElementById('st-no-salon').classList.remove('hidden');
-      document.getElementById('st-salon-info').classList.add('hidden');
-    } else {
-      document.getElementById('st-no-salon').classList.add('hidden');
-      document.getElementById('st-salon-info').classList.remove('hidden');
-      renderSalonHeader();
-      renderHours();
-      renderCategories();
-      renderServices();
+    try { localStorage.setItem('velour_dash_cache', JSON.stringify(data)); } catch {}
+    _applyDashData(data);
+    _revealStDash();
+    if (stSalonData) {
       loadSalonMedia();
       loadBlockedSlots();
       loadStReviews();
@@ -48,6 +71,7 @@ async function loadStylistDashboard() {
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
+    _revealStDash();
   }
 }
 
