@@ -101,6 +101,7 @@ const Api = {
     youMightLike: () => apiCall('GET', '/beauty/you-might-like'),
     aiHairstyle: (image_base64, face_shape) => apiCall('POST', '/beauty/ai-hairstyle', { image_base64, face_shape }),
     chat: (messages, image_base64) => apiCall('POST', '/beauty/chat', { messages, image_base64 }),
+    stylistAssistant: (messages) => apiCall('POST', '/beauty/stylist-assistant', { messages }),
     listProducts: () => apiCall('GET', '/beauty/products'),
     addProduct: (data) => apiCall('POST', '/beauty/products', data),
     deleteProduct: (id) => apiCall('DELETE', '/beauty/products/' + id),

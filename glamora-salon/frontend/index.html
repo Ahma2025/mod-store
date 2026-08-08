@@ -763,6 +763,25 @@
     </div>
   </div>
 
+  <!-- ======= STYLIST AI ASSISTANT ======= -->
+  <div id="screen-stylist-assistant" class="screen slide-up">
+    <div class="chat-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <div class="chat-header-info">
+        <div class="chat-avatar">🤝</div>
+        <div>
+          <h3>مساعِدتك الذكية</h3>
+          <p class="chat-status">أعمال • تسويق • تقني • ردود</p>
+        </div>
+      </div>
+    </div>
+    <div id="sa-chat-messages" class="chat-messages"></div>
+    <div class="chat-input-bar">
+      <input type="text" id="sa-chat-input" placeholder="اسأليني عن أرقامك، عرض، رد لزبونة، أو فورمولا..." onkeydown="if(event.key==='Enter')sendStylistAssistant()" style="text-align:right;direction:rtl;">
+      <button class="send-btn" type="button" onclick="sendStylistAssistant()">➤</button>
+    </div>
+  </div>
+
   <!-- ======= HAIR COLOR CALCULATOR ======= -->
   <div id="screen-color-calc" class="screen slide-up">
     <div class="page-header">
@@ -982,6 +1001,9 @@
             </button>
             <button class="analytics-quick-btn" onclick="showScreen('beauty-products'); loadBeautyProductsAdmin()">
               <span>🧴</span><span>منتجات المستشار AI</span>
+            </button>
+            <button class="analytics-quick-btn" onclick="showScreen('stylist-assistant'); loadStylistAssistant()">
+              <span>🤝</span><span>مساعِدتك الذكية</span>
             </button>
           </div>
 

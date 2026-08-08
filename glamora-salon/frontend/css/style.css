@@ -460,6 +460,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 /* Chat conversation screen uses flex column so input bar always stays at bottom */
 #screen-chat-conv { overflow: hidden; display: flex !important; flex-direction: column; height: 100%; }
 #screen-ai-hairstyle { overflow: hidden; display: flex !important; flex-direction: column; height: 100%; }
+#screen-stylist-assistant { overflow: hidden; display: flex !important; flex-direction: column; height: 100%; }
 .beauty-attach-chip { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--white); border-top: 1px solid var(--gray-light); direction: rtl; }
 .beauty-attach-chip img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
 .beauty-attach-chip span { font-size: 13px; color: var(--dark); }

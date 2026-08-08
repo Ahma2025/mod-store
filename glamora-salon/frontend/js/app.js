@@ -2298,6 +2298,53 @@ async function deleteBeautyProduct(id) {
   }
 }
 
+// ===== Stylist AI assistant (business + craft + marketing + replies) =====
+let stylistAssistantHistory = [];
+let stylistAssistantBusy = false;
+
+function loadStylistAssistant() {
+  stylistAssistantHistory = [];
+  stylistAssistantBusy = false;
+  const box = document.getElementById('sa-chat-messages');
+  if (box) box.innerHTML = '';
+  appendSaMsg('them', 'أهلين 👋 أنا مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟');
+}
+
+function appendSaMsg(who, text) {
+  const box = document.getElementById('sa-chat-messages');
+  if (!box) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap ' + (who === 'me' ? 'me' : 'them');
+  wrap.innerHTML = text ? `<div class="msg-bubble">${_beautyFmt(text)}</div>` : '';
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+  return wrap;
+}
+
+async function sendStylistAssistant() {
+  if (stylistAssistantBusy) return;
+  const input = document.getElementById('sa-chat-input');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  stylistAssistantBusy = true;
+  appendSaMsg('me', text);
+  input.value = '';
+  stylistAssistantHistory.push({ role: 'user', content: text });
+  const typing = appendSaMsg('them', '⏳ ...');
+  try {
+    const res = await Api.beauty.stylistAssistant(stylistAssistantHistory);
+    if (typing) typing.remove();
+    const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
+    appendSaMsg('them', reply);
+    stylistAssistantHistory.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    if (typing) typing.remove();
+    appendSaMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
+  } finally {
+    stylistAssistantBusy = false;
+  }
+}
+
 function appendBeautyMsg(who, text, imgSrc) {
   const box = document.getElementById('beauty-chat-messages');
   if (!box) return null;

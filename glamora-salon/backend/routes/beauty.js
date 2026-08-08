@@ -334,4 +334,95 @@ router.delete('/products/:id', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/beauty/stylist-assistant — AI business+craft assistant for stylists (Opus 5)
+router.post('/stylist-assistant', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'stylist' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'هذه الميزة للكوافيرات فقط' });
+    }
+    const { messages } = req.body;
+    if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'لا توجد رسائل' });
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'خدمة الذكاء الاصطناعي غير متاحة حالياً' });
+
+    // ---- build a real business snapshot for this stylist's salon ----
+    let snapshot = '';
+    try {
+      const stylist = await DB.stylists.findOne(s => s.user_id === req.user.id);
+      const salonId = stylist && stylist.salon_id;
+      if (salonId) {
+        const bookings = (await DB.bookings.find(b => b.salon_id === salonId)) || [];
+        const services = (await DB.services.find(s => s.salon_id === salonId)) || [];
+        const ratings = (await DB.salon_ratings.find(r => r.salon_id === salonId)) || [];
+        const products = (await DB.beauty_products.find(p => p.is_active !== 0)) || [];
+        const now = Date.now();
+        const day = 86400000;
+        const pdate = (b) => new Date(b.booking_date || b.created_at).getTime();
+        const done = bookings.filter(b => b.status === 'completed');
+        const revenueAll = done.reduce((s, b) => s + Number(b.total_price || 0), 0);
+        const monthB = bookings.filter(b => pdate(b) >= now - 30 * day);
+        const revenueMonth = monthB.filter(b => b.status === 'completed').reduce((s, b) => s + Number(b.total_price || 0), 0);
+
+        const svcCount = {};
+        bookings.forEach(b => { if (b.service_id) svcCount[b.service_id] = (svcCount[b.service_id] || 0) + 1; });
+        const topSvc = Object.entries(svcCount).sort((a, b) => b[1] - a[1]).slice(0, 5)
+          .map(([id, c]) => { const s = services.find(x => String(x.id) === String(id)); return `${s ? (s.name_ar || s.name) : ('#' + id)} (${c} حجز)`; });
+
+        const dowNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const dow = {};
+        bookings.forEach(b => { const d = new Date(b.booking_date || b.created_at); if (!isNaN(d)) dow[d.getDay()] = (dow[d.getDay()] || 0) + 1; });
+        const busyDays = Object.entries(dow).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([d, c]) => `${dowNames[d]} (${c})`);
+        const quietDays = dowNames.map((n, i) => [n, dow[i] || 0]).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([n, c]) => `${n} (${c})`);
+
+        const lastByClient = {};
+        bookings.forEach(b => { if (b.client_id) { const t = pdate(b); if (!lastByClient[b.client_id] || t > lastByClient[b.client_id]) lastByClient[b.client_id] = t; } });
+        const lapsed = Object.values(lastByClient).filter(t => t < now - 60 * day).length;
+        const avgRating = ratings.length ? (ratings.reduce((s, r) => s + Number(r.stars || 0), 0) / ratings.length).toFixed(1) : 'لا يوجد';
+
+        snapshot = `\n\nبيانات صالونك الفعلية (استندي عليها في نصائح العمل والأرقام):
+- إجمالي الحجوزات: ${bookings.length} | آخر 30 يوم: ${monthB.length}
+- الدخل الإجمالي (حجوزات مكتملة): ${revenueAll} ₪ | آخر 30 يوم: ${revenueMonth} ₪
+- أكثر الخدمات طلباً: ${topSvc.join('، ') || 'لا يوجد بيانات'}
+- أكثر الأيام ازدحاماً: ${busyDays.join('، ') || 'لا يوجد'} | أهدأ الأيام (فرصة لعروض): ${quietDays.join('، ')}
+- زبونات لم يرجعن منذ 60+ يوم (فرصة استرجاع): ${lapsed}
+- متوسط تقييم الصالون: ${avgRating}
+- عدد منتجات كتالوج المستشار الذكي: ${products.length}`;
+      } else {
+        snapshot = '\n\nملاحظة: لا يوجد صالون مرتبط بحسابك بعد، لذا لا تتوفر أرقام. ساعديها في الأسئلة التقنية والتسويقية وردود الزبونات.';
+      }
+    } catch (e) { snapshot = ''; }
+
+    const system = `أنتِ "مساعِدة الكوافيرة الذكية" في تطبيق Velour لإدارة صالونات التجميل. أنتِ مساعِدة أعمال + خبيرة تجميل محترفة، تساعدين صاحبة الصالون تدير وتكبّر شغلها. تحدثي بالعربية بأسلوب عملي وودود ومحترف.
+
+أدوارك الأربعة:
+1) 📊 مستشارة أعمال: حللي أرقام صالونها وأعطيها نصائح عملية تزيد دخلها — استرجاع الزبونات اللي ما رجعوا، ملء الأيام الهادئة بعروض، التركيز على أكثر الخدمات طلباً، واقتراح بيع منتجات (upsell).
+2) 💬 مساعِدة ردود: إذا طلبت، اكتبيلها ردوداً دافئة ومهنية لرسائل زبوناتها.
+3) 🎨 مستشارة تقنية: جاوبي أسئلتها المهنية — فورمولات صبغة، تصحيح لون، علاجات شعر/بشرة، نسب خلط، حلول للمشاكل التقنية.
+4) 📣 مولّدة محتوى تسويقي: اكتبي عروضاً، كابشنات إنستغرام، وصف خدمات، وأفكار حملات موسمية.
+
+قواعد:
+- استندي على أرقامها الفعلية (تحت) عند نصائح العمل، وكوني محددة وعملية بخطوات قابلة للتنفيذ — لا نصائح عامة.
+- ردود مرتبة بنقاط وإيموجي. لا تستخدمي جداول (tables) لأن الرد يظهر بفقاعة محادثة على الجوال.
+- إذا كان طلبها غير واضح، اسأليها أي دور تريد المساعدة به.${snapshot}`;
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const trimmed = messages.slice(-12).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '') }));
+
+    const response = await client.messages.create({
+      model: 'claude-opus-5',
+      max_tokens: 2000,
+      output_config: { effort: 'medium' },
+      system,
+      messages: trimmed,
+    });
+
+    const reply = (response.content.find(b => b.type === 'text') || {}).text
+      || 'عذراً، ما قدرت أرد الآن. جربي مرة ثانية.';
+    res.json({ reply });
+  } catch (e) {
+    console.error('stylist assistant error:', e.message);
+    res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+  }
+});
+
 module.exports = router;
