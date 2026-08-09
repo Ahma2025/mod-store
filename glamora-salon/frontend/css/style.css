@@ -1221,16 +1221,190 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 }
 
 @keyframes cardStaggerIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes modalBounceUp {
-  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  from { opacity: 0; transform: translateY(50px) scale(0.92); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* 3. Navigation Bar Glassmorphism & Active Indicator Glow */
+/* ── 9. SPLASH SCREEN CREATIVE MOTION ────────────────────────── */
+#screen-splash .splash-bg {
+  background: radial-gradient(ellipse at 50% 30%, #7B1D40 0%, #3D091A 50%, #1A0A0F 100%) !important;
+  animation: splashSpotlight 6s ease-in-out infinite alternate;
+}
+
+@keyframes splashSpotlight {
+  0% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+  100% { transform: scale(1.12) rotate(3deg); opacity: 1; }
+}
+
+.logo-icon {
+  animation: logoAuraPulse 3s infinite ease-in-out !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(196, 86, 122, 0.35) !important;
+}
+
+@keyframes logoAuraPulse {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 30px rgba(196, 86, 122, 0.35); }
+  50% { transform: translateY(-8px) scale(1.05); box-shadow: 0 24px 50px rgba(0,0,0,0.6), 0 0 50px rgba(201, 169, 110, 0.5); }
+}
+
+.logo-text {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F5D6E0 40%, var(--gold) 70%, #FFFFFF 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldTextShimmer 4s linear infinite;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+@keyframes goldTextShimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.loader-bar {
+  box-shadow: 0 0 15px rgba(201, 169, 110, 0.25);
+  position: relative;
+}
+
+.loader-fill {
+  position: relative;
+  background: linear-gradient(90deg, var(--rose) 0%, var(--gold) 50%, var(--rose-light) 100%) !important;
+  background-size: 200% 100% !important;
+}
+
+.loader-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  animation: loaderFlare 1.4s infinite ease-in-out;
+}
+
+@keyframes loaderFlare {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* ── 10. CHAT SCREEN CREATIVE MOTION ────────────────────────── */
+@keyframes msgPopMe {
+  0% { opacity: 0; transform: translateY(14px) scale(0.92) rotate(-1deg); }
+  60% { transform: translateY(-2px) scale(1.02) rotate(0deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes msgPopThem {
+  0% { opacity: 0; transform: translateY(14px) scale(0.92) rotate(1deg); }
+  60% { transform: translateY(-2px) scale(1.02) rotate(0deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.msg-wrap.me {
+  animation: msgPopMe 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.msg-wrap.them {
+  animation: msgPopThem 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.msg-wrap.me .msg-bubble {
+  background: linear-gradient(135deg, var(--rose) 0%, #831530 100%) !important;
+  box-shadow: 0 4px 16px rgba(155, 27, 59, 0.22) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.msg-wrap.them .msg-bubble {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(232, 216, 223, 0.8) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+.voice-player {
+  box-shadow: 0 6px 20px rgba(107, 15, 43, 0.3) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.vp-btn {
+  animation: vpPulseRing 2.5s infinite ease-in-out;
+}
+
+@keyframes vpPulseRing {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  50% { box-shadow: 0 4px 16px rgba(201, 169, 110, 0.5), 0 0 0 6px rgba(201, 169, 110, 0.15); }
+}
+
+.vp-wave {
+  transition: height 0.2s ease, background-color 0.2s ease !important;
+}
+
+.typing-indicator span {
+  animation: typingBounce 1.2s infinite ease-in-out !important;
+  box-shadow: 0 2px 6px rgba(196, 86, 122, 0.4);
+}
+
+@keyframes typingBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.25); background: var(--gold); }
+}
+
+.chat-input-bar {
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04) !important;
+}
+
+.send-btn {
+  box-shadow: 0 4px 16px rgba(155, 27, 59, 0.35) !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
+}
+
+.send-btn:active {
+  transform: scale(0.88) rotate(-10deg) !important;
+}
+
+/* ── 11. ONBOARDING ORGANIC ORBIT MOTION ─────────────────────── */
+.art-circle.c1 {
+  animation: floatOrbit1 7s infinite ease-in-out alternate;
+}
+
+.art-circle.c2 {
+  animation: floatOrbit2 5s infinite ease-in-out alternate-reverse;
+}
+
+.art-circle.c3 {
+  animation: floatOrbit3 3.5s infinite ease-in-out alternate;
+}
+
+@keyframes floatOrbit1 {
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(12deg) scale(1.04); }
+}
+
+@keyframes floatOrbit2 {
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(-16deg) scale(1.06); }
+}
+
+@keyframes floatOrbit3 {
+  0% { transform: translateY(0) scale(1); box-shadow: 0 8px 24px rgba(155, 27, 59, 0.4); }
+  100% { transform: translateY(-6px) scale(1.08); box-shadow: 0 14px 32px rgba(155, 27, 59, 0.6); }
+}
+
+.onboard-icon {
+  animation: onboardIconFloat 3s infinite ease-in-out alternate;
+}
+
+@keyframes onboardIconFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}
+
+/* ── 12. NAVIGATION & HEADER GLASSMORPHISM & SHADOWS ────────── */
 .bottom-nav {
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
@@ -1266,7 +1440,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   background: rgba(255, 255, 255, 0.90) !important;
 }
 
-/* 4. Luxury Button Shimmer & FAB Aura Pulse */
+/* ── 13. LUXURY BUTTON SHIMMER & FAB AURA ────────────────────── */
 .btn-primary {
   background: linear-gradient(135deg, var(--rose) 0%, #831530 50%, var(--rose-dark) 100%) !important;
   background-size: 200% 200% !important;
@@ -1288,7 +1462,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   box-shadow: 0 8px 30px rgba(155, 27, 59, 0.6) !important;
 }
 
-/* 5. Soft Form Focus Rings */
+/* ── 14. SOFT FORM FOCUS RINGS ───────────────────────────────── */
 .input-wrap input:focus, 
 .form-group input:focus, 
 .form-group textarea:focus,
@@ -1302,7 +1476,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   transition: all 0.22s ease !important;
 }
 
-/* 6. Luxury Elevation, Card Depth & Metallic Shimmer */
+/* ── 15. LUXURY ELEVATION, CARD DEPTH & METALLIC SHIMMER ────── */
 .salon-card, 
 .featured-card, 
 .booking-item, 
@@ -1338,7 +1512,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   animation: badgePulse 3s infinite ease-in-out;
 }
 
-/* 7. Smooth Image & Card Zoom Effects */
+/* ── 16. SMOOTH IMAGE & CARD ZOOM EFFECTS ────────────────────── */
 .home-salon-card:hover .hsc-thumb img,
 .service-cat-card:hover .scc-img,
 .featured-card:hover .featured-cover img {
@@ -1346,7 +1520,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
 }
 
-/* 8. Staggered Entrance Animations for Booking Items & Dialogs */
+/* ── 17. STAGGERED ENTRANCE ANIMATIONS FOR BOOKINGS & DIALOGS ── */
 .booking-item, .conv-item, .notif-item, .review-item, .wizard-service-item {
   animation: cardStaggerIn 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
@@ -1354,6 +1528,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .modal-box {
   animation: modalBounceUp 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
 
 
 
