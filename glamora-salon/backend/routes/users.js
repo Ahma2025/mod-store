@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/loyalty', authenticate, async (req, res) => {
   try {
-    const user = await DB.users.findOne(u => u.id === req.user.id);
+    const user = await DB.users.findById(req.user.id);
     const transactions = (await DB.loyalty_transactions.find(t => t.user_id === req.user.id))
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20);
     const tier = getTier(user?.loyalty_points || 0);
@@ -42,7 +42,7 @@ router.get('/color-history', authenticate, async (req, res) => {
     formulas.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
     const result = await Promise.all(formulas.map(async f => {
       const stylist = await DB.stylists.findOne(s => s.id === f.stylist_id);
-      const stylistUser = stylist ? await DB.users.findOne(u => u.id === stylist.user_id) : null;
+      const stylistUser = stylist ? await DB.users.findById(stylist.user_id) : null;
       const salon = stylist ? await DB.salons.findOne(s => s.id === stylist.salon_id) : null;
       return { ...f, stylist_name: stylistUser?.name, salon_name: salon?.name };
     }));
@@ -62,7 +62,7 @@ router.put('/profile', authenticate, async (req, res) => {
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'لا يوجد تحديثات' });
 
     await DB.users.update(u => u.id === req.user.id, updates);
-    const user = await DB.users.findOne(u => u.id === req.user.id);
+    const user = await DB.users.findById(req.user.id);
     res.json({ success: true, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role } });
   } catch (e) {
     res.status(500).json({ error: 'خطأ في تحديث الملف الشخصي' });

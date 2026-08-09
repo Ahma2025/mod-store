@@ -10,7 +10,7 @@ router.get('/me/color-history', authenticate, async (req, res) => {
     formulas.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
     const result = await Promise.all(formulas.map(async f => {
       const stylist = await DB.stylists.findOne(s => s.id === f.stylist_id);
-      const stylistUser = stylist ? await DB.users.findOne(u => u.id === stylist.user_id) : null;
+      const stylistUser = stylist ? await DB.users.findById(stylist.user_id) : null;
       const salon = stylist ? await DB.salons.findOne(s => s.id === stylist.salon_id) : null;
       return { ...f, stylist_name: stylistUser?.name, stylist_avatar: stylistUser?.avatar, salon_name: salon?.name };
     }));
@@ -26,14 +26,14 @@ router.get('/:id', async (req, res) => {
     const stylist = await DB.stylists.findOne(s => s.id === id);
     if (!stylist) return res.status(404).json({ error: 'الكوفيرة غير موجودة' });
 
-    const user = await DB.users.findOne(u => u.id === stylist.user_id);
+    const user = await DB.users.findById(stylist.user_id);
     const salon = stylist.salon_id ? await DB.salons.findOne(s => s.id === stylist.salon_id) : null;
     const services = await DB.services.find(s => s.stylist_id === id && s.is_active === 1);
     const allReviews = await DB.reviews.find(r => r.stylist_id === id);
     const reviews = await Promise.all(
       allReviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 15)
         .map(async r => {
-          const u = await DB.users.findOne(u => u.id === r.client_id);
+          const u = await DB.users.findById(r.client_id);
           return { ...r, client_name: u?.name };
         })
     );

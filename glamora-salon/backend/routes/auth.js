@@ -12,7 +12,7 @@ router.post('/register', async (req, res) => {
     const { name, phone, email, password } = req.body;
     if (!name || !phone || !password) return res.status(400).json({ error: 'بيانات ناقصة' });
 
-    const exists = await DB.users.findOne(u => u.phone === phone);
+    const exists = await DB.users.findByPhone(phone);
     if (exists) return res.status(409).json({ error: 'رقم الهاتف مسجل مسبقاً' });
 
     // ✅ SECURITY: role always 'client' on registration — never from request body
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     if (!phone || !password) return res.status(400).json({ error: 'أدخلي رقم الهاتف وكلمة المرور' });
 
-    const user = await DB.users.findOne(u => u.phone === phone);
+    const user = await DB.users.findByPhone(phone);
     const validPassword = user && await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غلط' });
@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
 
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const user = await DB.users.findOne(u => u.id === req.user.id);
+    const user = await DB.users.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
     const { password_hash, ...safeUser } = user;
     res.json(safeUser);

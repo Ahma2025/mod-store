@@ -288,6 +288,15 @@ const DB = {
       const r = await query('SELECT * FROM users');
       return rows(r.rows).find(filter) || null;
     },
+    // ⚡ indexed lookups — use these on hot paths instead of full-table scans
+    findById: async (id) => {
+      const r = await query('SELECT * FROM users WHERE id=$1', [id]);
+      return row(r.rows[0]);
+    },
+    findByPhone: async (phone) => {
+      const r = await query('SELECT * FROM users WHERE phone=$1', [phone]);
+      return row(r.rows[0]);
+    },
     update: async (filter, data) => {
       const r = await query('SELECT * FROM users');
       const matched = rows(r.rows).filter(filter);

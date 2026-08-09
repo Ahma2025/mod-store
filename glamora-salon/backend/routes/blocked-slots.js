@@ -24,7 +24,7 @@ router.get('/', authenticate, async (req, res) => {
 
     const result = await Promise.all(blocks.map(async b => {
       const st = await DB.stylists.findOne(s => s.id === b.stylist_id);
-      const user = st ? await DB.users.findOne(u => u.id === st.user_id) : null;
+      const user = st ? await DB.users.findById(st.user_id) : null;
       return { ...b, stylist_name: user?.name };
     }));
 

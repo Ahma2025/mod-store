@@ -15,7 +15,7 @@ router.get('/my-salon', authenticate, async (req, res) => {
     const hours = (await DB.salon_hours.find(h => h.salon_id === salon.id)).sort((a, b) => a.day_of_week - b.day_of_week);
     const rawStylists = await DB.stylists.find(st => st.salon_id === salon.id && st.is_active === 1);
     const stylists = await Promise.all(rawStylists.map(async st => {
-      const user = st.user_id ? await DB.users.findOne(u => u.id === st.user_id) : null;
+      const user = st.user_id ? await DB.users.findById(st.user_id) : null;
       const availability = (await DB.stylist_availability.find(a => a.stylist_id === st.id)).sort((a, b) => a.day_of_week - b.day_of_week);
       return { ...st, name: user?.name || st.name, phone: user?.phone || st.phone, email: user?.email || st.email, availability };
     }));
@@ -301,10 +301,10 @@ router.get('/bookings', authenticate, async (req, res) => {
     const isOwner = currentStylist && await DB.stylists.findOne(s => s.salon_id === currentStylist.salon_id && s.user_id === req.user.id && s.id === currentStylist.id);
 
     const result = await Promise.all(bookings.map(async b => {
-      const client = await DB.users.findOne(u => u.id === b.client_id);
+      const client = await DB.users.findById(b.client_id);
       const service = await DB.services.findOne(s => s.id === b.service_id);
       const bStylist = await DB.stylists.findOne(s => s.id === b.stylist_id);
-      const bStylistUser = bStylist?.user_id ? await DB.users.findOne(u => u.id === bStylist.user_id) : null;
+      const bStylistUser = bStylist?.user_id ? await DB.users.findById(bStylist.user_id) : null;
       const bStylistName = bStylist?.user_id ? bStylistUser?.name : bStylist?.name;
       const isAssignedStylist = bStylist?.user_id === req.user.id;
       const canSeeContact = isAssignedStylist || isOwner;
@@ -360,7 +360,7 @@ router.post('/salon/:id/offers', authenticate, async (req, res) => {
     const salonBookings = await DB.bookings.find(b => b.salon_id === salonId);
     const clientIds = [...new Set(salonBookings.map(b => b.client_id))];
     for (const cid of clientIds) {
-      const client = await DB.users.findOne(u => u.id === cid);
+      const client = await DB.users.findById(cid);
       if (client?.fcm_token) {
         fcm.notifySpecialOffer(client.fcm_token, salon?.name || 'صالون', title.trim()).catch(() => {});
       }
@@ -440,7 +440,7 @@ router.get('/salon/:id/clients', authenticate, async (req, res) => {
     for (const b of bookings) {
       if (!b.client_id) continue;
       if (!clientMap[b.client_id]) {
-        const user = await DB.users.findOne(u => u.id === b.client_id);
+        const user = await DB.users.findById(b.client_id);
         clientMap[b.client_id] = { id: b.client_id, name: user?.name || 'زبونة', phone: user?.phone || '', bookings: [] };
       }
       clientMap[b.client_id].bookings.push({ date: b.booking_date, time: b.booking_time, status: b.status, total_price: b.total_price });

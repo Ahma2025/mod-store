@@ -8,7 +8,7 @@ const router = express.Router();
 async function getSalonOwner(salonId) {
   const ownerStylist = await DB.stylists.findOne(s => s.salon_id === salonId && s.user_id != null);
   if (!ownerStylist) return null;
-  return DB.users.findOne(u => u.id === ownerStylist.user_id);
+  return DB.users.findById(ownerStylist.user_id);
 }
 
 router.get('/my', authenticate, async (req, res) => {
@@ -22,7 +22,7 @@ router.get('/my', authenticate, async (req, res) => {
     const result = await Promise.all(bookings.map(async b => {
       const service = await DB.services.findOne(s => s.id === b.service_id);
       const stylist = await DB.stylists.findOne(s => s.id === b.stylist_id);
-      const stylistUser = stylist ? await DB.users.findOne(u => u.id === stylist.user_id) : null;
+      const stylistUser = stylist ? await DB.users.findById(stylist.user_id) : null;
       const salon = await DB.salons.findOne(s => s.id === b.salon_id);
       const owner = await getSalonOwner(b.salon_id);
       const stylistName = stylist?.user_id ? stylistUser?.name : stylist?.name;
@@ -150,7 +150,7 @@ router.post('/', authenticate, async (req, res) => {
     });
 
     const serviceName = services.map(s => s.name_ar || s.name).join(' + ');
-    const user = await DB.users.findOne(u => u.id === req.user.id);
+    const user = await DB.users.findById(req.user.id);
     const io = req.io;
 
     await DB.notifications.insert({ user_id: req.user.id, title: 'طلب حجزك قيد المراجعة ⏳', body: `${serviceName} بتاريخ ${booking_date} الساعة ${booking_time} - بانتظار موافقة الصالون`, type: 'booking', booking_id: booking.id });
@@ -160,7 +160,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const stylist = await DB.stylists.findOne(s => s.id === booking.stylist_id);
-    const stylistUser = stylist?.user_id ? await DB.users.findOne(u => u.id === stylist.user_id) : null;
+    const stylistUser = stylist?.user_id ? await DB.users.findById(stylist.user_id) : null;
     const stylistName = stylist?.user_id ? (stylistUser?.name || 'الكوفيرة') : (stylist?.name || 'الكوفيرة');
     const owner = await getSalonOwner(booking.salon_id);
     if (owner) {
@@ -222,7 +222,7 @@ router.put('/:id/status', authenticate, async (req, res) => {
     await DB.bookings.update(b => b.id === bookingId, { status });
 
     const service = await DB.services.findOne(s => s.id === booking.service_id);
-    const client = await DB.users.findOne(u => u.id === booking.client_id);
+    const client = await DB.users.findById(booking.client_id);
     const serviceName = service?.name_ar || service?.name || '';
     const io = req.io;
 

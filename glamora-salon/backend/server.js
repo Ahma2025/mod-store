@@ -38,23 +38,20 @@ app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 
 app.use(express.json({ limit: '2mb' }));
 
-// ✅ SECURITY: Rate limiting — auth endpoints
-// NOTE: relaxed for the TRIAL period so testers (often sharing a carrier/wifi IP)
-// aren't cut off. Tighten back (e.g. max 20) before public launch.
+// ✅ SECURITY: Rate limiting — auth endpoints (strict)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'محاولات كثيرة، انتظري قليلاً' },
+  max: 10,
+  message: { error: 'محاولات كثيرة، انتظري 15 دقيقة' },
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false },
 });
 
 // ✅ SECURITY: Rate limiting — general API
-// NOTE: relaxed for the TRIAL period (was 100/min). Tighten before public launch.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 1000,
+  max: 100,
   message: { error: 'طلبات كثيرة جداً' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -107,7 +104,7 @@ io.on('connection', (socket) => {
         booking_id: booking_id || null,
         content: content.trim()
       });
-      const sender = await DB.users.findOne(u => u.id === socket.user.id);
+      const sender = await DB.users.findById(socket.user.id);
       const fullMsg = { ...msg, sender_name: sender?.name };
 
       io.to(`user_${receiver_id}`).emit('new_message', fullMsg);
@@ -116,7 +113,7 @@ io.on('connection', (socket) => {
       await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: content.trim().slice(0, 60), type: 'message' });
       io.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: socket.user.id });
 
-      const receiver = await DB.users.findOne(u => u.id === parseInt(receiver_id));
+      const receiver = await DB.users.findById(parseInt(receiver_id));
       if (receiver?.fcm_token) {
         fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
       }
@@ -215,7 +212,7 @@ async function runBookingReminders() {
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const bookings = await DB.bookings.find(b => b.booking_date === tomorrow && (b.status === 'confirmed' || b.status === 'pending'));
     for (const b of bookings) {
-      const client = await DB.users.findOne(u => u.id === b.client_id);
+      const client = await DB.users.findById(b.client_id);
       if (!client?.fcm_token) continue;
       const alreadySent = await DB.notifications.find(n => n.user_id === b.client_id && n.type === 'reminder' && n.body?.includes(b.booking_time) && n.created_at > new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString());
       if (alreadySent.length > 0) continue;

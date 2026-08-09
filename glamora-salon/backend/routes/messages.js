@@ -15,7 +15,7 @@ async function getSalonUserIds(userId) {
 router.get('/conversations', authenticate, async (req, res) => {
   try {
     const uid = req.user.id;
-    const user = await DB.users.findOne(u => u.id === uid);
+    const user = await DB.users.findById(uid);
 
     if (user?.role === 'stylist') {
       const salon = await getSalonUserIds(uid);
@@ -35,7 +35,7 @@ router.get('/conversations', authenticate, async (req, res) => {
       });
 
       const convs = await Promise.all(Object.values(convMap).map(async c => {
-        const other = await DB.users.findOne(u => u.id === c.other_id);
+        const other = await DB.users.findById(c.other_id);
         const unread = msgs.filter(m =>
           !salon.userIds.includes(m.sender_id) &&
           salon.userIds.includes(m.receiver_id) &&
@@ -58,7 +58,7 @@ router.get('/conversations', authenticate, async (req, res) => {
     });
 
     const convs = await Promise.all(Object.values(convMap).map(async c => {
-      const other = await DB.users.findOne(u => u.id === c.other_id);
+      const other = await DB.users.findById(c.other_id);
       const unread = msgs.filter(m => m.sender_id === c.other_id && m.receiver_id === uid && !m.is_read).length;
       const stylist = await DB.stylists.findOne(s => s.user_id === c.other_id);
       const salon = stylist ? await DB.salons.findOne(s => s.id === stylist.salon_id) : null;
@@ -82,7 +82,7 @@ router.get('/:other_id', authenticate, async (req, res) => {
   try {
     const uid = req.user.id;
     const otherId = parseInt(req.params.other_id);
-    const user = await DB.users.findOne(u => u.id === uid);
+    const user = await DB.users.findById(uid);
 
     let msgs;
     if (user?.role === 'stylist') {
@@ -122,7 +122,7 @@ router.get('/:other_id', authenticate, async (req, res) => {
     const result = await Promise.all(
       msgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
         .map(async m => {
-          const sender = await DB.users.findOne(u => u.id === m.sender_id);
+          const sender = await DB.users.findById(m.sender_id);
           return { ...m, sender_name: sender?.name, sender_avatar: sender?.avatar };
         })
     );
@@ -150,8 +150,8 @@ router.post('/', authenticate, async (req, res) => {
       [req.user.id, parseInt(receiver_id), booking_id || null, textContent || '', msg_type, media_url]
     ).then(r => r.rows[0]);
 
-    const sender = await DB.users.findOne(u => u.id === req.user.id);
-    const receiver = await DB.users.findOne(u => u.id === parseInt(receiver_id));
+    const sender = await DB.users.findById(req.user.id);
+    const receiver = await DB.users.findById(parseInt(receiver_id));
 
     const notifBody = msg_type === 'voice' ? '🎤 رسالة صوتية' : msg_type === 'image' ? '📷 صورة' : textContent.slice(0, 60);
     await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message' });

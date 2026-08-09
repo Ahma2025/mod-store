@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/beauty/profile
 router.get('/profile', authenticate, async (req, res) => {
   try {
-    const user = await DB.users.findOne(u => u.id === req.user.id);
+    const user = await DB.users.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
     const formulas = await DB.color_formulas.find(f => f.client_id === req.user.id);
     res.json({

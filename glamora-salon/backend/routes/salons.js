@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
       const { rating, reviews_count } = await computeSalonRating(s.id);
       const rawStylists = await DB.stylists.find(st => st.salon_id === s.id && st.is_active === 1);
       const stylists = await Promise.all(rawStylists.map(async st => {
-        const user = st.user_id ? await DB.users.findOne(u => u.id === st.user_id) : null;
+        const user = st.user_id ? await DB.users.findById(st.user_id) : null;
         return { ...st, name: user?.name || st.name, avatar: user?.avatar || st.avatar };
       }));
       const allMedia = await DB.salon_media.find(m => m.salon_id === s.id);
@@ -74,7 +74,7 @@ router.get('/:id', async (req, res) => {
     const hours = (await DB.salon_hours.find(h => h.salon_id === id)).sort((a, b) => a.day_of_week - b.day_of_week);
     const rawStylists = await DB.stylists.find(st => st.salon_id === id && st.is_active === 1);
     const stylists = await Promise.all(rawStylists.map(async st => {
-      const user = st.user_id ? await DB.users.findOne(u => u.id === st.user_id) : null;
+      const user = st.user_id ? await DB.users.findById(st.user_id) : null;
       // ✅ SECURITY: phone is private — not exposed in public salon detail
       return { ...st, name: user?.name || st.name, avatar: user?.avatar || st.avatar };
     }));
@@ -84,7 +84,7 @@ router.get('/:id', async (req, res) => {
     const reviews = await Promise.all(
       allReviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20)
         .map(async r => {
-          const u = await DB.users.findOne(u => u.id === r.client_id);
+          const u = await DB.users.findById(r.client_id);
           return { ...r, client_name: u?.name, avatar: u?.avatar };
         })
     );
@@ -94,7 +94,7 @@ router.get('/:id', async (req, res) => {
     const salonRatings = await Promise.all(
       rawRatings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .map(async r => {
-          const u = await DB.users.findOne(u => u.id === r.client_id);
+          const u = await DB.users.findById(r.client_id);
           return { ...r, client_name: u?.name, avatar: u?.avatar };
         })
     );
@@ -139,9 +139,9 @@ router.post('/:id/rate', authenticate, async (req, res) => {
     // #74 — notify salon stylists about new review
     try {
       const stylists = await DB.stylists.find(s => s.salon_id === salonId && s.user_id != null);
-      const rater = await DB.users.findOne(u => u.id === clientId);
+      const rater = await DB.users.findById(clientId);
       for (const st of stylists) {
-        const stUser = await DB.users.findOne(u => u.id === st.user_id);
+        const stUser = await DB.users.findById(st.user_id);
         if (stUser?.fcm_token) {
           fcm.notifyNewReview(stUser.fcm_token, rater?.name || 'زبونة', stars, salon.name).catch(() => {});
         }
