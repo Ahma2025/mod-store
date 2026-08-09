@@ -38,20 +38,23 @@ app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 
 app.use(express.json({ limit: '2mb' }));
 
-// ✅ SECURITY: Rate limiting — auth endpoints (strict)
+// ✅ SECURITY: Rate limiting — auth endpoints
+// NOTE: relaxed for the TRIAL period so testers (often sharing a carrier/wifi IP)
+// aren't cut off. Tighten back (e.g. max 20) before public launch.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'محاولات كثيرة، انتظري 15 دقيقة' },
+  max: 100,
+  message: { error: 'محاولات كثيرة، انتظري قليلاً' },
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false },
 });
 
 // ✅ SECURITY: Rate limiting — general API
+// NOTE: relaxed for the TRIAL period (was 100/min). Tighten before public launch.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: 1000,
   message: { error: 'طلبات كثيرة جداً' },
   standardHeaders: true,
   legacyHeaders: false,
