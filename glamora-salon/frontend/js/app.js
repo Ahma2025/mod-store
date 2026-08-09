@@ -1025,9 +1025,9 @@ function buildCoverSlider(items) {
         </div>
       </div>`;
     }
-    return `<div class="cover-slide" style="flex:0 0 100%;">
-      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" draggable="false">
-    </div>`;
+    // background-image (not <img>) — iOS WKWebView renders 100%-height <img> in a
+    // flex/absolute parent as height:0, so photos vanished; background:cover is robust
+    return `<div class="cover-slide" style="flex:0 0 100%;background:#f0e6ea url('${url}') center/cover no-repeat;"></div>`;
   }).join('');
 
   dotsEl.innerHTML = items.map((_, i) =>
