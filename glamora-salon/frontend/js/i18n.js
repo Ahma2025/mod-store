@@ -778,6 +778,43 @@ const TR = {
   'رام الله': 'Ramallah',
   'مريم الكوفيرة': 'Mariam the Stylist',
   'مثال: بالياج': 'e.g. Balayage',
+
+  // === AI BEAUTY ADVISOR (customer) ===
+  'مستشارة الجمال AI': 'AI Beauty Advisor',
+  'حللي صورتك واسألي عن أظافرك ومكياجك وشعرك وبشرتك': 'Analyze your photo & ask about your nails, makeup, hair & skin',
+  'خبيرة تجميل • ذكاء اصطناعي': 'Beauty Expert • AI',
+  '📎 صورة مرفقة': '📎 Photo attached',
+  'اسألي عن أظافرك، مكياجك، شعرك، بشرتك...': 'Ask about your nails, makeup, hair, skin...',
+
+  // === AI ADVISOR PRODUCTS (stylist) ===
+  '🧴 منتجات المستشار AI': '🧴 AI Advisor Products',
+  'منتجات المستشار AI': 'AI Advisor Products',
+  '➕ إضافة منتج': '➕ Add Product',
+  '➕ إضافة المنتج': '➕ Add Product',
+  '📦 المنتجات الحالية': '📦 Current Products',
+  '📷 اضغطي لإضافة صورة المنتج': '📷 Tap to add product photo',
+  'المنتجات الي تضيفيها هون بيقترحها الذكاء الاصطناعي على الزبونات حسب حالتهن، بصورها وشرحها.': 'Products you add here are recommended by the AI to clients based on their needs — with photos and details.',
+  '🧴 بشرة': '🧴 Skin',
+  '💅 أظافر': '💅 Nails',
+  '💄 مكياج': '💄 Makeup',
+  '💇 شعر': '💇 Hair',
+  'اسم المنتج *': 'Product name *',
+  'الماركة (اختياري)': 'Brand (optional)',
+  'مناسب لـ (افصلي بفاصلة): بشرة دهنية، تفتيح...': 'Suitable for (comma-separated): oily skin, brightening...',
+  'وصف قصير للمنتج': 'Short product description',
+  'طريقة الاستخدام': 'How to use',
+  'السعر (₪) — اختياري': 'Price (₪) — optional',
+
+  // === STYLIST AI ASSISTANT ===
+  'مساعِدتك الذكية': 'Your Smart Assistant',
+  'أعمال • تسويق • تقني • ردود': 'Business • Marketing • Technical • Replies',
+  'اسأليني عن أرقامك، عرض، رد لزبونة، أو فورمولا...': 'Ask about your numbers, an offer, a client reply, or a formula...',
+
+  // === STYLIST DASHBOARD (previously untranslated) ===
+  '+ إضافة عرض': '+ Add Offer',
+  '📊 إحصائياتي': '📊 My Analytics',
+  '👥 قائمة الزبونات': '👥 Clients List',
+  '📦 إضافة / تعديل منتج': '📦 Add / Edit Product',
 };
 
 // ---- Core translation function ----
