@@ -1012,11 +1012,17 @@ function buildCoverSlider(items) {
     return;
   }
 
-  track.innerHTML = items.map((m) => {
+  // Crossfade stack: every slide is absolutely stacked and filling the cover;
+  // only the active slide is opaque. This deliberately avoids flex + translateX,
+  // which shows blank slides under RTL (slides lay right→left, so translateX(-100%)
+  // scrolls into empty space) and is unreliable in iOS WKWebView.
+  track.style.cssText = 'position:absolute;inset:0;transform:none;';
+  track.innerHTML = items.map((m, i) => {
     const url = mediaUrl(m.url);
+    const base = `position:absolute;inset:0;opacity:${i === 0 ? 1 : 0};transition:opacity .6s ease;background:#f0e6ea;overflow:hidden;`;
     if (m.type === 'video') {
-      return `<div class="cover-slide" style="flex:0 0 100%;position:relative;">
-        <video src="${url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+      return `<div class="cover-slide" style="${base}">
+        <video src="${url}" muted playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openMediaViewer('${url}','video')">
           <svg viewBox="0 0 60 60" width="52" height="52" fill="none">
             <circle cx="30" cy="30" r="29" fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
@@ -1025,10 +1031,8 @@ function buildCoverSlider(items) {
         </div>
       </div>`;
     }
-    // iOS WKWebView renders a height:100% <img> in a flex/absolute parent as height:0.
-    // Fix: absolutely-positioned <img> (inset:0) gets definite bounds — reliable on iOS.
     // #f0e6ea base color shows if the image itself ever fails to load.
-    return `<div class="cover-slide" style="flex:0 0 100%;position:relative;background:#f0e6ea;overflow:hidden;">
+    return `<div class="cover-slide" style="${base}">
       <img src="${url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" draggable="false">
     </div>`;
   }).join('');
@@ -1059,7 +1063,7 @@ function coverSliderGoTo(idx) {
   if (!_coverSliderState) return;
   _coverSliderState.cur = idx;
   const track = document.getElementById('cover-slider-track');
-  if (track) track.style.transform = `translateX(-${idx * 100}%)`;
+  if (track) track.querySelectorAll('.cover-slide').forEach((s, i) => { s.style.opacity = i === idx ? '1' : '0'; });
   document.querySelectorAll('.cover-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
 
