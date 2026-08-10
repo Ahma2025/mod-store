@@ -48,6 +48,39 @@ async function apiCall(method, path, body = null) {
   return data;
 }
 
+// Streaming POST for AI chat — reads text incrementally so the reply "types" live.
+// Uses XHR (reliable in iOS WKWebView, unlike fetch ReadableStream). The server
+// streams visible text, then a \x1e frame carrying JSON metadata (e.g. products).
+function streamPost(path, body, onText) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API + path);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    if (authToken) xhr.setRequestHeader('Authorization', 'Bearer ' + authToken);
+    const parse = (raw) => {
+      const i = raw.indexOf('\x1e');
+      const text = i >= 0 ? raw.slice(0, i) : raw;
+      let meta = null;
+      if (i >= 0) { try { meta = JSON.parse(raw.slice(i + 1)); } catch (e) {} }
+      return { text, meta };
+    };
+    xhr.onprogress = () => { if (onText) onText(parse(xhr.responseText).text); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const { text, meta } = parse(xhr.responseText);
+        if (onText) onText(text);
+        resolve({ reply: text, ...(meta || {}) });
+      } else {
+        let msg = 'حدث خطأ';
+        try { msg = JSON.parse(xhr.responseText).error || msg; } catch (e) {}
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror = () => reject(new Error('تعذّر الاتصال'));
+    xhr.send(JSON.stringify(body));
+  });
+}
+
 const Api = {
   auth: {
     login: (phone, password) => apiCall('POST', '/auth/login', { phone, password }),
@@ -100,8 +133,8 @@ const Api = {
     recommendations: () => apiCall('GET', '/beauty/recommendations'),
     youMightLike: () => apiCall('GET', '/beauty/you-might-like'),
     aiHairstyle: (image_base64, face_shape) => apiCall('POST', '/beauty/ai-hairstyle', { image_base64, face_shape }),
-    chat: (messages, image_base64) => apiCall('POST', '/beauty/chat', { messages, image_base64 }),
-    stylistAssistant: (messages) => apiCall('POST', '/beauty/stylist-assistant', { messages }),
+    chat: (messages, image_base64, onText) => streamPost('/beauty/chat', { messages, image_base64 }, onText),
+    stylistAssistant: (messages, onText) => streamPost('/beauty/stylist-assistant', { messages }, onText),
     listProducts: () => apiCall('GET', '/beauty/products'),
     addProduct: (data) => apiCall('POST', '/beauty/products', data),
     deleteProduct: (id) => apiCall('DELETE', '/beauty/products/' + id),

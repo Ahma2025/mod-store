@@ -781,6 +781,9 @@ const TR = {
 
   // === AI BEAUTY ADVISOR (customer) ===
   'مستشارة الجمال AI': 'AI Beauty Advisor',
+  'جوري ✨': 'Jouri ✨',
+  'جوري 🌹 مستشارة جمالك': 'Jouri 🌹 Your Beauty Advisor',
+  'جوري 🌹 مساعِدتك': 'Jouri 🌹 Your Assistant',
   'حللي صورتك واسألي عن أظافرك ومكياجك وشعرك وبشرتك': 'Analyze your photo & ask about your nails, makeup, hair & skin',
   'خبيرة تجميل • ذكاء اصطناعي': 'Beauty Expert • AI',
   '📎 صورة مرفقة': '📎 Photo attached',

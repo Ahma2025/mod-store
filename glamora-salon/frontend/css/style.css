@@ -335,6 +335,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .cover-slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.6s ease; }
 .cover-slide { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; }
 .cover-slide video { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* live typing cursor for AI (جوري) streaming replies */
+.ai-caret { display: inline-block; width: 2px; height: 1em; background: var(--rose, #7B1D40); margin-inline-start: 2px; vertical-align: -2px; border-radius: 1px; animation: aiBlink 1s step-end infinite; }
+@keyframes aiBlink { 50% { opacity: 0; } }
 .cover-dots { position: absolute; bottom: 54px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; z-index: 2; }
 .cover-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: all 0.25s; }
 .cover-dot.active { background: #fff; width: 16px; border-radius: 3px; }

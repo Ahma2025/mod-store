@@ -206,7 +206,7 @@ router.post('/chat', authenticate, async (req, res) => {
     const Anthropic = require('@anthropic-ai/sdk');
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const baseSystem = `أنتِ "مستشارة الجمال" الذكية في تطبيق صالون نسائي فاخر اسمه Velour. تتحدثين مع الزبونة بالعربية بأسلوب دافئ وصديق، مثل صديقة خبيرة في التجميل تهتم فيها.
+    const baseSystem = `أنتِ "جوري" 🌹 — مستشارة الجمال الذكية في تطبيق صالون نسائي فاخر اسمه Velour. اسمك جوري، وإذا سألتك الزبونة عن اسمك أو حابة تعرّفي عن نفسك، قولي إنك جوري مستشارة جمالها. تتحدثين مع الزبونة بالعربية بأسلوب دافئ وصديق، مثل صديقة خبيرة في التجميل تهتم فيها.
 
 شخصيتك ونبرتك (مهمة جداً):
 - كوني دافئة ومُجامِلة بسخاء! امدحي جمالها بصدق وبشكل يرفع ثقتها ويفرّحها: "ما شاء الله شو حلوة 😍"، "عيونك ساحرة"، "بشرتك ناعمة وحلوة كتير"، "إطلالتك تجنّن"، "أنتِ جميلة طبيعياً وبس رح نبرز جمالك أكتر". خلّيها تحس إنها أميرة.
@@ -260,33 +260,57 @@ router.post('/chat', authenticate, async (req, res) => {
       return { role, content: String(m.content || '') };
     });
 
-    const response = await client.messages.create({
+    // Stream tokens to the client as plain text so the reply "types" live.
+    // effort:'low' cuts thinking latency dramatically for a chat advisor.
+    // A trailing \x1e frame carries the products JSON after the visible text.
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (res.flushHeaders) res.flushHeaders();
+
+    const stream = client.messages.stream({
       model: 'claude-opus-5',
       max_tokens: 2000,
-      output_config: { effort: 'medium' },
+      output_config: { effort: 'low' },
       system,
       messages: anthMessages,
     });
 
-    let reply = (response.content.find(b => b.type === 'text') || {}).text
-      || 'عذراً، ما قدرت أرد الآن. جربي مرة ثانية.';
+    let buf = '';       // full text so far
+    let sent = 0;       // chars already written to client
+    stream.on('text', (delta) => {
+      buf += delta;
+      // never emit the [[PRODUCTS ...]] marker: hold back from '[[' onward,
+      // otherwise flush everything except the last char (a '[' may split across deltas)
+      const mIdx = buf.indexOf('[[');
+      const flushEnd = mIdx >= 0 ? mIdx : Math.max(sent, buf.length - 1);
+      if (flushEnd > sent) {
+        res.write(buf.slice(sent, flushEnd));
+        sent = flushEnd;
+      }
+    });
 
-    // extract recommended products from the [[PRODUCTS: ...]] marker and hydrate as cards
+    await stream.finalMessage();
+
+    // strip the marker, resolve products, flush any remaining visible text
+    let full = buf;
     let products = [];
-    const mk = reply.match(/\[\[\s*PRODUCTS\s*:\s*([0-9,\s]+)\]\]/i);
+    const mk = full.match(/\[\[\s*PRODUCTS\s*:\s*([0-9,\s]+)\]\]/i);
     if (mk) {
       const ids = mk[1].split(',').map(s => parseInt(s.trim(), 10)).filter(n => n);
       products = catalog.filter(p => ids.includes(p.id)).slice(0, 4).map(p => ({
         id: p.id, category: p.category, name: p.name, brand: p.brand,
         image_url: p.image_url, description: p.description, how_to_use: p.how_to_use, price: p.price,
       }));
-      reply = reply.replace(mk[0], '').trim();
+      full = full.replace(mk[0], '').trim();
     }
-
-    res.json({ reply, products });
+    if (full.length > sent) res.write(full.slice(sent));
+    res.write('\x1e' + JSON.stringify({ products }));
+    res.end();
   } catch (e) {
     console.error('beauty chat error:', e.message);
-    res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+    if (!res.headersSent) res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+    else { try { res.end(); } catch {} }
   }
 });
 
@@ -391,7 +415,7 @@ router.post('/stylist-assistant', authenticate, async (req, res) => {
       }
     } catch (e) { snapshot = ''; }
 
-    const system = `أنتِ "مساعِدة الكوافيرة الذكية" في تطبيق Velour لإدارة صالونات التجميل. أنتِ مساعِدة أعمال + خبيرة تجميل محترفة، تساعدين صاحبة الصالون تدير وتكبّر شغلها. تحدثي بالعربية بأسلوب عملي وودود ومحترف.
+    const system = `أنتِ "جوري" 🌹 — المساعِدة الذكية في تطبيق Velour لإدارة صالونات التجميل. اسمك جوري، وإذا سألتك عن اسمك عرّفي عن نفسك باسمك. أنتِ مساعِدة أعمال + خبيرة تجميل محترفة، تساعدين صاحبة الصالون تدير وتكبّر شغلها. تحدثي بالعربية بأسلوب عملي وودود ومحترف.
 
 أدوارك الأربعة:
 1) 📊 مستشارة أعمال: حللي أرقام صالونها وأعطيها نصائح عملية تزيد دخلها — استرجاع الزبونات اللي ما رجعوا، ملء الأيام الهادئة بعروض، التركيز على أكثر الخدمات طلباً، واقتراح بيع منتجات (upsell).
@@ -408,20 +432,26 @@ router.post('/stylist-assistant', authenticate, async (req, res) => {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const trimmed = messages.slice(-12).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '') }));
 
-    const response = await client.messages.create({
+    // stream the reply live (effort:'low' for snappy first token)
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (res.flushHeaders) res.flushHeaders();
+
+    const stream = client.messages.stream({
       model: 'claude-opus-5',
       max_tokens: 2000,
-      output_config: { effort: 'medium' },
+      output_config: { effort: 'low' },
       system,
       messages: trimmed,
     });
-
-    const reply = (response.content.find(b => b.type === 'text') || {}).text
-      || 'عذراً، ما قدرت أرد الآن. جربي مرة ثانية.';
-    res.json({ reply });
+    stream.on('text', (delta) => { res.write(delta); });
+    await stream.finalMessage();
+    res.end();
   } catch (e) {
     console.error('stylist assistant error:', e.message);
-    res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+    if (!res.headersSent) res.status(500).json({ error: 'حدث خطأ، جربي مرة ثانية' });
+    else { try { res.end(); } catch {} }
   }
 });
 

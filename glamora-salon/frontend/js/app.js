@@ -2258,14 +2258,22 @@ function loadAiScreen() {
   const box = document.getElementById('beauty-chat-messages');
   if (box) box.innerHTML = '';
   clearBeautyAttach();
-  appendBeautyMsg('them', 'أهلاً حبيبتي! 💖 أنا مستشارة الجمال الذكية. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨');
+  appendBeautyMsg('them', 'أهلاً حبيبتي! 💖 أنا **جوري** 🌹 مستشارة جمالك. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨');
 }
 
 function _beautyFmt(t) {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return String(t)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+    .split('\n')
+    .map((line) => {
+      let l = esc(line);
+      const h = l.match(/^\s*#{1,6}\s+(.*)$/);        // markdown header -> bold line
+      if (h) l = '<strong>' + h[1] + '</strong>';
+      l = l.replace(/^\s*[-*]\s+/, '• ');             // "- "/"* " bullet -> "• "
+      l = l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); // **bold**
+      return l;
+    })
+    .join('<br>');
 }
 
 function _esc(t) {
@@ -2399,7 +2407,7 @@ function loadStylistAssistant() {
   stylistAssistantBusy = false;
   const box = document.getElementById('sa-chat-messages');
   if (box) box.innerHTML = '';
-  appendSaMsg('them', 'أهلين 👋 أنا مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟');
+  appendSaMsg('them', 'أهلين 👋 أنا **جوري** 🌹 مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟');
 }
 
 function appendSaMsg(who, text) {
@@ -2422,15 +2430,23 @@ async function sendStylistAssistant() {
   appendSaMsg('me', text);
   input.value = '';
   stylistAssistantHistory.push({ role: 'user', content: text });
-  const typing = appendSaMsg('them', '⏳ ...');
+  const box = document.getElementById('sa-chat-messages');
+  const wrap = appendSaMsg('them', '');
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = '<span class="ai-caret"></span>';
+  if (wrap) wrap.appendChild(bubble);
   try {
-    const res = await Api.beauty.stylistAssistant(stylistAssistantHistory);
-    if (typing) typing.remove();
+    const res = await Api.beauty.stylistAssistant(stylistAssistantHistory, (partial) => {
+      bubble.innerHTML = _beautyFmt(partial) + '<span class="ai-caret"></span>';
+      if (box) box.scrollTop = box.scrollHeight;
+    });
     const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
-    appendSaMsg('them', reply);
+    bubble.innerHTML = _beautyFmt(reply);
+    if (box) box.scrollTop = box.scrollHeight;
     stylistAssistantHistory.push({ role: 'assistant', content: reply });
   } catch (e) {
-    if (typing) typing.remove();
+    if (wrap) wrap.remove();
     appendSaMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
   } finally {
     stylistAssistantBusy = false;
@@ -2473,17 +2489,25 @@ async function sendBeautyChat() {
 
   const sentImg = img;
   clearBeautyAttach();
-  const typing = appendBeautyMsg('them', '⏳ ...');
+  const box = document.getElementById('beauty-chat-messages');
+  const wrap = appendBeautyMsg('them', '');
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = '<span class="ai-caret"></span>';
+  if (wrap) wrap.appendChild(bubble);
 
   try {
-    const res = await Api.beauty.chat(beautyChatHistory, sentImg);
-    if (typing) typing.remove();
+    const res = await Api.beauty.chat(beautyChatHistory, sentImg, (partial) => {
+      bubble.innerHTML = _beautyFmt(partial) + '<span class="ai-caret"></span>';
+      if (box) box.scrollTop = box.scrollHeight;
+    });
     const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
-    appendBeautyMsg('them', reply);
+    bubble.innerHTML = _beautyFmt(reply);
+    if (box) box.scrollTop = box.scrollHeight;
     if (res && Array.isArray(res.products) && res.products.length) appendBeautyProducts(res.products);
     beautyChatHistory.push({ role: 'assistant', content: reply });
   } catch (e) {
-    if (typing) typing.remove();
+    if (wrap) wrap.remove();
     appendBeautyMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
   } finally {
     beautyChatBusy = false;
