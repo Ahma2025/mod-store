@@ -1090,7 +1090,7 @@ async function showAnalytics() {
   if (!stSalonData?.id) return;
   try {
     analyticsData = await Api.stylistDash.analytics(stSalonData.id);
-    renderAnalytics('today');
+    renderAnalytics('total');
     const _anEN = window.VELOUR_LANG === 'en';
     document.getElementById('analytics-top-service').textContent =
       analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} ${_anEN ? 'times' : 'مرة'})` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');

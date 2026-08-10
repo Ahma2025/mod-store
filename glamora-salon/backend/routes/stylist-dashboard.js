@@ -389,21 +389,28 @@ router.get('/salon/:id/analytics', authenticate, async (req, res) => {
     const weekAgo = new Date(now - 7 * 86400000).toISOString().split('T')[0];
     const monthAgo = new Date(now - 30 * 86400000).toISOString().split('T')[0];
 
-    const completedBookings = await DB.bookings.find(b => b.salon_id === salonId && b.status === 'completed');
+    const allBookings = await DB.bookings.find(b => b.salon_id === salonId);
 
-    const revenue = (range) => completedBookings
-      .filter(b => b.booking_date >= range)
-      .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+    // Revenue = committed income: completed (already earned) + confirmed (booked & agreed).
+    // Counting confirmed matters because stylists rarely flip a booking to "completed",
+    // so revenue would otherwise sit at 0 despite a full calendar.
+    const earning = allBookings.filter(b => b.status === 'completed' || b.status === 'confirmed');
+    const sumIn = (pred) => earning.filter(pred).reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+    const todayRevenue = sumIn(b => b.booking_date === todayStr);
+    const weekRevenue  = sumIn(b => b.booking_date >= weekAgo);
+    const monthRevenue = sumIn(b => b.booking_date >= monthAgo);
+    const totalRevenue = sumIn(() => true);
 
-    const todayRevenue = revenue(todayStr);
-    const weekRevenue = revenue(weekAgo);
-    const monthRevenue = revenue(monthAgo);
-    const totalRevenue = revenue('2000-01-01');
+    // Demand stats (top service / busiest hour) count every real booking that reflects
+    // demand — everything except cancelled/rejected — so they populate from day one.
+    const demand = allBookings.filter(b => b.status !== 'cancelled' && b.status !== 'rejected');
 
     // 60 — most requested service
     const serviceCounts = {};
-    completedBookings.forEach(b => {
-      const ids = b.service_ids ? JSON.parse(b.service_ids) : [b.service_id];
+    demand.forEach(b => {
+      let ids = [];
+      try { ids = b.service_ids ? JSON.parse(b.service_ids) : (b.service_id ? [b.service_id] : []); }
+      catch (_) { ids = b.service_id ? [b.service_id] : []; }
       ids.forEach(id => { serviceCounts[id] = (serviceCounts[id] || 0) + 1; });
     });
     const topServiceId = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -411,22 +418,22 @@ router.get('/salon/:id/analytics', authenticate, async (req, res) => {
 
     // 61 — busiest booking hour
     const hourCounts = {};
-    completedBookings.forEach(b => {
+    demand.forEach(b => {
       const h = b.booking_time?.split(':')[0];
       if (h) hourCounts[h] = (hourCounts[h] || 0) + 1;
     });
     const topHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
 
     // Total bookings counts
-    const allBookings = await DB.bookings.find(b => b.salon_id === salonId);
     const pending = allBookings.filter(b => b.status === 'pending').length;
     const confirmed = allBookings.filter(b => b.status === 'confirmed').length;
+    const completed = allBookings.filter(b => b.status === 'completed').length;
 
     res.json({
       revenue: { today: todayRevenue, week: weekRevenue, month: monthRevenue, total: totalRevenue },
       top_service: topService ? { name: topService.name_ar || topService.name, count: serviceCounts[topServiceId] } : null,
       busiest_hour: topHour ? `${topHour}:00` : null,
-      bookings: { pending, confirmed, completed: completedBookings.length, total: allBookings.length }
+      bookings: { pending, confirmed, completed, total: allBookings.length }
     });
   } catch (e) { console.error('analytics error:', e); res.status(500).json({ error: 'خطأ' }); }
 });
