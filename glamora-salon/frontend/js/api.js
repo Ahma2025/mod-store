@@ -193,6 +193,7 @@ const Api = {
     deleteBlockedSlot: (id) => apiCall('DELETE', `/blocked-slots/${id}`),
     updateBooking: (id, status) => apiCall('PUT', `/bookings/${id}/status`, { status }),
     analytics: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/analytics`),
+    resetRevenue: (salonId) => apiCall('POST', `/stylist/salon/${salonId}/revenue-reset`),
     clients: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/clients`),
     getInventory: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/inventory`),
     addInventory: (salonId, data) => apiCall('POST', `/stylist/salon/${salonId}/inventory`, data),

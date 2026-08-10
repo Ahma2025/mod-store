@@ -203,6 +203,7 @@ async function initDatabase() {
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS categories TEXT DEFAULT '[]'`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS is_verified INTEGER DEFAULT 0`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS revenue_reset_at TIMESTAMPTZ`,
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS cleanliness_rating INTEGER`,
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS punctuality_rating INTEGER`,
     `ALTER TABLE salon_ratings ADD COLUMN IF NOT EXISTS result_rating INTEGER`,

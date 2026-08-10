@@ -284,6 +284,7 @@ const TR = {
   'مؤكدة': 'Confirmed',
   'مكتملة': 'Completed',
   'أكثر خدمة مطلوبة': 'Most Requested Service',
+  '🔄 تصفير الدخل': '🔄 Reset Revenue',
   'أكثر وقت حجزاً': 'Busiest Booking Time',
   'لا توجد بيانات بعد': 'No data yet',
   'الساعة': 'At',

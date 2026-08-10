@@ -1123,7 +1123,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .period-tab.active { background: var(--rose); color: white; border-color: var(--rose); }
 .analytics-revenue-card { background: linear-gradient(135deg, var(--burgundy), var(--rose)); border-radius: var(--radius); padding: 24px 20px; text-align: center; color: white; }
 .revenue-label { font-size: 13px; opacity: 0.85; margin-bottom: 6px; }
-.revenue-amount { font-size: 36px; font-weight: 700; }
+.revenue-amount { font-size: 36px; font-weight: 700; color: #111; }
+.revenue-reset-btn { margin-top: 14px; padding: 8px 18px; border-radius: 999px; border: 1.5px solid rgba(0,0,0,0.18); background: rgba(255,255,255,0.65); color: #111; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.18s ease; }
+.revenue-reset-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.9); }
 .analytics-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .analytics-stat-box { background: var(--white); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; border: 1.5px solid var(--gray-light); }
 .stat-num { font-size: 24px; font-weight: 700; color: var(--rose); }

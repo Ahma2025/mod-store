@@ -227,7 +227,15 @@ function buildStBookingCard(b) {
     rejected:  { label: _isEN ? 'Rejected ❌' : 'مرفوض ❌', cls: 'status-cancelled' },
     completed: { label: _isEN ? 'Completed ✔️' : 'مكتمل ✔️', cls: 'status-completed' }
   };
-  const st = statusMap[b.status] || { label: b.status, cls: '' };
+  // a confirmed booking whose appointment time has passed shows as completed
+  const _endMs = (() => {
+    if (!b.booking_date) return null;
+    const t = /^\d{1,2}:\d{2}/.test(b.booking_time || '') ? b.booking_time.slice(0, 5) : '23:59';
+    const start = new Date(`${b.booking_date}T${t}:00`).getTime();
+    return isNaN(start) ? null : start + (parseInt(b.total_duration) || 0) * 60000;
+  })();
+  const effStatus = (b.status === 'confirmed' && _endMs !== null && _endMs <= Date.now()) ? 'completed' : b.status;
+  const st = statusMap[effStatus] || { label: b.status, cls: '' };
   const catIcon = { 'صبغ الشعر': '🎨', 'قص': '✂️', 'علاجات': '💆', 'مكياج': '💄', 'أظافر': '💅', 'تصفيف': '👑' };
   const icon = catIcon[b.service_category] || '✨';
   return `
@@ -266,7 +274,7 @@ function buildStBookingCard(b) {
           <button class="btn-accept" onclick="stUpdateBooking(${b.id},'confirmed')">${_isEN ? 'Accept' : 'قبول الحجز'}</button>
           <button class="btn-reject" onclick="stUpdateBooking(${b.id},'rejected')">${_isEN ? 'Reject' : 'رفض'}</button>
         </div>` : ''}
-      ${b.status === 'confirmed' ? `
+      ${effStatus === 'confirmed' ? `
         <div class="st-bk-actions">
           <button class="btn-chat-sm" onclick="openChatWith(${b.client_id || b.id}, '${b.client_name}')">${_isEN ? 'Contact' : 'تواصل'}</button>
           <button class="btn-reject" onclick="stUpdateBooking(${b.id},'cancelled')">${_isEN ? 'Cancel Booking' : 'إلغاء الحجز'}</button>
@@ -1112,6 +1120,17 @@ function switchAnalyticsPeriod(period, el) {
   document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   renderAnalytics(period);
+}
+
+async function resetRevenue() {
+  if (!stSalonData?.id) return;
+  const _en = window.VELOUR_LANG === 'en';
+  if (!confirm(_en ? 'Reset revenue to zero? Income earned so far will no longer be counted (bookings are kept).' : 'تصفير الدخل؟ الدخل المحسوب لحد هلأ ما رح ينعد بعد اليوم (الحجوزات بتضل موجودة).')) return;
+  try {
+    await Api.stylistDash.resetRevenue(stSalonData.id);
+    showToast(_en ? '✅ Revenue reset' : '✅ تم تصفير الدخل');
+    showAnalytics();
+  } catch (e) { showToast(_en ? 'Failed to reset' : 'فشل التصفير'); }
 }
 
 // ===== 64: CLIENTS =====

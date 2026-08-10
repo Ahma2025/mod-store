@@ -391,11 +391,24 @@ router.get('/salon/:id/analytics', authenticate, async (req, res) => {
 
     const allBookings = await DB.bookings.find(b => b.salon_id === salonId);
 
-    // Revenue = committed income: completed (already earned) + confirmed (booked & agreed).
-    // Counting confirmed matters because stylists rarely flip a booking to "completed",
-    // so revenue would otherwise sit at 0 despite a full calendar.
-    const earning = allBookings.filter(b => b.status === 'completed' || b.status === 'confirmed');
-    const sumIn = (pred) => earning.filter(pred).reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+    // A confirmed booking auto-completes once its appointment time has passed → its price
+    // is then counted as earned revenue. (End = start time + service duration.)
+    const nowMs = now.getTime();
+    const endMs = (b) => {
+      if (!b.booking_date) return 0;
+      const t = /^\d{1,2}:\d{2}/.test(b.booking_time || '') ? b.booking_time.slice(0, 5) : '23:59';
+      const start = new Date(`${b.booking_date}T${t}:00`).getTime();
+      if (isNaN(start)) return 0;
+      return start + (parseInt(b.total_duration) || 0) * 60000;
+    };
+    const isEarned = (b) => b.status === 'completed' || (b.status === 'confirmed' && endMs(b) <= nowMs);
+
+    // "تصفير الدخل": only count income earned after the reset moment.
+    const salon = await DB.salons.findOne(s => s.id === salonId);
+    const resetMs = salon && salon.revenue_reset_at ? new Date(salon.revenue_reset_at).getTime() : 0;
+
+    const earned = allBookings.filter(b => isEarned(b) && endMs(b) > resetMs);
+    const sumIn = (pred) => earned.filter(pred).reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
     const todayRevenue = sumIn(b => b.booking_date === todayStr);
     const weekRevenue  = sumIn(b => b.booking_date >= weekAgo);
     const monthRevenue = sumIn(b => b.booking_date >= monthAgo);
@@ -424,10 +437,10 @@ router.get('/salon/:id/analytics', authenticate, async (req, res) => {
     });
     const topHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
 
-    // Total bookings counts
+    // Total bookings counts (respecting the auto-complete rule)
     const pending = allBookings.filter(b => b.status === 'pending').length;
-    const confirmed = allBookings.filter(b => b.status === 'confirmed').length;
-    const completed = allBookings.filter(b => b.status === 'completed').length;
+    const confirmed = allBookings.filter(b => b.status === 'confirmed' && !isEarned(b)).length; // still upcoming
+    const completed = allBookings.filter(b => isEarned(b)).length;
 
     res.json({
       revenue: { today: todayRevenue, week: weekRevenue, month: monthRevenue, total: totalRevenue },
@@ -436,6 +449,17 @@ router.get('/salon/:id/analytics', authenticate, async (req, res) => {
       bookings: { pending, confirmed, completed, total: allBookings.length }
     });
   } catch (e) { console.error('analytics error:', e); res.status(500).json({ error: 'خطأ' }); }
+});
+
+// Reset revenue counter (تصفير الدخل) — owner only. Income earned before now stops counting.
+router.post('/salon/:id/revenue-reset', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id);
+    const ownerStylist = await DB.stylists.findOne(s => s.salon_id === salonId && s.user_id === req.user.id);
+    if (!ownerStylist && req.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
+    await DB.salons.update(s => s.id === salonId, { revenue_reset_at: new Date().toISOString() });
+    res.json({ ok: true });
+  } catch (e) { console.error('revenue-reset error:', e); res.status(500).json({ error: 'خطأ' }); }
 });
 
 // ===== 64: CLIENT LIST =====
