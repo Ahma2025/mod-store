@@ -565,12 +565,17 @@
       <button class="quick-reply-chip" onclick="useQuickReply('يمكنك الاطلاع على أسعارنا من قسم الخدمات في صفحة الصالون 💅')">الأسعار 💅</button>
     </div>
     <div class="chat-input-bar">
-      <button class="chat-media-btn" id="chat-voice-btn"
-        ontouchstart="startVoiceRecord()" ontouchend="stopVoiceRecord()"
-        onmousedown="startVoiceRecord()" onmouseup="stopVoiceRecord()" title="رسالة صوتية">🎤</button>
-      <button class="chat-media-btn" onclick="sendChatImage()" title="إرسال صورة">📷</button>
+      <button class="chat-media-btn" id="chat-voice-btn" type="button" onclick="toggleVoiceRecord()" title="رسالة صوتية">🎤</button>
+      <button class="chat-media-btn" type="button" onclick="sendChatImage()" title="إرسال صورة">📷</button>
+      <div id="chat-recording-bar" class="chat-recording-bar hidden">
+        <span class="rec-dot">🔴</span>
+        <span id="chat-recording-timer" class="rec-timer">0:00</span>
+        <div class="rec-waves">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
       <input type="text" id="chat-input" placeholder="اكتبي رسالتك..." onkeydown="if(event.key==='Enter')sendChatMessage()" style="text-align:right;direction:rtl;">
-      <button class="send-btn" onclick="sendChatMessage()">➤</button>
+      <button class="send-btn" type="button" onclick="sendChatMessage()">➤</button>
     </div>
   </div>
 

@@ -1773,6 +1773,11 @@ function appendChatMessage(msg, isMe) {
 }
 
 function sendChatMessage() {
+  if (voiceRecording) {
+    // Pressing send button while voice recording is active sends the voice note!
+    stopVoiceRecord();
+    return;
+  }
   const input = document.getElementById('chat-input');
   const content = input.value.trim();
   if (!content || !currentChatUserId) return;
@@ -1810,6 +1815,17 @@ async function sendChatImage() {
   input.click();
 }
 
+let recordingTimerInterval = null;
+let recordingSeconds = 0;
+
+async function toggleVoiceRecord() {
+  if (!voiceRecording) {
+    await startVoiceRecord();
+  } else {
+    await stopVoiceRecord();
+  }
+}
+
 async function startVoiceRecord() {
   if (voiceRecording) return;
   try {
@@ -1819,8 +1835,22 @@ async function startVoiceRecord() {
     voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
     voiceRecorder.start();
     voiceRecording = true;
+
+    // UI Updates (Instagram style)
     document.getElementById('chat-voice-btn')?.classList.add('recording');
-    showToast(window.VELOUR_LANG === 'en' ? '🎤 Recording...' : '🎤 جاري التسجيل...');
+    document.getElementById('chat-input')?.classList.add('hidden');
+    const recBar = document.getElementById('chat-recording-bar');
+    if (recBar) recBar.classList.remove('hidden');
+
+    recordingSeconds = 0;
+    const timerEl = document.getElementById('chat-recording-timer');
+    if (timerEl) timerEl.textContent = '0:00';
+    clearInterval(recordingTimerInterval);
+    recordingTimerInterval = setInterval(() => {
+      recordingSeconds++;
+      if (timerEl) timerEl.textContent = fmtVoiceTime(recordingSeconds);
+    }, 1000);
+
   } catch (e) {
     showToast(window.VELOUR_LANG === 'en' ? '⚠️ Microphone access denied' : '⚠️ لا يمكن الوصول للميكروفون');
   }
@@ -1829,7 +1859,13 @@ async function startVoiceRecord() {
 async function stopVoiceRecord() {
   if (!voiceRecording || !voiceRecorder) return;
   voiceRecording = false;
+
+  clearInterval(recordingTimerInterval);
   document.getElementById('chat-voice-btn')?.classList.remove('recording');
+  document.getElementById('chat-input')?.classList.remove('hidden');
+  const recBar = document.getElementById('chat-recording-bar');
+  if (recBar) recBar.classList.add('hidden');
+
   voiceRecorder.stream?.getTracks().forEach(t => t.stop());
   voiceRecorder.onstop = async () => {
     const blob = new Blob(voiceChunks, { type: 'audio/webm' });

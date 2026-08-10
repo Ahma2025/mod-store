@@ -1629,6 +1629,127 @@ textarea.bp-input {
   background: rgba(155, 27, 59, 0.06) !important;
 }
 
+/* ── 19. CONVERSATIONS CARD SEPARATION & GIRLISH CHAT UI ─────── */
+.conversations-list {
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.conversations-list .conv-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 14px 16px !important;
+  background: var(--white) !important;
+  border-radius: var(--radius-sm) !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(107, 15, 43, 0.07), 0 1px 4px rgba(0, 0, 0, 0.02) !important;
+  border: 1.5px solid rgba(232, 216, 223, 0.8) !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.conversations-list .conv-item:active {
+  transform: scale(0.97) translateY(1px) !important;
+  border-color: var(--rose) !important;
+  background: var(--cream2) !important;
+}
+
+/* Girlish Cute Mic & Camera Action Buttons */
+.chat-media-btn {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(196, 86, 122, 0.35) !important;
+  background: linear-gradient(135deg, #FFF0F5 0%, #FADADD 100%) !important;
+  color: var(--rose-dark) !important;
+  font-size: 19px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+  box-shadow: 0 3px 12px rgba(155, 27, 59, 0.14) !important;
+}
+
+.chat-media-btn:hover {
+  transform: scale(1.1) rotate(6deg) !important;
+  border-color: var(--rose) !important;
+  box-shadow: 0 6px 18px rgba(155, 27, 59, 0.25) !important;
+}
+
+.chat-media-btn:active {
+  transform: scale(0.92) !important;
+}
+
+.chat-media-btn.recording {
+  background: linear-gradient(135deg, #FF4D6D 0%, #C9184A 100%) !important;
+  color: white !important;
+  border-color: #FF758F !important;
+  animation: girlishRecPulse 1.2s infinite ease-in-out alternate !important;
+}
+
+@keyframes girlishRecPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.5); }
+  100% { transform: scale(1.12); box-shadow: 0 0 0 10px rgba(255, 77, 109, 0); }
+}
+
+/* Instagram-style Voice Recording Bar */
+.chat-recording-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #FFF0F5 0%, #FADADD 100%);
+  border-radius: 99px;
+  border: 1.5px solid var(--rose-light);
+  box-shadow: 0 2px 10px rgba(155, 27, 59, 0.12);
+  animation: fadeIn 0.25s ease;
+  direction: rtl;
+}
+
+.rec-dot {
+  font-size: 10px;
+  animation: pulse-rec 0.8s infinite alternate;
+}
+
+.rec-timer {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rose-dark);
+  font-family: monospace;
+}
+
+.rec-waves {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  margin-right: auto;
+}
+
+.rec-waves span {
+  width: 3px;
+  background: var(--rose);
+  border-radius: 3px;
+  animation: recWaveDance 0.8s infinite ease-in-out alternate;
+}
+
+.rec-waves span:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+.rec-waves span:nth-child(2) { height: 80%; animation-delay: 0.3s; }
+.rec-waves span:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+.rec-waves span:nth-child(4) { height: 60%; animation-delay: 0.4s; }
+.rec-waves span:nth-child(5) { height: 90%; animation-delay: 0.15s; }
+
+@keyframes recWaveDance {
+  0% { transform: scaleY(0.3); }
+  100% { transform: scaleY(1.3); }
+}
+
+
 
 
 
