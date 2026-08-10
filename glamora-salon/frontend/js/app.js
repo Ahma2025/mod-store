@@ -2248,17 +2248,128 @@ async function checkBeautyReminder() {
 let aiFaceBase64 = null;
 let aiSelectedShape = null;
 
-let beautyChatHistory = [];
+// ===================== Saved & resumable AI conversations (ChatGPT-style) =====================
+// Stored locally per user & per kind ('beauty' | 'stylist'). Each conversation keeps its rich
+// messages (text + optional image/products) so it can be reopened and continued anytime.
+const AiConvo = {
+  key(kind) { const uid = (currentUser && currentUser.id) || 'guest'; return `velour_ai_convos_${kind}_${uid}`; },
+  load(kind) { try { return JSON.parse(localStorage.getItem(this.key(kind)) || '[]'); } catch (e) { return []; } },
+  saveAll(kind, list) {
+    try { localStorage.setItem(this.key(kind), JSON.stringify(list)); }
+    catch (e) { try { localStorage.setItem(this.key(kind), JSON.stringify(list.slice(0, Math.max(1, list.length >> 1)))); } catch (_) {} }
+  },
+  upsert(kind, convo) {
+    convo.updatedAt = Date.now();
+    const list = this.load(kind).filter(c => c.id !== convo.id);
+    list.unshift(convo);
+    list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    this.saveAll(kind, list.slice(0, 40));
+  },
+  get(kind, id) { return this.load(kind).find(c => c.id === id) || null; },
+  remove(kind, id) { this.saveAll(kind, this.load(kind).filter(c => c.id !== id)); },
+};
+function _convoId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function _convoTitle(messages) {
+  const fu = (messages || []).find(m => m.role === 'user' && (m.content || '').trim());
+  const t = (fu ? fu.content : '').replace(/\s+/g, ' ').trim() || 'محادثة جديدة';
+  return t.length > 34 ? t.slice(0, 34) + '…' : t;
+}
+function _convoWhen(ts) {
+  if (!ts) return '';
+  const d = new Date(ts), now = new Date();
+  const yst = new Date(now); yst.setDate(now.getDate() - 1);
+  const time = d.toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return 'اليوم ' + time;
+  if (d.toDateString() === yst.toDateString()) return 'أمس ' + time;
+  return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+}
+
+// ---- generic conversations picker modal (shared by both chats) ----
+let _aiConvoKind = 'beauty';
+function ensureAiConvoModal() {
+  if (document.getElementById('ai-convo-modal')) return;
+  const d = document.createElement('div');
+  d.id = 'ai-convo-modal';
+  d.className = 'ai-convo-modal hidden';
+  d.innerHTML = `<div class="ai-convo-sheet" onclick="event.stopPropagation()">
+      <div class="ai-convo-head"><b>💬 محادثاتي</b><button type="button" class="ai-convo-x" onclick="closeAiConvoModal()">✕</button></div>
+      <button type="button" class="ai-convo-new" onclick="newAiConvo()">➕ محادثة جديدة</button>
+      <div id="ai-convo-list" class="ai-convo-list"></div>
+    </div>`;
+  d.addEventListener('click', () => closeAiConvoModal());
+  document.body.appendChild(d);
+}
+function openAiConvoModal(kind) {
+  _aiConvoKind = kind;
+  ensureAiConvoModal();
+  renderAiConvoList();
+  document.getElementById('ai-convo-modal').classList.remove('hidden');
+}
+function closeAiConvoModal() { const m = document.getElementById('ai-convo-modal'); if (m) m.classList.add('hidden'); }
+function renderAiConvoList() {
+  const kind = _aiConvoKind;
+  const list = AiConvo.load(kind);
+  const curId = kind === 'beauty' ? (beautyConvo && beautyConvo.id) : (stylistConvo && stylistConvo.id);
+  const el = document.getElementById('ai-convo-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<p class="ai-convo-empty">ما في محادثات محفوظة بعد ✨<br>ابدئي محادثة وراح تنحفظ هون تلقائياً.</p>'; return; }
+  el.innerHTML = list.map(c => `<div class="ai-convo-item${c.id === curId ? ' active' : ''}" onclick="openAiConvo('${kind}','${c.id}')">
+      <div class="ai-convo-item-main">
+        <div class="ai-convo-item-t">${_esc(c.title || 'محادثة')}</div>
+        <div class="ai-convo-item-d">${_convoWhen(c.updatedAt)}</div>
+      </div>
+      <button type="button" class="ai-convo-del" onclick="event.stopPropagation();deleteAiConvo('${kind}','${c.id}')" aria-label="حذف">🗑️</button>
+    </div>`).join('');
+}
+function openAiConvo(kind, id) { closeAiConvoModal(); if (kind === 'beauty') openBeautyConversation(id); else openStylistConversation(id); }
+function newAiConvo() { closeAiConvoModal(); if (_aiConvoKind === 'beauty') newBeautyConversation(); else newStylistConversation(); }
+function deleteAiConvo(kind, id) {
+  AiConvo.remove(kind, id);
+  const curId = kind === 'beauty' ? (beautyConvo && beautyConvo.id) : (stylistConvo && stylistConvo.id);
+  if (id === curId) { if (kind === 'beauty') newBeautyConversation(); else newStylistConversation(); }
+  renderAiConvoList();
+}
+
+// ===================== Beauty (جوري) chat =====================
+let beautyConvo = null;
 let beautyChatBusy = false;
+const BEAUTY_GREETING = 'أهلاً حبيبتي! 💖 أنا **جوري** 🌹 مستشارة جمالك. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨';
 
 function loadAiScreen() {
-  beautyChatHistory = [];
+  ensureAiConvoModal();
   aiFaceBase64 = null;
   beautyChatBusy = false;
+  clearBeautyAttach();
+  const recent = AiConvo.load('beauty')[0];   // resume where she left off
+  if (recent) openBeautyConversation(recent.id);
+  else newBeautyConversation();
+}
+function newBeautyConversation() {
+  beautyConvo = { id: _convoId(), title: 'محادثة جديدة', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+  aiFaceBase64 = null; clearBeautyAttach();
+  _renderBeautyConvo();
+}
+function openBeautyConversation(id) {
+  const c = AiConvo.get('beauty', id);
+  if (!c) return newBeautyConversation();
+  beautyConvo = c;
+  aiFaceBase64 = null; clearBeautyAttach();
+  _renderBeautyConvo();
+}
+function _renderBeautyConvo() {
   const box = document.getElementById('beauty-chat-messages');
   if (box) box.innerHTML = '';
-  clearBeautyAttach();
-  appendBeautyMsg('them', 'أهلاً حبيبتي! 💖 أنا **جوري** 🌹 مستشارة جمالك. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨');
+  appendBeautyMsg('them', BEAUTY_GREETING);
+  (beautyConvo.messages || []).forEach(m => {
+    if (m.role === 'user') appendBeautyMsg('me', m.content, m.image || null);
+    else { appendBeautyMsg('them', m.content); if (Array.isArray(m.products) && m.products.length) appendBeautyProducts(m.products); }
+  });
+  if (box) box.scrollTop = box.scrollHeight;
+}
+function _persistBeauty() {
+  if (!beautyConvo || !beautyConvo.messages.length) return;
+  beautyConvo.title = _convoTitle(beautyConvo.messages);
+  AiConvo.upsert('beauty', beautyConvo);
 }
 
 function _beautyFmt(t) {
@@ -2399,15 +2510,38 @@ async function deleteBeautyProduct(id) {
 }
 
 // ===== Stylist AI assistant (business + craft + marketing + replies) =====
-let stylistAssistantHistory = [];
+let stylistConvo = null;
 let stylistAssistantBusy = false;
+const STYLIST_GREETING = 'أهلين 👋 أنا **جوري** 🌹 مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟';
 
 function loadStylistAssistant() {
-  stylistAssistantHistory = [];
+  ensureAiConvoModal();
   stylistAssistantBusy = false;
+  const recent = AiConvo.load('stylist')[0];
+  if (recent) openStylistConversation(recent.id);
+  else newStylistConversation();
+}
+function newStylistConversation() {
+  stylistConvo = { id: _convoId(), title: 'محادثة جديدة', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+  _renderStylistConvo();
+}
+function openStylistConversation(id) {
+  const c = AiConvo.get('stylist', id);
+  if (!c) return newStylistConversation();
+  stylistConvo = c;
+  _renderStylistConvo();
+}
+function _renderStylistConvo() {
   const box = document.getElementById('sa-chat-messages');
   if (box) box.innerHTML = '';
-  appendSaMsg('them', 'أهلين 👋 أنا **جوري** 🌹 مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟');
+  appendSaMsg('them', STYLIST_GREETING);
+  (stylistConvo.messages || []).forEach(m => appendSaMsg(m.role === 'user' ? 'me' : 'them', m.content));
+  if (box) box.scrollTop = box.scrollHeight;
+}
+function _persistStylist() {
+  if (!stylistConvo || !stylistConvo.messages.length) return;
+  stylistConvo.title = _convoTitle(stylistConvo.messages);
+  AiConvo.upsert('stylist', stylistConvo);
 }
 
 function appendSaMsg(who, text) {
@@ -2423,13 +2557,15 @@ function appendSaMsg(who, text) {
 
 async function sendStylistAssistant() {
   if (stylistAssistantBusy) return;
+  if (!stylistConvo) newStylistConversation();
   const input = document.getElementById('sa-chat-input');
   const text = (input.value || '').trim();
   if (!text) return;
   stylistAssistantBusy = true;
   appendSaMsg('me', text);
   input.value = '';
-  stylistAssistantHistory.push({ role: 'user', content: text });
+  stylistConvo.messages.push({ role: 'user', content: text });
+  _persistStylist();
   const box = document.getElementById('sa-chat-messages');
   const wrap = appendSaMsg('them', '');
   const bubble = document.createElement('div');
@@ -2437,14 +2573,16 @@ async function sendStylistAssistant() {
   bubble.innerHTML = '<span class="ai-caret"></span>';
   if (wrap) wrap.appendChild(bubble);
   try {
-    const res = await Api.beauty.stylistAssistant(stylistAssistantHistory, (partial) => {
+    const apiHistory = stylistConvo.messages.map(m => ({ role: m.role, content: m.content }));
+    const res = await Api.beauty.stylistAssistant(apiHistory, (partial) => {
       bubble.innerHTML = _beautyFmt(partial) + '<span class="ai-caret"></span>';
       if (box) box.scrollTop = box.scrollHeight;
     });
     const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
     bubble.innerHTML = _beautyFmt(reply);
     if (box) box.scrollTop = box.scrollHeight;
-    stylistAssistantHistory.push({ role: 'assistant', content: reply });
+    stylistConvo.messages.push({ role: 'assistant', content: reply });
+    _persistStylist();
   } catch (e) {
     if (wrap) wrap.remove();
     appendSaMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
@@ -2477,6 +2615,7 @@ function clearBeautyAttach() {
 
 async function sendBeautyChat() {
   if (beautyChatBusy) return;
+  if (!beautyConvo) newBeautyConversation();
   const input = document.getElementById('beauty-chat-input');
   const text = (input.value || '').trim();
   const img = aiFaceBase64;
@@ -2485,7 +2624,8 @@ async function sendBeautyChat() {
   beautyChatBusy = true;
   appendBeautyMsg('me', text, img);
   input.value = '';
-  beautyChatHistory.push({ role: 'user', content: text || 'حللي صورتي وأعطيني نصائح.' });
+  beautyConvo.messages.push({ role: 'user', content: text || 'حللي صورتي وأعطيني نصائح.', image: img || null });
+  _persistBeauty();
 
   const sentImg = img;
   clearBeautyAttach();
@@ -2497,15 +2637,18 @@ async function sendBeautyChat() {
   if (wrap) wrap.appendChild(bubble);
 
   try {
-    const res = await Api.beauty.chat(beautyChatHistory, sentImg, (partial) => {
+    const apiHistory = beautyConvo.messages.map(m => ({ role: m.role, content: m.content }));
+    const res = await Api.beauty.chat(apiHistory, sentImg, (partial) => {
       bubble.innerHTML = _beautyFmt(partial) + '<span class="ai-caret"></span>';
       if (box) box.scrollTop = box.scrollHeight;
     });
     const reply = (res && res.reply) || 'عذراً، ما قدرت أرد الآن.';
     bubble.innerHTML = _beautyFmt(reply);
     if (box) box.scrollTop = box.scrollHeight;
-    if (res && Array.isArray(res.products) && res.products.length) appendBeautyProducts(res.products);
-    beautyChatHistory.push({ role: 'assistant', content: reply });
+    const products = (res && Array.isArray(res.products)) ? res.products : [];
+    if (products.length) appendBeautyProducts(products);
+    beautyConvo.messages.push({ role: 'assistant', content: reply, products });
+    _persistBeauty();
   } catch (e) {
     if (wrap) wrap.remove();
     appendBeautyMsg('them', '⚠️ صار خطأ، جربي مرة ثانية.');
