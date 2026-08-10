@@ -1529,6 +1529,106 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   animation: modalBounceUp 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* ── 18. TARGETED UI/UX LAYOUT & SCREEN FIXES ─────────────────── */
+
+/* AI Chat & Stylist Assistant Screens - Fullscreen flex column layout (Fixes big gap at bottom) */
+#screen-ai-hairstyle, 
+#screen-stylist-assistant {
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  height: 100dvh !important;
+}
+
+#screen-ai-hairstyle .chat-messages,
+#screen-stylist-assistant .chat-messages {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Header Safe Area & Back Button Alignment (Fixes back button stuck at top under notch/status bar) */
+.screen-header, 
+.page-header {
+  padding: max(52px, calc(env(safe-area-inset-top) + 12px)) 20px 16px !important;
+  background: var(--white) !important;
+  border-bottom: 1px solid var(--gray-light) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  z-index: 10 !important;
+  flex-shrink: 0 !important;
+}
+
+.screen-header h2, 
+.page-header h2 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  flex: 1 !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.screen-header .back-btn, 
+.page-header .back-btn {
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+/* AI Products Form Input Styling (Fixes squished/overlapping input fields) */
+.bp-input {
+  display: block !important;
+  width: 100% !important;
+  padding: 13px 16px !important;
+  margin-bottom: 14px !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1.5px solid var(--gray-light) !important;
+  font-family: 'El Messiri', sans-serif !important;
+  font-size: 14.5px !important;
+  background: var(--white) !important;
+  color: var(--dark) !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: all 0.22s ease !important;
+}
+
+.bp-input:focus {
+  border-color: var(--rose) !important;
+  box-shadow: 0 0 0 3.5px rgba(155, 27, 59, 0.14) !important;
+  transform: translateY(-1px) !important;
+}
+
+textarea.bp-input {
+  min-height: 80px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+
+.bp-upload {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px 16px !important;
+  border: 2px dashed var(--rose-light) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--cream2) !important;
+  cursor: pointer !important;
+  margin-bottom: 16px !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.bp-upload:hover {
+  border-color: var(--rose) !important;
+  background: rgba(155, 27, 59, 0.06) !important;
+}
+
 
 
 
