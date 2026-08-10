@@ -322,8 +322,8 @@
         <div class="profile-menu-item" onclick="showScreen('ai-hairstyle'); loadAiScreen()">
           <span class="menu-icon">✨</span>
           <div class="menu-text">
-            <span>مستشارة التسريحة AI</span>
-            <span class="menu-sub">ارفعي صورتك واحصلي على توصيات ذكية</span>
+            <span>جوري ✨</span>
+            <span class="menu-sub">حللي صورتك واسألي عن أظافرك ومكياجك وشعرك وبشرتك</span>
           </div>
           <span class="menu-arrow">›</span>
         </div>
@@ -565,12 +565,17 @@
       <button class="quick-reply-chip" onclick="useQuickReply('يمكنك الاطلاع على أسعارنا من قسم الخدمات في صفحة الصالون 💅')">الأسعار 💅</button>
     </div>
     <div class="chat-input-bar">
-      <button class="chat-media-btn" id="chat-voice-btn"
-        ontouchstart="startVoiceRecord()" ontouchend="stopVoiceRecord()"
-        onmousedown="startVoiceRecord()" onmouseup="stopVoiceRecord()" title="رسالة صوتية">🎤</button>
-      <button class="chat-media-btn" onclick="sendChatImage()" title="إرسال صورة">📷</button>
+      <button class="chat-media-btn" id="chat-voice-btn" type="button" onclick="toggleVoiceRecord()" title="رسالة صوتية">🎤</button>
+      <button class="chat-media-btn" type="button" onclick="sendChatImage()" title="إرسال صورة">📷</button>
+      <div id="chat-recording-bar" class="chat-recording-bar hidden">
+        <span class="rec-dot">🔴</span>
+        <span id="chat-recording-timer" class="rec-timer">0:00</span>
+        <div class="rec-waves">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
       <input type="text" id="chat-input" placeholder="اكتبي رسالتك..." onkeydown="if(event.key==='Enter')sendChatMessage()" style="text-align:right;direction:rtl;">
-      <button class="send-btn" onclick="sendChatMessage()">➤</button>
+      <button class="send-btn" type="button" onclick="sendChatMessage()">➤</button>
     </div>
   </div>
 
@@ -702,51 +707,91 @@
 
   <!-- ======= AI HAIRSTYLE ======= -->
   <div id="screen-ai-hairstyle" class="screen slide-up">
+    <div class="chat-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <div class="chat-header-info">
+        <div class="chat-avatar">✨</div>
+        <div>
+          <h3>جوري 🌹 مستشارة جمالك</h3>
+          <p class="chat-status">خبيرة تجميل • ذكاء اصطناعي</p>
+        </div>
+      </div>
+      <div class="chat-header-acts">
+        <button type="button" class="chat-header-act" onclick="openAiConvoModal('beauty')" title="محادثاتي" aria-label="محادثاتي">🕐</button>
+        <button type="button" class="chat-header-act" onclick="newBeautyConversation()" title="محادثة جديدة" aria-label="محادثة جديدة">✎</button>
+      </div>
+    </div>
+    <div id="beauty-chat-messages" class="chat-messages"></div>
+    <div id="beauty-chat-attach-preview" class="beauty-attach-chip hidden">
+      <img id="ai-face-preview">
+      <span>📎 صورة مرفقة</span>
+      <button type="button" onclick="clearBeautyAttach()" aria-label="حذف الصورة">✕</button>
+    </div>
+    <div class="chat-input-bar">
+      <button class="chat-media-btn" type="button" onclick="document.getElementById('ai-face-input').click()" title="إرسال صورة">📷</button>
+      <input type="file" id="ai-face-input" accept="image/*" onchange="previewAiFace(this)" style="display:none">
+      <input type="text" id="beauty-chat-input" placeholder="اسألي عن أظافرك، مكياجك، شعرك، بشرتك..." onkeydown="if(event.key==='Enter')sendBeautyChat()" style="text-align:right;direction:rtl;">
+      <button class="send-btn" type="button" onclick="sendBeautyChat()">➤</button>
+    </div>
+  </div>
+
+  <!-- ======= BEAUTY PRODUCTS ADMIN (AI advisor catalog) ======= -->
+  <div id="screen-beauty-products" class="screen slide-up">
     <div class="page-header">
       <button class="back-btn" onclick="goBack()">←</button>
-      <h2>🤖 مستشارة التسريحة</h2>
+      <h2>🧴 منتجات المستشار AI</h2>
     </div>
     <div class="home-content" style="padding:16px">
-      <div class="beauty-card ai-intro-card">
-        <div class="ai-icon-big">✨</div>
-        <h3>اكتشفي التسريحة المناسبة لك</h3>
-        <p>ارفعي صورة وجهك أو اختاري شكل وجهك وسنقترح تسريحات ولون شعر يناسبك</p>
-      </div>
-
       <div class="beauty-card">
-        <h4 class="beauty-section-title">📸 صورة وجهك (اختياري)</h4>
-        <div id="ai-face-preview-wrap" class="ai-face-preview-wrap">
-          <img id="ai-face-preview" class="hidden" style="max-width:100%;border-radius:12px;margin-bottom:8px">
-          <label class="ai-upload-btn">
-            📷 رفع صورة وجهك
-            <input type="file" id="ai-face-input" accept="image/*" onchange="previewAiFace(this)" style="display:none">
-          </label>
+        <h4 class="beauty-section-title">➕ إضافة منتج</h4>
+        <p style="font-size:12.5px;color:#a08a94;margin-bottom:10px">المنتجات الي تضيفيها هون بيقترحها الذكاء الاصطناعي على الزبونات حسب حالتهن، بصورها وشرحها.</p>
+        <label class="bp-upload" id="bp-upload-label">
+          <img id="bp-new-img" class="hidden">
+          <span id="bp-upload-text">📷 اضغطي لإضافة صورة المنتج</span>
+          <input type="file" id="bp-new-file" accept="image/*" onchange="uploadBeautyProductImg(this)" style="display:none">
+        </label>
+        <select id="bp-new-category" class="bp-input">
+          <option value="skincare">🧴 بشرة</option>
+          <option value="nails">💅 أظافر</option>
+          <option value="makeup">💄 مكياج</option>
+          <option value="hair">💇 شعر</option>
+        </select>
+        <input id="bp-new-name" class="bp-input" placeholder="اسم المنتج *">
+        <input id="bp-new-brand" class="bp-input" placeholder="الماركة (اختياري)">
+        <input id="bp-new-tags" class="bp-input" placeholder="مناسب لـ (افصلي بفاصلة): بشرة دهنية، تفتيح...">
+        <textarea id="bp-new-desc" class="bp-input" rows="2" placeholder="وصف قصير للمنتج"></textarea>
+        <textarea id="bp-new-how" class="bp-input" rows="2" placeholder="طريقة الاستخدام"></textarea>
+        <input id="bp-new-price" class="bp-input" type="number" inputmode="decimal" placeholder="السعر (₪) — اختياري">
+        <button class="btn-primary full" id="bp-add-btn" onclick="addBeautyProduct()">➕ إضافة المنتج</button>
+      </div>
+      <div class="beauty-card" style="margin-top:12px">
+        <h4 class="beauty-section-title">📦 المنتجات الحالية</h4>
+        <div id="bp-admin-list"></div>
+      </div>
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
+  <!-- ======= STYLIST AI ASSISTANT ======= -->
+  <div id="screen-stylist-assistant" class="screen slide-up">
+    <div class="chat-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <div class="chat-header-info">
+        <div class="chat-avatar">🤝</div>
+        <div>
+          <h3>جوري 🌹 مساعِدتك</h3>
+          <p class="chat-status">أعمال • تسويق • تقني • ردود</p>
         </div>
       </div>
-
-      <div class="beauty-card">
-        <h4 class="beauty-section-title">أو اختاري شكل وجهك</h4>
-        <div class="face-shape-grid">
-          <div class="face-shape-btn" data-shape="oval" onclick="selectFaceShape(this)">🥚 بيضاوي</div>
-          <div class="face-shape-btn" data-shape="round" onclick="selectFaceShape(this)">⭕ مستدير</div>
-          <div class="face-shape-btn" data-shape="square" onclick="selectFaceShape(this)">⬜ مربع</div>
-          <div class="face-shape-btn" data-shape="heart" onclick="selectFaceShape(this)">🩷 قلب</div>
-        </div>
+      <div class="chat-header-acts">
+        <button type="button" class="chat-header-act" onclick="openAiConvoModal('stylist')" title="محادثاتي" aria-label="محادثاتي">🕐</button>
+        <button type="button" class="chat-header-act" onclick="newStylistConversation()" title="محادثة جديدة" aria-label="محادثة جديدة">✎</button>
       </div>
-
-      <button class="btn-primary full" id="ai-analyze-btn" onclick="runAiHairstyle()">✨ احصلي على توصياتك</button>
-
-      <div id="ai-results" class="hidden" style="margin-top:16px">
-        <div class="beauty-card">
-          <h4 class="beauty-section-title">💇 تسريحات مقترحة</h4>
-          <div id="ai-hairstyles-list"></div>
-        </div>
-        <div class="beauty-card" style="margin-top:12px">
-          <h4 class="beauty-section-title">🎨 ألوان مقترحة</h4>
-          <div id="ai-colors-list"></div>
-        </div>
-      </div>
-      <div style="height:30px"></div>
+    </div>
+    <div id="sa-chat-messages" class="chat-messages"></div>
+    <div class="chat-input-bar">
+      <input type="text" id="sa-chat-input" placeholder="اسأليني عن أرقامك، عرض، رد لزبونة، أو فورمولا..." onkeydown="if(event.key==='Enter')sendStylistAssistant()" style="text-align:right;direction:rtl;">
+      <button class="send-btn" type="button" onclick="sendStylistAssistant()">➤</button>
     </div>
   </div>
 
@@ -967,6 +1012,12 @@
             <button class="analytics-quick-btn" onclick="showClients()">
               <span>👥</span><span>الزبونات</span>
             </button>
+            <button class="analytics-quick-btn" onclick="showScreen('beauty-products'); loadBeautyProductsAdmin()">
+              <span>🧴</span><span>منتجات المستشار AI</span>
+            </button>
+            <button class="analytics-quick-btn" onclick="showScreen('stylist-assistant'); loadStylistAssistant()">
+              <span>🤝</span><span>جوري 🌹 مساعِدتك</span>
+            </button>
           </div>
 
         </div>
@@ -1036,11 +1087,11 @@
           </div>
           <span class="menu-arrow">›</span>
         </div>
-        <div class="profile-menu-item" onclick="stShowStats()">
+        <div class="profile-menu-item" onclick="showAnalytics()">
           <span class="menu-icon">📊</span>
           <div class="menu-text">
-            <span>إحصائياتي</span>
-            <span class="menu-sub">الحجوزات والتقييمات</span>
+            <span>التحليلات والإحصائيات</span>
+            <span class="menu-sub">تقرير الحجوزات والدخل والخدمات</span>
           </div>
           <span class="menu-arrow">›</span>
         </div>
@@ -1053,8 +1104,8 @@
         </div>
       </div>
 
-      <!-- Stats Panel (hidden by default) -->
-      <div id="st-stats-panel" class="hidden" style="margin:16px">
+      <!-- Stats Panel (hidden) -->
+      <div id="st-stats-panel" class="hidden" style="display:none !important;margin:16px">
         <div class="mgmt-section-header" style="margin-bottom:12px"><h4>📊 إحصائياتي</h4></div>
         <div id="st-stats-content"></div>
       </div>
@@ -1099,14 +1150,15 @@
     <div class="screen-body" style="padding:16px;gap:14px;display:flex;flex-direction:column">
       <!-- Revenue Cards -->
       <div class="analytics-period-tabs">
-        <button class="period-tab active" onclick="switchAnalyticsPeriod('today',this)">اليوم</button>
+        <button class="period-tab" onclick="switchAnalyticsPeriod('today',this)">اليوم</button>
         <button class="period-tab" onclick="switchAnalyticsPeriod('week',this)">الأسبوع</button>
         <button class="period-tab" onclick="switchAnalyticsPeriod('month',this)">الشهر</button>
-        <button class="period-tab" onclick="switchAnalyticsPeriod('total',this)">الكل</button>
+        <button class="period-tab active" onclick="switchAnalyticsPeriod('total',this)">الكل</button>
       </div>
       <div class="analytics-revenue-card">
         <div class="revenue-label">الدخل</div>
         <div class="revenue-amount" id="analytics-revenue">₪0</div>
+        <button type="button" class="revenue-reset-btn" onclick="resetRevenue()">🔄 تصفير الدخل</button>
       </div>
       <!-- Stats Row -->
       <div class="analytics-stats-row">
