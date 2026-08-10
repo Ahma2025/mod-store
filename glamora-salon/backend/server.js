@@ -17,9 +17,16 @@ if (!process.env.JWT_SECRET) {
 }
 const SECRET = process.env.JWT_SECRET;
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:3000', 'http://localhost:8100', 'capacitor://localhost', 'ionic://localhost'];
+// Capacitor WebView origins — iOS uses capacitor://localhost, Android uses
+// https://localhost (default androidScheme). Always allow these so both native
+// apps can call the API regardless of any ALLOWED_ORIGINS env override.
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'https://localhost', 'http://localhost'];
+const ALLOWED_ORIGINS = [
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://localhost:8100']),
+  ...CAPACITOR_ORIGINS,
+];
 
 const app = express();
 const server = http.createServer(app);
