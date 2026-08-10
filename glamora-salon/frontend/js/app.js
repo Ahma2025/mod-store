@@ -728,53 +728,69 @@ async function filterCategory(el, cat) {
 // ===== SALON DETAIL =====
 async function openSalon(id) {
   showScreen('salon');
-  // Reset the header + cover so the previously-viewed salon (or the placeholder)
-  // doesn't flash for ~1s before this salon's data loads.
+  // Reset first so the previously-viewed salon / placeholder never flashes.
   document.getElementById('salon-detail-name').textContent = '';
   const _salonMeta = document.querySelector('.salon-meta');
   if (_salonMeta) _salonMeta.style.visibility = 'hidden';
   const _oldBadges = document.getElementById('salon-detail-badges');
   if (_oldBadges) _oldBadges.innerHTML = '';
-  const _coverTrack = document.getElementById('cover-slider-track');
-  if (_coverTrack) _coverTrack.innerHTML = '';
-  const _coverDots = document.getElementById('cover-dots');
-  if (_coverDots) _coverDots.innerHTML = '';
-  document.getElementById('salon-services-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+  const cached = _pageCacheGet('salon_' + id);
+  if (cached && cached.services) {
+    // Repeat visit — paint the whole page instantly from cache (same tick, no blank).
+    _paintSalon(cached, id);
+  } else {
+    const _coverTrack = document.getElementById('cover-slider-track');
+    if (_coverTrack) _coverTrack.innerHTML = '';
+    const _coverDots = document.getElementById('cover-dots');
+    if (_coverDots) _coverDots.innerHTML = '';
+    document.getElementById('salon-services-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    // First visit — at least fill the header instantly from the salons-list data we already have.
+    const fromList = (_getSalonsCache() || []).find(s => String(s.id) === String(id));
+    if (fromList) {
+      document.getElementById('salon-detail-name').textContent = fromList.name || '';
+      document.getElementById('salon-detail-rating').textContent = fromList.rating || '0';
+      document.getElementById('salon-detail-reviews').textContent = fromList.reviews_count || 0;
+      document.getElementById('salon-detail-city').textContent = fromList.city || '';
+      if (_salonMeta) _salonMeta.style.visibility = 'visible';
+    }
+  }
 
   try {
     const data = await Api.salons.get(id);
-    currentSalonData = data;
-
-    document.getElementById('salon-detail-name').textContent = data.name;
-    document.getElementById('salon-detail-rating').textContent = data.rating || '0';
-    document.getElementById('salon-detail-reviews').textContent = data.reviews_count || 0;
-    document.getElementById('salon-detail-city').textContent = data.city;
-    if (_salonMeta) _salonMeta.style.visibility = 'visible';
-    // Badges on detail header
-    const badgesHtml = [
-      data.is_verified ? `<span class="salon-badge badge-verified">✓ ${window.VELOUR_LANG === 'en' ? 'Verified' : 'موثّق'}</span>` : '',
-      data.is_new ? `<span class="salon-badge badge-new">✨ ${window.VELOUR_LANG === 'en' ? 'New' : 'جديد'}</span>` : '',
-    ].filter(Boolean).join('');
-    const metaEl = document.querySelector('.salon-meta');
-    if (metaEl && badgesHtml) {
-      let badgeRow = document.getElementById('salon-detail-badges');
-      if (!badgeRow) { badgeRow = document.createElement('div'); badgeRow.id = 'salon-detail-badges'; badgeRow.className = 'salon-badges-row'; metaEl.after(badgeRow); }
-      badgeRow.innerHTML = badgesHtml;
-    }
-
-    renderSalonServices(data.services);
-    renderSalonStylists(data.stylists);
-    renderSalonRatings(data);
-    renderSalonInfo(data);
-    loadSalonGallery(id);
-
-    const cats = [...new Set(data.services.map(s => s.category))];
-    const filterHtml = `<div class="svc-filter-chip active" onclick="filterSalonServices(this, '')">الكل</div>` +
-      cats.map(c => `<div class="svc-filter-chip" onclick="filterSalonServices(this, '${c}')">${categoryIcon(c)} ${c}</div>`).join('');
-    document.getElementById('services-filter').innerHTML = filterHtml;
+    _pageCacheSet('salon_' + id, data);
+    _paintSalon(data, id);
   } catch (e) {
-    showToast('خطأ في تحميل بيانات الصالون');
+    if (!cached) showToast('خطأ في تحميل بيانات الصالون');
   }
+}
+
+function _paintSalon(data, id) {
+  currentSalonData = data;
+  document.getElementById('salon-detail-name').textContent = data.name;
+  document.getElementById('salon-detail-rating').textContent = data.rating || '0';
+  document.getElementById('salon-detail-reviews').textContent = data.reviews_count || 0;
+  document.getElementById('salon-detail-city').textContent = data.city;
+  const metaEl = document.querySelector('.salon-meta');
+  if (metaEl) metaEl.style.visibility = 'visible';
+  const badgesHtml = [
+    data.is_verified ? `<span class="salon-badge badge-verified">✓ ${window.VELOUR_LANG === 'en' ? 'Verified' : 'موثّق'}</span>` : '',
+    data.is_new ? `<span class="salon-badge badge-new">✨ ${window.VELOUR_LANG === 'en' ? 'New' : 'جديد'}</span>` : '',
+  ].filter(Boolean).join('');
+  if (metaEl) {
+    let badgeRow = document.getElementById('salon-detail-badges');
+    if (!badgeRow && badgesHtml) { badgeRow = document.createElement('div'); badgeRow.id = 'salon-detail-badges'; badgeRow.className = 'salon-badges-row'; metaEl.after(badgeRow); }
+    if (badgeRow) badgeRow.innerHTML = badgesHtml;
+  }
+  renderSalonServices(data.services);
+  renderSalonStylists(data.stylists);
+  renderSalonRatings(data);
+  renderSalonInfo(data);
+  loadSalonGallery(id != null ? id : data.id);
+  const cats = [...new Set((data.services || []).map(s => s.category))];
+  document.getElementById('services-filter').innerHTML =
+    `<div class="svc-filter-chip active" onclick="filterSalonServices(this, '')">الكل</div>` +
+    cats.map(c => `<div class="svc-filter-chip" onclick="filterSalonServices(this, '${c}')">${categoryIcon(c)} ${c}</div>`).join('');
 }
 
 function renderSalonServices(services) {
@@ -977,20 +993,22 @@ let _sliderState = null;
 let _coverSliderState = null;
 
 async function loadSalonGallery(salonId) {
+  const cachedMedia = _pageCacheGet('salonmedia_' + salonId);
+  if (Array.isArray(cachedMedia)) _paintGallery(cachedMedia);   // instant cover on repeat visits
   try {
     const media = await Api.salons.media(salonId);
-    const photos = media.filter(m => m.url && m.type !== 'video');
-    const video  = media.find(m => m.url && m.type === 'video');
-
-    // Slider: photos only
-    buildCoverSlider(photos);
-
-    // Dedicated video section
-    buildVideoSection(video);
-
-    const strip = document.getElementById('salon-gallery-strip');
-    if (strip) strip.classList.add('hidden');
+    _pageCacheSet('salonmedia_' + salonId, media);
+    _paintGallery(media);
   } catch (e) {}
+}
+
+function _paintGallery(media) {
+  const photos = media.filter(m => m.url && m.type !== 'video');
+  const video  = media.find(m => m.url && m.type === 'video');
+  buildCoverSlider(photos);   // photos only
+  buildVideoSection(video);   // dedicated video section
+  const strip = document.getElementById('salon-gallery-strip');
+  if (strip) strip.classList.add('hidden');
 }
 
 function buildVideoSection(videoItem) {
@@ -1504,17 +1522,30 @@ async function confirmBooking() {
 
 // ===== BOOKINGS =====
 let allBookings = [];
+// Cache-first page data: paint the last-seen data instantly, refresh in the background.
+function _pageCacheGet(key) {
+  try { const uid = (currentUser && currentUser.id) || 'g'; return JSON.parse(localStorage.getItem(`velour_pc_${key}_${uid}`) || 'null'); } catch (e) { return null; }
+}
+function _pageCacheSet(key, data) {
+  try { const uid = (currentUser && currentUser.id) || 'g'; localStorage.setItem(`velour_pc_${key}_${uid}`, JSON.stringify(data)); } catch (e) {}
+}
+
+let _bookingsFilter = 'upcoming';
 async function loadMyBookings() {
-  document.getElementById('bookings-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  const cached = _pageCacheGet('bookings');
+  if (Array.isArray(cached)) { allBookings = cached; filterBookings(_bookingsFilter); }  // instant paint
+  else document.getElementById('bookings-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
     allBookings = await Api.bookings.my();
-    filterBookings('upcoming');
+    _pageCacheSet('bookings', allBookings);
+    filterBookings(_bookingsFilter);
   } catch (e) {
-    document.getElementById('bookings-list').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>${window.VELOUR_LANG === 'en' ? 'Failed to load bookings' : 'تعذر تحميل الحجوزات'}</h3></div>`;
+    if (!Array.isArray(cached)) document.getElementById('bookings-list').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>${window.VELOUR_LANG === 'en' ? 'Failed to load bookings' : 'تعذر تحميل الحجوزات'}</h3></div>`;
   }
 }
 
 function filterBookings(type, btn) {
+  _bookingsFilter = type;
   if (btn) { document.querySelectorAll('.btab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
   const today = new Date().toISOString().split('T')[0];
   const filtered = type === 'upcoming'
@@ -1691,15 +1722,25 @@ let voiceChunks = [];
 let voiceRecording = false;
 
 async function loadConversations() {
-  document.getElementById('conversations-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  const cached = _pageCacheGet('convos');
+  if (Array.isArray(cached)) _renderConversations(cached);   // instant paint
+  else document.getElementById('conversations-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
     const convs = await Api.messages.conversations();
-    if (!convs.length) {
-      const _cvEN = window.VELOUR_LANG === 'en';
-      document.getElementById('conversations-list').innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><h3>${_cvEN ? 'No conversations yet' : 'لا توجد محادثات بعد'}</h3><p>${_cvEN ? 'Contact your stylist from the bookings page' : 'تواصلي مع كوفيرتك من صفحة الحجوزات'}</p></div>`;
-      return;
-    }
-    document.getElementById('conversations-list').innerHTML = convs.map(c => `
+    _pageCacheSet('convos', convs);
+    _renderConversations(convs);
+  } catch (e) {}
+}
+
+function _renderConversations(convs) {
+  const el = document.getElementById('conversations-list');
+  if (!el) return;
+  if (!convs.length) {
+    const _cvEN = window.VELOUR_LANG === 'en';
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><h3>${_cvEN ? 'No conversations yet' : 'لا توجد محادثات بعد'}</h3><p>${_cvEN ? 'Contact your stylist from the bookings page' : 'تواصلي مع كوفيرتك من صفحة الحجوزات'}</p></div>`;
+    return;
+  }
+  el.innerHTML = convs.map(c => `
       <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}')">
         <div class="conv-avatar">${(c.other_name || '?')[0]}</div>
         <div class="conv-info">
@@ -1712,7 +1753,6 @@ async function loadConversations() {
         </div>
       </div>
     `).join('');
-  } catch (e) {}
 }
 
 async function openChatWith(userId, userName) {

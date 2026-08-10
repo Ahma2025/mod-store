@@ -196,11 +196,18 @@ function renderTeam() {
 // ===== BOOKINGS =====
 async function loadStBookings(filter) {
   const list = document.getElementById('st-bookings-list');
-  list.innerHTML = '<div class="loading-dots" style="padding:40px;text-align:center"><span></span><span></span><span></span></div>';
+  const f = filter || 'pending';
+  const cached = _pageCacheGet('stbookings_' + f);
+  if (Array.isArray(cached)) { stAllBookings = cached; renderStBookings(cached); }  // instant
+  else list.innerHTML = '<div class="loading-dots" style="padding:40px;text-align:center"><span></span><span></span><span></span></div>';
   try {
-    stAllBookings = await Api.stylistDash.bookings(filter || 'pending');
+    stAllBookings = await Api.stylistDash.bookings(f);
+    _pageCacheSet('stbookings_' + f, stAllBookings);
     renderStBookings(stAllBookings);
-  } catch (e) { console.error(e); list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">⚠️</div><h3>${window.VELOUR_LANG === 'en' ? 'Loading error' : 'خطأ في التحميل'}</h3></div>`; }
+  } catch (e) {
+    console.error(e);
+    if (!Array.isArray(cached)) list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">⚠️</div><h3>${window.VELOUR_LANG === 'en' ? 'Loading error' : 'خطأ في التحميل'}</h3></div>`;
+  }
 }
 
 function stFilterBookings(filter, btn) {
@@ -664,8 +671,11 @@ async function saveAvailability() {
 // ===== SALON MEDIA =====
 async function loadSalonMedia() {
   if (!stSalonData) return;
+  const cached = _pageCacheGet('stmedia_' + stSalonData.id);
+  if (Array.isArray(cached)) renderMediaGrid(cached);   // instant photos on open
   try {
     const media = await Api.stylistDash.getSalonMedia(stSalonData.id);
+    _pageCacheSet('stmedia_' + stSalonData.id, media);
     renderMediaGrid(media);
   } catch (e) {}
 }
