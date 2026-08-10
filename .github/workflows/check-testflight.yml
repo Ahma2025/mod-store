@@ -1,0 +1,33 @@
+name: Check TestFlight Build Status
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query App Store Connect build beta states
+        env:
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          pip install pyjwt cryptography requests --quiet
+          python3 - <<'PY'
+          import os, time, base64, jwt, requests
+          key = base64.b64decode(os.environ['ASC_KEY_BASE64']).decode()
+          kid, iss = os.environ['ASC_KEY_ID'], os.environ['ASC_ISSUER_ID']
+          tok = jwt.encode({'iss':iss,'iat':int(time.time()),'exp':int(time.time())+1000,'aud':'appstoreconnect-v1'},
+                           key, algorithm='ES256', headers={'kid':kid,'typ':'JWT'})
+          h={'Authorization':'Bearer '+tok}; B='https://api.appstoreconnect.apple.com/v1'
+          appid=requests.get(B+'/apps?filter[bundleId]=com.velour.salon',headers=h).json()['data'][0]['id']
+          r=requests.get(B+f'/builds?filter[app]={appid}&sort=-uploadedDate&limit=6'
+                         '&include=buildBetaDetail,betaAppReviewSubmission'
+                         '&fields[builds]=version,processingState,expired'
+                         '&fields[buildBetaDetails]=internalBuildState,externalBuildState'
+                         '&fields[betaAppReviewSubmissions]=betaReviewState', headers=h).json()
+          inc={i['id']:i for i in r.get('included',[])}
+          for x in r.get('data',[]):
+              a=x['attributes']; rel=x.get('relationships',{})
+              bbd=inc.get((rel.get('buildBetaDetail',{}).get('data') or {}).get('id'),{}).get('attributes',{})
+              bar=inc.get((rel.get('betaAppReviewSubmission',{}).get('data') or {}).get('id'),{}).get('attributes',{})
+              print(f"build {a.get('version'):>4} | proc={a.get('processingState'):<10} | internal={bbd.get('internalBuildState')} | external={bbd.get('externalBuildState')} | review={bar.get('betaReviewState')}")
+          PY
