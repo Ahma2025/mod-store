@@ -728,6 +728,17 @@ async function filterCategory(el, cat) {
 // ===== SALON DETAIL =====
 async function openSalon(id) {
   showScreen('salon');
+  // Reset the header + cover so the previously-viewed salon (or the placeholder)
+  // doesn't flash for ~1s before this salon's data loads.
+  document.getElementById('salon-detail-name').textContent = '';
+  const _salonMeta = document.querySelector('.salon-meta');
+  if (_salonMeta) _salonMeta.style.visibility = 'hidden';
+  const _oldBadges = document.getElementById('salon-detail-badges');
+  if (_oldBadges) _oldBadges.innerHTML = '';
+  const _coverTrack = document.getElementById('cover-slider-track');
+  if (_coverTrack) _coverTrack.innerHTML = '';
+  const _coverDots = document.getElementById('cover-dots');
+  if (_coverDots) _coverDots.innerHTML = '';
   document.getElementById('salon-services-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
 
   try {
@@ -738,6 +749,7 @@ async function openSalon(id) {
     document.getElementById('salon-detail-rating').textContent = data.rating || '0';
     document.getElementById('salon-detail-reviews').textContent = data.reviews_count || 0;
     document.getElementById('salon-detail-city').textContent = data.city;
+    if (_salonMeta) _salonMeta.style.visibility = 'visible';
     // Badges on detail header
     const badgesHtml = [
       data.is_verified ? `<span class="salon-badge badge-verified">✓ ${window.VELOUR_LANG === 'en' ? 'Verified' : 'موثّق'}</span>` : '',
