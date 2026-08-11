@@ -285,10 +285,12 @@
     <!-- ---- PROFILE TAB ---- -->
     <div id="tab-profile" class="tab">
       <div class="profile-header-bg">
-        <div class="profile-avatar-wrap">
+        <div class="profile-avatar-wrap" style="cursor:pointer" onclick="document.getElementById('my-avatar-input').click()">
           <div class="profile-avatar" id="profile-avatar-text">س</div>
+          <div class="profile-avatar-cam">📷</div>
           <div class="profile-tier-badge" id="profile-tier-badge">وردي</div>
         </div>
+        <input type="file" id="my-avatar-input" accept="image/*" style="display:none" onchange="uploadMyAvatar(this)">
         <h2 id="profile-name">سارة أحمد</h2>
         <p id="profile-phone-display">0591000001</p>
       </div>

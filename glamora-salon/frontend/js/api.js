@@ -126,6 +126,11 @@ const Api = {
     notifications: () => apiCall('GET', '/users/notifications'),
     markNotifsRead: () => apiCall('PUT', '/users/notifications/read'),
     colorHistory: () => apiCall('GET', '/users/color-history'),
+    // reuses the avatar endpoint (saves to the current user's avatar regardless of role)
+    uploadAvatar: (file) => {
+      const fd = new FormData(); fd.append('file', file);
+      return fetch(`${API}/media/stylist/avatar`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: fd }).then(r => r.json());
+    },
   },
   beauty: {
     getProfile: () => apiCall('GET', '/beauty/profile'),

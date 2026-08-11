@@ -312,8 +312,8 @@ async function loadStConversations() {
     const list = document.getElementById('st-conversations-list');
     if (!convs.length) { list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">💬</div><h3>${window.VELOUR_LANG === 'en' ? 'No messages' : 'لا توجد رسائل'}</h3></div>`; return; }
     list.innerHTML = convs.map(c => `
-      <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}')">
-        <div class="conv-avatar">${(c.other_name||'؟')[0]}</div>
+      <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
+        <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
           <div class="conv-name">${c.other_name}</div>
           <div class="conv-preview">${c.last_message || ''}</div>

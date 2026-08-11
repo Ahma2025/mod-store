@@ -48,16 +48,16 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
   background: var(--cream);
   transform: translateX(100%);
-  transition: transform 0.48s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1; display: none;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  will-change: transform;
+  will-change: transform, opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-.screen.active { transform: translateX(0); display: block; }
-.screen.slide-up { transform: translateY(100%); transition: transform 0.46s cubic-bezier(0.32, 0.72, 0, 1); }
+.screen.active { transform: translateX(0); display: block; opacity: 1; }
+.screen.slide-up { transform: translateY(100%); transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1); }
 .screen.slide-up.active { transform: translateY(0); z-index: 20; }
 
 /* ===== SPLASH SCREEN ===== */
@@ -270,9 +270,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .tab {
   position: absolute; inset: 0; overflow-y: auto;
   opacity: 0; pointer-events: none;
-  transform: translateY(10px);
-  transition: opacity 0.38s cubic-bezier(0.25,0.46,0.45,0.94),
-              transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94);
+  transform: translateY(6px);
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: 80px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -403,6 +403,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--rose), var(--rose-dark)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.3); margin: 0 auto; overflow: hidden; position: relative; }
 .avatar-camera-btn { position: absolute; bottom: -2px; left: -2px; background: var(--rose); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 2; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.profile-avatar-cam { position: absolute; bottom: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; background: var(--rose, #8C1C3D); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); pointer-events: none; }
 .profile-tier-badge { position: absolute; bottom: -4px; right: -4px; background: var(--gold); color: var(--dark); font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 99px; }
 .profile-header-bg h2 { color: white; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .profile-header-bg p { color: rgba(255,255,255,0.6); font-size: 14px; }
@@ -1564,9 +1565,11 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .nav-plus:active,
 .slot-btn:active,
 .quick-reply-chip:active,
-.profile-menu-item:active {
-  transform: scale(0.94) translateY(1px) !important;
-  transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+.profile-menu-item:active,
+.conv-item:active,
+.notif-item:active {
+  transform: scale(0.975) translateY(0.5px) !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 /* 2. Keyframe Animations & Luxury Motion */

@@ -1748,8 +1748,8 @@ function _renderConversations(convs) {
     return;
   }
   el.innerHTML = convs.map(c => `
-      <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}')">
-        <div class="conv-avatar">${(c.other_name || '?')[0]}</div>
+      <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
+        <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
           <div class="conv-name">${c.other_name}</div>
           <div class="conv-last">${c.last_message || ''}</div>
@@ -1771,10 +1771,10 @@ function _renderChatMessages(msgs) {
   container.scrollTop = container.scrollHeight;
 }
 
-async function openChatWith(userId, userName) {
+async function openChatWith(userId, userName, avatar) {
   currentChatUserId = userId;
   document.getElementById('chat-other-name').textContent = userName;
-  document.getElementById('chat-other-avatar').textContent = (userName || '?')[0];
+  document.getElementById('chat-other-avatar').innerHTML = _avatarInner(avatar, userName);
   showScreen('chat-conv');
 
   // Show the last-seen messages instantly, then refresh from the server in the background.
@@ -1992,11 +1992,65 @@ async function doLogout() {
 }
 
 // ===== PROFILE =====
+// Returns an <img> for a real photo URL, the emoji itself for an emoji avatar, else the first letter.
+function _avatarInner(avatar, name) {
+  if (avatar && (avatar.startsWith('http') || avatar.startsWith('data:'))) return `<img class="avatar-img" src="${avatar}" alt="">`;
+  if (avatar) return avatar;
+  return (name || '?')[0];
+}
+
+function _paintMyAvatar() {
+  const el = document.getElementById('profile-avatar-text');
+  if (!el) return;
+  el.innerHTML = _avatarInner(currentUser?.avatar, currentUser?.name);
+}
+
+// Downscale to a small square-ish JPEG before upload (avoids huge phone photos / 413).
+function _resizeImage(file, maxSize) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize; }
+      else if (height >= width && height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b => resolve(b ? new File([b], 'avatar.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+async function uploadMyAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const _en = window.VELOUR_LANG === 'en';
+  try {
+    const small = await _resizeImage(file, 400);
+    const res = await Api.users.uploadAvatar(small);
+    if (res && res.avatar) {
+      currentUser.avatar = res.avatar;
+      setAuth(authToken, currentUser);   // persist so it survives reopen
+      _paintMyAvatar();
+      showToast(_en ? 'Photo updated ✓' : 'تم تحديث صورتك ✓');
+    } else {
+      showToast((res && res.error) || (_en ? 'Upload failed' : 'فشل رفع الصورة'));
+    }
+  } catch (e) {
+    showToast(_en ? 'Upload failed' : 'فشل رفع الصورة');
+  }
+  input.value = '';
+}
+
 async function loadProfile() {
   if (!currentUser) return;
   document.getElementById('profile-name').textContent = currentUser.name;
   document.getElementById('profile-phone-display').textContent = currentUser.phone;
-  document.getElementById('profile-avatar-text').textContent = currentUser.name[0];
+  _paintMyAvatar();
 
   try {
     const { points, tier, transactions } = await Api.users.loyalty();
