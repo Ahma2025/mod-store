@@ -1216,28 +1216,35 @@ function openStylistBooking(stylistId) {
   loadWizardStep1(null);
 }
 
+function _paintWizardServices(services) {
+  const cats = [...new Set(services.map(s => s.category))];
+  document.getElementById('wizard-cats').innerHTML =
+    `<div class="svc-filter-chip active" onclick="filterWizardServices(this, '', ${JSON.stringify(services).replace(/"/g,'&quot;')})">الكل</div>` +
+    cats.map(c => `<div class="svc-filter-chip" onclick="filterWizardServices(this,'${c}',null)">${categoryIcon(c)} ${c}</div>`).join('');
+  window._wizardServices = services;
+  renderWizardServices(services);
+}
+
 async function loadWizardStep1(salonId) {
   document.getElementById('wizard-cats').innerHTML = '';
-  document.getElementById('wizard-services-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  // Show the salon's services instantly from what we already have (salon page cached them);
+  // no spinner, no wait. Then refresh in the background only if they actually changed.
+  let shown = false;
+  const cachedSalon = salonId ? _pageCacheGet('salon_' + salonId) : null;
+  const instant = (cachedSalon && cachedSalon.services)
+    || (currentSalonData && (!salonId || String(currentSalonData.id) === String(salonId)) ? currentSalonData.services : null);
+  if (instant && instant.length) { _paintWizardServices(instant); shown = true; }
+  else document.getElementById('wizard-services-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
 
   try {
     let services = [];
-    if (salonId) {
-      services = await Api.salons.services(salonId);
-    } else if (currentSalonData) {
-      services = currentSalonData.services;
-    } else {
-      const salons = await Api.salons.list();
-      salons.forEach(s => { if (s.services) services.push(...s.services); });
+    if (salonId) services = await Api.salons.services(salonId);
+    else if (currentSalonData) services = currentSalonData.services;
+    else { const salons = await Api.salons.list(); salons.forEach(s => { if (s.services) services.push(...s.services); }); }
+    // repaint only if we didn't already show it, or the data really changed (avoids resetting the user's filter)
+    if (services && services.length && (!shown || JSON.stringify(services) !== JSON.stringify(window._wizardServices))) {
+      _paintWizardServices(services);
     }
-
-    const cats = [...new Set(services.map(s => s.category))];
-    document.getElementById('wizard-cats').innerHTML =
-      `<div class="svc-filter-chip active" onclick="filterWizardServices(this, '', ${JSON.stringify(services).replace(/"/g,'&quot;')})">الكل</div>` +
-      cats.map(c => `<div class="svc-filter-chip" onclick="filterWizardServices(this,'${c}',null)">${categoryIcon(c)} ${c}</div>`).join('');
-
-    window._wizardServices = services;
-    renderWizardServices(services);
   } catch (e) { console.error(e); }
 }
 
@@ -1755,20 +1762,35 @@ function _renderConversations(convs) {
     `).join('');
 }
 
+function _renderChatMessages(msgs) {
+  renderedMsgIds.clear();
+  msgs.forEach(m => { if (m.id) renderedMsgIds.add(m.id); });
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  container.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
 async function openChatWith(userId, userName) {
   currentChatUserId = userId;
   document.getElementById('chat-other-name').textContent = userName;
   document.getElementById('chat-other-avatar').textContent = (userName || '?')[0];
   showScreen('chat-conv');
 
-  const msgs = await Api.messages.get(userId);
-  renderedMsgIds.clear();
-  msgs.forEach(m => { if (m.id) renderedMsgIds.add(m.id); });
+  // Show the last-seen messages instantly, then refresh from the server in the background.
   const container = document.getElementById('chat-messages');
-  container.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
+  const cached = _pageCacheGet('chat_' + userId);
+  if (Array.isArray(cached)) _renderChatMessages(cached);
+  else if (container) container.innerHTML = '';   // clear the previous chat so it doesn't linger
+
+  try {
+    const msgs = await Api.messages.get(userId);
+    _pageCacheSet('chat_' + userId, msgs.slice(-50));   // cap cache size
+    _renderChatMessages(msgs);
+  } catch (e) {}
   setTimeout(() => {
-    const container = document.getElementById('chat-messages');
-    if (container) container.scrollTop = container.scrollHeight;
+    const c = document.getElementById('chat-messages');
+    if (c) c.scrollTop = c.scrollHeight;
   }, 100);
   // Mark incoming messages as seen
   Api.messages.markSeen(userId).catch(() => {});
@@ -1822,6 +1844,7 @@ function appendChatMessage(msg, isMe) {
   const container = document.getElementById('chat-messages');
   container.insertAdjacentHTML('beforeend', buildMsgHtml({ ...msg, sender_id: isMe ? currentUser?.id : msg.sender_id }));
   container.scrollTop = container.scrollHeight;
+  return container.lastElementChild;
 }
 
 function sendChatMessage() {
@@ -1853,16 +1876,21 @@ async function sendChatImage() {
   input.type = 'file'; input.accept = 'image/*';
   input.onchange = async () => {
     const file = input.files[0];
-    if (!file) return;
-    showToast(window.VELOUR_LANG === 'en' ? '📤 Uploading photo...' : '📤 جاري رفع الصورة...');
+    if (!file || !currentChatUserId) return;
+    // Show the image instantly from a local preview; upload happens in the background.
+    const localUrl = URL.createObjectURL(file);
+    const el = appendChatMessage({ media_url: localUrl, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'image', content: '' }, true);
     try {
       const res = await Api.messages.uploadChatFile(file);
       if (res.url) {
-        const fakeMsg = { media_url: res.url, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'image', content: '' };
-        appendChatMessage(fakeMsg, true);
+        const img = el && el.querySelector('img.chat-img');
+        if (img) { img.src = res.url; img.setAttribute('onclick', `viewChatImage('${res.url}')`); }
         Api.messages.send(currentChatUserId, '', null, 'image', res.url).catch(e => showToast('⚠️ ' + e.message));
       }
-    } catch (e) { showToast(window.VELOUR_LANG === 'en' ? '⚠️ Photo upload failed' : '⚠️ فشل رفع الصورة'); }
+    } catch (e) {
+      if (el) el.style.opacity = '0.45';
+      showToast(window.VELOUR_LANG === 'en' ? '⚠️ Photo upload failed' : '⚠️ فشل رفع الصورة');
+    }
   };
   input.click();
 }
@@ -1923,16 +1951,21 @@ async function stopVoiceRecord() {
     const blob = new Blob(voiceChunks, { type: 'audio/webm' });
     const _vrEN = window.VELOUR_LANG === 'en';
     if (blob.size < 1000) { showToast(_vrEN ? 'Recording too short' : 'التسجيل قصير جداً'); return; }
-    showToast(_vrEN ? '📤 Sending voice message...' : '📤 جاري إرسال الرسالة الصوتية...');
+    // Show the voice note instantly from the local recording; upload in the background.
+    const localUrl = URL.createObjectURL(blob);
+    const el = appendChatMessage({ media_url: localUrl, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'voice', content: '' }, true);
     try {
       const file = new File([blob], 'voice.webm', { type: 'audio/webm' });
       const res = await Api.messages.uploadChatFile(file);
       if (res.url) {
-        const fakeMsg = { media_url: res.url, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'voice', content: '' };
-        appendChatMessage(fakeMsg, true);
+        const au = el && el.querySelector('audio');
+        if (au) au.src = res.url;
         Api.messages.send(currentChatUserId, '', null, 'voice', res.url).catch(e => showToast('⚠️ ' + e.message));
       }
-    } catch (e) { showToast(window.VELOUR_LANG === 'en' ? '⚠️ Failed to send voice message' : '⚠️ فشل إرسال الرسالة الصوتية'); }
+    } catch (e) {
+      if (el) el.style.opacity = '0.45';
+      showToast(window.VELOUR_LANG === 'en' ? '⚠️ Failed to send voice message' : '⚠️ فشل إرسال الرسالة الصوتية');
+    }
   };
   voiceRecorder.stop();
 }
@@ -2040,24 +2073,18 @@ async function showLoyaltyHistory() {
   } catch (e) {}
 }
 
-async function showNotifications() {
-  showScreen('notifications');
-  document.querySelector('#screen-notifications h2').textContent = window.VELOUR_LANG === 'en' ? 'Notifications' : 'الإشعارات';
-  // Hide both badges
-  document.getElementById('notif-badge')?.classList.add('hidden');
-  document.getElementById('st-notif-badge')?.classList.add('hidden');
-  try {
-    const notifs = await Api.users.notifications();
-    await Api.users.markNotifsRead();
-    if (!notifs.length) {
-      document.getElementById('notifs-list').innerHTML = `<div class="empty-state"><div class="empty-icon">🔔</div><h3>${window.VELOUR_LANG === 'en' ? 'No notifications' : 'لا توجد إشعارات'}</h3></div>`;
-      return;
-    }
-    document.getElementById('notifs-list').innerHTML = notifs.map(n => {
-      const isUnread = !n.is_read;
-      const clickable = n.type === 'booking' && n.booking_id;
-      const onclick = clickable ? `navigateToBooking(${n.booking_id})` : (n.type === 'message' ? `switchTab('chat', document.querySelector('.nav-btn:nth-child(4)')); goBack();` : '');
-      return `
+function _renderNotifs(notifs) {
+  const el = document.getElementById('notifs-list');
+  if (!el) return;
+  if (!notifs.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔔</div><h3>${window.VELOUR_LANG === 'en' ? 'No notifications' : 'لا توجد إشعارات'}</h3></div>`;
+    return;
+  }
+  el.innerHTML = notifs.map(n => {
+    const isUnread = !n.is_read;
+    const clickable = n.type === 'booking' && n.booking_id;
+    const onclick = clickable ? `navigateToBooking(${n.booking_id})` : (n.type === 'message' ? `switchTab('chat', document.querySelector('.nav-btn:nth-child(4)')); goBack();` : '');
+    return `
         <div class="notif-item ${isUnread ? 'notif-unread' : ''}" ${onclick ? `onclick="${onclick}" style="cursor:pointer"` : ''}>
           <div class="notif-icon">${notifIcon(n.type)}</div>
           <div style="flex:1">
@@ -2068,7 +2095,22 @@ async function showNotifications() {
           ${clickable ? '<div style="color:var(--rose);font-size:18px">›</div>' : ''}
         </div>
       `;
-    }).join('');
+  }).join('');
+}
+
+async function showNotifications() {
+  showScreen('notifications');
+  document.querySelector('#screen-notifications h2').textContent = window.VELOUR_LANG === 'en' ? 'Notifications' : 'الإشعارات';
+  // Hide both badges
+  document.getElementById('notif-badge')?.classList.add('hidden');
+  document.getElementById('st-notif-badge')?.classList.add('hidden');
+  const cached = _pageCacheGet('notifs');
+  if (Array.isArray(cached)) _renderNotifs(cached);   // instant paint
+  try {
+    const notifs = await Api.users.notifications();
+    _pageCacheSet('notifs', notifs);
+    _renderNotifs(notifs);
+    Api.users.markNotifsRead().catch(() => {});
   } catch (e) {}
 }
 
