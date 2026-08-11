@@ -207,30 +207,48 @@ async function runSmartNotifJobs() {
   }
 }
 
-// Run smart jobs every 24 hours, first run after 10 seconds (server warm-up)
-setTimeout(() => {
-  runSmartNotifJobs();
-  setInterval(runSmartNotifJobs, 24 * 60 * 60 * 1000);
-}, 10000);
+// DISABLED by request: the recurring promo pushes ("اشتقنا إليكِ" inactive-user and
+// "الصالون متاح" favorite-salon availability) are no longer scheduled. The ONLY
+// automated push to clients is the one-hour-before appointment reminder below.
+// (runSmartNotifJobs is kept above but intentionally never invoked.)
 
-// ===== #63: BOOKING REMINDER (runs every hour) =====
+// ===== THE ONLY automated client push: reminder ~1 hour before the appointment =====
+// Uses Palestine wall-clock (Asia/Hebron) so the timing is correct year-round (DST-safe).
+function _nowInPalestine() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const g = t => parts.find(p => p.type === t).value;
+  return { date: `${g('year')}-${g('month')}-${g('day')}`, minutes: parseInt(g('hour'), 10) * 60 + parseInt(g('minute'), 10) };
+}
+
 async function runBookingReminders() {
   try {
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const bookings = await DB.bookings.find(b => b.booking_date === tomorrow && (b.status === 'confirmed' || b.status === 'pending'));
+    const nowP = _nowInPalestine();
+    const bookings = await DB.bookings.find(b => b.booking_date === nowP.date && b.status === 'confirmed');
     for (const b of bookings) {
+      const t = /^\d{1,2}:\d{2}/.test(b.booking_time || '') ? b.booking_time.slice(0, 5) : null;
+      if (!t) continue;
+      const [hh, mm] = t.split(':').map(Number);
+      const minsUntil = (hh * 60 + mm) - nowP.minutes;
+      // fire exactly once when the appointment is ~1 hour away (50–70 min window; job runs every 15 min)
+      if (minsUntil < 50 || minsUntil > 70) continue;
       const client = await DB.users.findById(b.client_id);
       if (!client?.fcm_token) continue;
-      const alreadySent = await DB.notifications.find(n => n.user_id === b.client_id && n.type === 'reminder' && n.body?.includes(b.booking_time) && n.created_at > new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString());
-      if (alreadySent.length > 0) continue;
-      await fcm.sendPushNotification(client.fcm_token, 'تذكير بموعدك غداً 💅', `موعدك الساعة ${b.booking_time} غداً ${tomorrow}`, { type: 'reminder', booking_id: String(b.id) }).catch(() => {});
-      await DB.notifications.insert({ user_id: b.client_id, title: 'تذكير بموعدك غداً 💅', body: `موعدك الساعة ${b.booking_time} غداً ${tomorrow}`, type: 'reminder', booking_id: b.id });
+      const already = await DB.notifications.find(n => n.user_id === b.client_id && n.type === 'reminder' && String(n.booking_id) === String(b.id) && n.created_at > new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString());
+      if (already.length > 0) continue;
+      const title = 'تذكير: موعدك بعد ساعة ⏰';
+      const body = `دورك قريب! موعدك الساعة ${t} 💅 جهّزي حالك`;
+      await fcm.sendPushNotification(client.fcm_token, title, body, { type: 'reminder', booking_id: String(b.id) }).catch(() => {});
+      await DB.notifications.insert({ user_id: b.client_id, title, body, type: 'reminder', booking_id: b.id });
     }
   } catch (e) { console.error('[Reminders] error:', e.message); }
 }
+// check every 15 minutes so the ~1-hour-before window is hit exactly once
 setTimeout(() => {
   runBookingReminders();
-  setInterval(runBookingReminders, 60 * 60 * 1000);
+  setInterval(runBookingReminders, 15 * 60 * 1000);
 }, 15000);
 
 const PORT = process.env.PORT || 3000;
