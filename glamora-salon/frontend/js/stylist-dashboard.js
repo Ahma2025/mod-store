@@ -49,9 +49,11 @@ function _applyDashData(data) {
 
 async function loadStylistDashboard() {
   _stDashRevealed = false;
+  // Per-user cache key so a NEW stylist never briefly sees a previous account's salon.
+  const dashKey = 'velour_dash_cache_' + ((currentUser && currentUser.id) || 'g');
   // instant paint from cache (zero wait)
   let cached = null;
-  try { cached = JSON.parse(localStorage.getItem('velour_dash_cache') || 'null'); } catch {}
+  try { cached = JSON.parse(localStorage.getItem(dashKey) || 'null'); } catch {}
   if (cached && cached.salon) {
     _applyDashData(cached);
     _revealStDash();
@@ -59,7 +61,7 @@ async function loadStylistDashboard() {
   // refresh silently
   try {
     const data = await Api.stylistDash.mySalon();
-    try { localStorage.setItem('velour_dash_cache', JSON.stringify(data)); } catch {}
+    try { localStorage.setItem(dashKey, JSON.stringify(data)); } catch {}
     _applyDashData(data);
     _revealStDash();
     if (stSalonData) {

@@ -48,8 +48,8 @@ app.use(express.json({ limit: '2mb' }));
 // ✅ SECURITY: Rate limiting — auth endpoints (strict)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'محاولات كثيرة، انتظري 15 دقيقة' },
+  max: 100,   // raised: multiple testers can share one IP (NAT/wifi); 10 was far too strict
+  message: { error: 'محاولات كثيرة، انتظري قليلاً' },
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false },
@@ -58,7 +58,7 @@ const authLimiter = rateLimit({
 // ✅ SECURITY: Rate limiting — general API
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: 1000,  // raised: dashboard + normal salon management + shared IPs easily exceeded 100/min
   message: { error: 'طلبات كثيرة جداً' },
   standardHeaders: true,
   legacyHeaders: false,
