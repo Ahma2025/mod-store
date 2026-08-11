@@ -9,15 +9,16 @@ const SECRET = process.env.JWT_SECRET;
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, phone, email, password } = req.body;
+    const { name, phone, email, password, role } = req.body;
     if (!name || !phone || !password) return res.status(400).json({ error: 'بيانات ناقصة' });
 
     const exists = await DB.users.findByPhone(phone);
     if (exists) return res.status(409).json({ error: 'رقم الهاتف مسجل مسبقاً' });
 
-    // ✅ SECURITY: role always 'client' on registration — never from request body
+    // ✅ SECURITY: only 'client' or 'stylist' may self-register — never admin/salon_owner.
+    const safeRole = role === 'stylist' ? 'stylist' : 'client';
     const hash = await bcrypt.hash(password, 12);
-    const user = await DB.users.insert({ name, phone, email: email || null, password_hash: hash, role: 'client', loyalty_points: 50 });
+    const user = await DB.users.insert({ name, phone, email: email || null, password_hash: hash, role: safeRole, loyalty_points: 50 });
 
     await DB.loyalty_transactions.insert({ user_id: user.id, points: 50, type: 'earned', description: 'مكافأة التسجيل 🎉' });
     await DB.notifications.insert({ user_id: user.id, title: 'أهلاً بك في Glamora 🌸', body: 'كسبتِ 50 نقطة كمكافأة تسجيل!', type: 'loyalty' });
