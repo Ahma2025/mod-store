@@ -231,15 +231,30 @@ async function getLocation() {
   });
 }
 
+// Single shared location fetch (memoized) — cache first, then GPS. Never throws.
+let _locInFlight = null;
+function ensureUserLocation() {
+  if (userLocation && userLocation.lat != null) return Promise.resolve(userLocation);
+  // seed from last-known location instantly
+  try { const c = JSON.parse(localStorage.getItem('velour_location') || 'null'); if (c && c.lat != null) userLocation = c; } catch {}
+  if (_locInFlight) return _locInFlight;
+  _locInFlight = (async () => {
+    try {
+      const loc = await getLocation();
+      if (loc && loc.lat != null) {
+        userLocation = loc;
+        try { localStorage.setItem('velour_location', JSON.stringify(loc)); } catch {}
+      }
+    } catch (e) { /* denied / no GPS — keep cached/null; the section falls back to top-rated */ }
+    _locInFlight = null;
+    return userLocation;
+  })();
+  return _locInFlight;
+}
+
 async function requestLocationPermission() {
-  try {
-    const loc = await getLocation();
-    userLocation = loc;
-    localStorage.setItem('velour_location', JSON.stringify(loc));
-  } catch {
-    const cached = localStorage.getItem('velour_location');
-    if (cached) userLocation = JSON.parse(cached);
-  }
+  await ensureUserLocation();
+  _renderNearYou();   // if home is already showing, upgrade its "near you" section to real distances
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -510,30 +525,46 @@ function homeSalonCard(s, distText) {
   </div>`;
 }
 
+let _homeSalonsForNear = [];
+
+// Renders the "near you" section. NEVER empty: if we have the user's location it sorts by
+// real distance; otherwise it shows the top-rated salons as a fallback. Safe to call anytime.
+function _renderNearYou() {
+  const section = document.getElementById('section-near-you');
+  const el = document.getElementById('home-near-list');
+  if (!section || !el) return;
+  const salons = _homeSalonsForNear || [];
+  if (!salons.length) return;   // truly nothing loaded yet
+  section.style.display = '';
+
+  let list = null, showDist = false;
+  if (userLocation && userLocation.lat != null) {
+    const withDist = salons
+      .filter(s => s.latitude && s.longitude)
+      .map(s => ({ ...s, _dist: haversineKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) }))
+      .sort((a, b) => a._dist - b._dist);
+    if (withDist.length) { list = withDist.slice(0, 5); showDist = true; }
+  }
+  if (!list) {
+    // fallback so the section is NEVER empty: highest-rated first
+    list = [...salons].sort((a, b) =>
+      (b.rating || 0) * Math.log((b.reviews_count || 0) + 1) - (a.rating || 0) * Math.log((a.reviews_count || 0) + 1)
+    ).slice(0, 5);
+  }
+  el.innerHTML = list.map(s => {
+    const d = (showDist && s._dist != null) ? (s._dist < 1 ? Math.round(s._dist * 1000) + 'م' : s._dist.toFixed(1) + 'كم') : '';
+    return homeSalonCard(s, d);
+  }).join('');
+  try { localStorage.setItem('velour_nearyou_cache', el.innerHTML); } catch {}
+}
+
 async function loadHomeNearYou(salons) {
-  try {
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout:5000}));
-    const { latitude: lat, longitude: lon } = pos.coords;
-    function dist(s) {
-      if (!s.latitude || !s.longitude) return Infinity;
-      const R = 6371;
-      const dLat = (s.latitude - lat) * Math.PI / 180;
-      const dLon = (s.longitude - lon) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180)*Math.cos(s.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-    const withDist = salons.map(s => ({...s, _dist: dist(s)})).filter(s => s._dist < Infinity).sort((a,b) => a._dist - b._dist).slice(0, 5);
-    if (!withDist.length) return;
-    const section = document.getElementById('section-near-you');
-    const el = document.getElementById('home-near-list');
-    if (!section || !el) return;
-    section.style.display = '';
-    el.innerHTML = withDist.map(s => {
-      const d = s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم';
-      return homeSalonCard(s, d);
-    }).join('');
-    try { localStorage.setItem('velour_nearyou_cache', el.innerHTML); } catch {}
-  } catch {}
+  _homeSalonsForNear = salons || [];
+  // seed cached location instantly if we have it
+  if (!userLocation) { try { const c = JSON.parse(localStorage.getItem('velour_location') || 'null'); if (c && c.lat != null) userLocation = c; } catch {} }
+  _renderNearYou();               // 1) instant paint — cached location or top-rated fallback (never empty)
+  await ensureUserLocation();     // 2) permission + GPS (shared, proper 20s/30s timeouts, no silent 5s fail)
+  _renderNearYou();               // 3) upgrade to real nearest once coordinates arrive
 }
 
 async function filterByService(serviceName) {
