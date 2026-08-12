@@ -154,11 +154,15 @@ router.post('/', authenticate, async (req, res) => {
     const receiver = await DB.users.findById(parseInt(receiver_id));
 
     const notifBody = msg_type === 'voice' ? '🎤 رسالة صوتية' : msg_type === 'image' ? '📷 صورة' : textContent.slice(0, 60);
-    await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message' });
-    req.io?.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: req.user.id });
-    req.io?.to(`user_${receiver_id}`).emit('new_message', { ...msg, sender_name: sender?.name });
-    if (receiver?.fcm_token) {
-      fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+    req.io?.to(`user_${receiver_id}`).emit('new_message', { ...msg, sender_name: sender?.name });  // always — appears in the open chat
+    // Skip the notification if the recipient is already viewing this exact conversation.
+    const viewing = req.io?.activeConv?.get(parseInt(receiver_id)) === req.user.id;
+    if (!viewing) {
+      await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message' });
+      req.io?.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: req.user.id });
+      if (receiver?.fcm_token) {
+        fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+      }
     }
 
     // Auto-bot: reply to common questions when the receiver is a stylist-linked user

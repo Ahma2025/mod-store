@@ -210,9 +210,20 @@ const Api = {
 // Track message IDs already shown in chat to prevent duplicates
 const renderedMsgIds = new Set();
 
+// Tells the server which conversation we currently have open, so it won't push a
+// notification for a message from that same person while we're looking at the chat.
+let _activeConvWith = null;
+function setActiveConversation(otherId) {
+  _activeConvWith = otherId || null;
+  try { if (socket && socket.connected) socket.emit('active_conversation', { with: _activeConvWith }); } catch (e) {}
+}
+
 function initSocket() {
   if (!authToken || socket) return;
   socket = io(BASE, { auth: { token: authToken } });
+
+  // re-tell the server our open conversation after every (re)connect
+  socket.on('connect', () => { if (_activeConvWith) { try { socket.emit('active_conversation', { with: _activeConvWith }); } catch (e) {} } });
 
   // Server confirms our sent message — register its real DB id so new_message echo is ignored
   socket.on('message_sent', (msg) => {

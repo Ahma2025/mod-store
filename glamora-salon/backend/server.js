@@ -98,8 +98,21 @@ io.use((socket, next) => {
   } catch { next(new Error('جلسة منتهية')); }
 });
 
+// Which conversation each connected user is actively viewing (userId -> otherUserId).
+// Lets us skip message notifications when the recipient is already looking at that chat.
+const activeConv = new Map();
+io.activeConv = activeConv;   // shared with the HTTP /messages route via req.io
+
 io.on('connection', (socket) => {
   socket.join(`user_${socket.user.id}`);
+
+  // client reports the chat it currently has open (or null/absent when it leaves)
+  socket.on('active_conversation', (data) => {
+    const w = parseInt(data?.with);
+    if (w && !isNaN(w)) activeConv.set(socket.user.id, w);
+    else activeConv.delete(socket.user.id);
+  });
+  socket.on('disconnect', () => { activeConv.delete(socket.user.id); });
 
   socket.on('send_message', async (data) => {
     const { receiver_id, content, booking_id } = data;
@@ -117,12 +130,16 @@ io.on('connection', (socket) => {
       io.to(`user_${receiver_id}`).emit('new_message', fullMsg);
       socket.emit('message_sent', fullMsg);
 
-      await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: content.trim().slice(0, 60), type: 'message' });
-      io.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: socket.user.id });
+      // Skip the notification if the recipient is already viewing this exact conversation.
+      const viewing = activeConv.get(parseInt(receiver_id)) === socket.user.id;
+      if (!viewing) {
+        await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: content.trim().slice(0, 60), type: 'message' });
+        io.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: socket.user.id });
 
-      const receiver = await DB.users.findById(parseInt(receiver_id));
-      if (receiver?.fcm_token) {
-        fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+        const receiver = await DB.users.findById(parseInt(receiver_id));
+        if (receiver?.fcm_token) {
+          fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+        }
       }
     } catch (e) {
       console.error('socket send_message error:', e);

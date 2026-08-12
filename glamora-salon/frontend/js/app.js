@@ -11,6 +11,9 @@ function showScreen(id) {
   const target = document.getElementById('screen-' + id);
   if (!target) return;
 
+  // leaving the chat conversation → tell the server we're no longer viewing it
+  if (id !== 'chat-conv' && typeof setActiveConversation === 'function') setActiveConversation(null);
+
   all.forEach(s => s.classList.remove('active'));
   const flexScreens = ['login', 'register'];
   target.style.display = flexScreens.includes(id) ? 'flex' : 'block';
@@ -1826,6 +1829,7 @@ async function openChatWith(userId, userName, avatar) {
   // Clear the "unread" badge for this conversation the INSTANT it's opened (don't wait for a list re-fetch),
   // then tell the server, then refresh the tab badge accurately.
   _clearConvUnread(userId);
+  setActiveConversation(userId);   // suppress push notifications from this person while we're in the chat
   Api.messages.markSeen(userId).then(() => loadChatBadge()).catch(() => {});
 }
 
