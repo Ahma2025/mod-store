@@ -128,8 +128,97 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .auth-header { display: flex; align-items: center; gap: 16px; padding: 20px 20px 0; flex-shrink: 0; }
 #screen-login, #screen-register { flex-direction: column; justify-content: center; }
 .auth-logo { font-size: 22px; font-weight: 800; color: var(--rose-dark); letter-spacing: 1px; }
-.back-btn { background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border: 1px solid var(--gray-light); font-size: 20px; cursor: pointer; color: var(--dark); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-.back-btn:active { transform: scale(0.92); background: var(--cream2); }
+/* ===== WORLD-CLASS ANIMATED BACK BUTTON SYSTEM ===== */
+.back-btn, .back-float {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 245, 248, 0.82) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  color: #5c0b24;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(123, 29, 64, 0.14), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 1);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.28s ease;
+  will-change: transform;
+}
+
+.back-btn::before, .back-float::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(229, 193, 88, 0.35) 0%, transparent 75%);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.back-btn:hover::before, .back-float:hover::before {
+  opacity: 1;
+}
+
+.back-btn:hover, .back-float:hover {
+  box-shadow: 0 6px 24px rgba(123, 29, 64, 0.22), 0 0 15px rgba(229, 193, 88, 0.3);
+  transform: translateY(-1px);
+}
+
+.back-btn:active, .back-float:active {
+  transform: scale(0.88) translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(123, 29, 64, 0.15) !important;
+}
+
+/* Arrow SVG & Motion */
+.back-btn svg, .back-float svg, .back-arrow-svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(123, 29, 64, 0.2));
+}
+
+[dir="rtl"] .back-btn svg, 
+[dir="rtl"] .back-float svg, 
+[dir="rtl"] .back-arrow-svg {
+  transform: scaleX(-1);
+}
+
+.back-btn:active svg, 
+.back-float:active svg {
+  transform: translateX(-4px) scale(0.9);
+}
+
+[dir="rtl"] .back-btn:active svg, 
+[dir="rtl"] .back-float:active svg {
+  transform: scaleX(-1) translateX(-4px) scale(0.9);
+}
+
+/* Dark Floating Back Button (for Covers/Media) */
+.back-float {
+  background: linear-gradient(135deg, rgba(35, 5, 20, 0.72) 0%, rgba(15, 2, 8, 0.88) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.back-float:hover {
+  background: linear-gradient(135deg, rgba(55, 8, 30, 0.85) 0%, rgba(25, 4, 14, 0.95) 100%);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 18px rgba(229, 193, 88, 0.35);
+}
 .auth-body { padding: 24px 24px 40px; }
 .auth-body h2 { font-size: 28px; font-weight: 800; color: var(--dark); margin-bottom: 6px; }
 .auth-sub { color: var(--gray); font-size: 15px; margin-bottom: 28px; }
@@ -2088,6 +2177,66 @@ textarea.bp-input {
 @keyframes recWaveDance {
   0% { transform: scaleY(0.3); }
   100% { transform: scaleY(1.3); }
+}
+
+/* ===== ULTRA-SOFT & SOOTHING WOMEN'S LUXURY UX SYSTEM ===== */
+
+/* 1. Global Soothing Scroll & Touch Feel */
+html, body, .screen, .tab, .home-h-scroll, .cats-scroll, .featured-scroll, .salons-list, .conversations-list, .bookings-list {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain;
+}
+
+/* 2. Soft & Calming Focus Rings (Inputs & Textareas) */
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(196, 86, 122, 0.5) !important;
+  box-shadow: 0 0 0 4px rgba(196, 86, 122, 0.12), 0 4px 12px rgba(196, 86, 122, 0.06) !important;
+  transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* 3. Silk Touch Elasticity (Super Gentle & Soothing Tap) */
+button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-chip, .svc-filter-chip, .stylist-mini-card, .role-card, .profile-menu-item, .conv-item, .notif-item, .booking-item {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s ease,
+              opacity 0.25s ease !important;
+  will-change: transform;
+}
+
+/* 4. Ultra-Soft Active Press (Silky Tactile Feel) */
+.salon-card:active, 
+.featured-card:active, 
+.service-cat-card:active, 
+.home-salon-card:active, 
+.cat-chip:active, 
+.svc-filter-chip:active, 
+.stylist-mini-card:active, 
+.role-card:active, 
+.profile-menu-item:active, 
+.conv-item:active, 
+.notif-item:active,
+.booking-item:active {
+  transform: scale(0.982) translateY(0.5px) !important;
+  opacity: 0.92 !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
+}
+
+/* 5. Smooth Modal & Backdrop Blur */
+.modal-overlay {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal-box {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 16px 48px rgba(35, 5, 20, 0.18) !important;
+}
+
+/* 6. Soft Shadow Depths across cards */
+.salon-card, .featured-card, .service-cat-card, .profile-menu, .loyalty-card, .beauty-card, .review-card, .booking-item {
+  box-shadow: 0 4px 20px rgba(107, 15, 43, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }
 
 
