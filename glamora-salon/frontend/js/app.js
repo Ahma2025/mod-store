@@ -1053,11 +1053,11 @@ function buildVideoSection(videoItem) {
     <video class="svs-thumb" src="${url}" preload="metadata" muted playsinline></video>
     <div class="svs-play" onclick="openMediaViewer('${url}','video')">
       <div class="svs-play-btn">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="11,7 31,18 11,29" fill="#7B1D40"/>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5v14l11-7L8 5z" fill="#7B1D40"/>
         </svg>
       </div>
-      <span class="svs-label">فيديو الصالون</span>
+      <span class="svs-label">🎬 فيديو الصالون السينمائي</span>
     </div>`;
 }
 
@@ -1779,7 +1779,7 @@ function _renderConversations(convs) {
     return;
   }
   el.innerHTML = convs.map(c => `
-      <div class="conv-item" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
+      <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
         <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
           <div class="conv-name">${c.other_name}</div>
@@ -1823,8 +1823,29 @@ async function openChatWith(userId, userName, avatar) {
     const c = document.getElementById('chat-messages');
     if (c) c.scrollTop = c.scrollHeight;
   }, 100);
-  // Mark incoming messages as seen
-  Api.messages.markSeen(userId).catch(() => {});
+  // Clear the "unread" badge for this conversation the INSTANT it's opened (don't wait for a list re-fetch),
+  // then tell the server, then refresh the tab badge accurately.
+  _clearConvUnread(userId);
+  Api.messages.markSeen(userId).then(() => loadChatBadge()).catch(() => {});
+}
+
+// Optimistically clear a conversation's unread badge: remove it from any rendered list (customer or
+// stylist), zero it in the cached conversations so it doesn't reappear, and update the tab badge.
+function _clearConvUnread(userId) {
+  document.querySelectorAll(`.conv-item[data-conv-id="${userId}"] .conv-unread`).forEach(b => b.remove());
+  let convos = null;
+  try { convos = _pageCacheGet('convos'); } catch (e) {}
+  if (Array.isArray(convos)) {
+    convos.forEach(c => { if (String(c.other_id) === String(userId)) c.unread_count = 0; });
+    try { _pageCacheSet('convos', convos); } catch (e) {}
+    const total = convos.reduce((s, c) => s + (c.unread_count || 0), 0);
+    ['chat-badge', 'st-chat-badge'].forEach(id => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
+      if (total > 0) { badge.textContent = total; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+    });
+  }
 }
 
 function buildMsgHtml(msg) {
