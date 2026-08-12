@@ -35,6 +35,13 @@ function showScreen(id) {
 }
 
 function goBack() {
+  const curScreen = screenStack[screenStack.length - 1];
+  if (curScreen === 'chat-conv') {
+    if (typeof currentChatUserId !== 'undefined' && currentChatUserId) {
+      _clearConvUnread(currentChatUserId);
+      currentChatUserId = null;
+    }
+  }
   screenStack.pop();
   const prev = screenStack[screenStack.length - 1] || 'main';
   const target = document.getElementById('screen-' + prev);
@@ -1050,11 +1057,12 @@ function buildVideoSection(videoItem) {
   if (!sec) return;
   if (!videoItem) { sec.classList.add('hidden'); sec.innerHTML = ''; return; }
 
-  const url = mediaUrl(videoItem.url);
+  const rawUrl = mediaUrl(videoItem.url);
+  const thumbUrl = rawUrl.includes('#') ? rawUrl : rawUrl + '#t=0.5';
   sec.classList.remove('hidden');
   sec.innerHTML = `
-    <video class="svs-thumb" src="${url}" preload="metadata" muted playsinline></video>
-    <div class="svs-play" onclick="openMediaViewer('${url}','video')">
+    <video class="svs-thumb" src="${thumbUrl}" preload="auto" muted playsinline onloadeddata="try{if(this.currentTime===0)this.currentTime=0.5}catch(e){}"></video>
+    <div class="svs-play" onclick="openMediaViewer('${rawUrl}','video')">
       <div class="svs-play-btn">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 5v14l11-7L8 5z" fill="#7B1D40"/>
@@ -1085,9 +1093,11 @@ function buildCoverSlider(items) {
     const url = mediaUrl(m.url);
     const base = `position:absolute;inset:0;opacity:${i === 0 ? 1 : 0};transition:opacity .6s ease;background:#f0e6ea;overflow:hidden;`;
     if (m.type === 'video') {
+      const rawUrl = mediaUrl(m.url);
+      const thumbUrl = rawUrl.includes('#') ? rawUrl : rawUrl + '#t=0.5';
       return `<div class="cover-slide" style="${base}">
-        <video src="${url}" muted playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openMediaViewer('${url}','video')">
+        <video src="${thumbUrl}" muted playsinline preload="auto" onloadeddata="try{if(this.currentTime===0)this.currentTime=0.5}catch(e){}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openMediaViewer('${rawUrl}','video')">
           <svg viewBox="0 0 60 60" width="52" height="52" fill="none">
             <circle cx="30" cy="30" r="29" fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
             <polygon points="24,18 46,30 24,42" fill="white"/>
@@ -1781,7 +1791,11 @@ function _renderConversations(convs) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><h3>${_cvEN ? 'No conversations yet' : 'لا توجد محادثات بعد'}</h3><p>${_cvEN ? 'Contact your stylist from the bookings page' : 'تواصلي مع كوفيرتك من صفحة الحجوزات'}</p></div>`;
     return;
   }
-  el.innerHTML = convs.map(c => `
+  el.innerHTML = convs.map(c => {
+    const isCurrentlyOpen = (typeof currentChatUserId !== 'undefined') && currentChatUserId && String(c.other_id) === String(currentChatUserId);
+    const unread = isCurrentlyOpen ? 0 : (c.unread_count || 0);
+    if (isCurrentlyOpen) c.unread_count = 0;
+    return `
       <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
         <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
@@ -1790,10 +1804,11 @@ function _renderConversations(convs) {
         </div>
         <div class="conv-meta">
           <div class="conv-time">${formatTime(c.last_time)}</div>
-          ${c.unread_count > 0 ? `<div class="conv-unread">${c.unread_count}</div>` : ''}
+          ${unread > 0 ? `<div class="conv-unread">${unread}</div>` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+  }).join('');
 }
 
 function _renderChatMessages(msgs) {

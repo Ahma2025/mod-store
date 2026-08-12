@@ -694,7 +694,7 @@ function renderMediaGrid(media) {
     return `
       <div class="media-item ${m.is_cover ? 'media-cover' : ''}" onclick="${isVideo ? '' : `setCoverMedia(${m.id})`}">
         ${isVideo
-          ? `<video src="${mediaUrl(m.url)}" class="media-thumb" muted></video><div class="media-type-badge">vid</div>`
+          ? `<video src="${mediaUrl(m.url)}#t=0.5" class="media-thumb" muted playsinline preload="auto" onloadeddata="try{if(this.currentTime===0)this.currentTime=0.5}catch(e){}"></video><div class="media-type-badge">vid</div>`
           : `<img src="${mediaUrl(m.url)}" class="media-thumb">`}
         ${m.is_cover ? `<div class="media-cover-badge">${_mgEN ? 'Cover ✓' : 'غلاف ✓'}</div>` : ''}
         <button class="media-delete-btn" onclick="event.stopPropagation();deleteMedia(${m.id})">×</button>

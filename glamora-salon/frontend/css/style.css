@@ -392,7 +392,62 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .section-header h3 { font-size: 17px; font-weight: 800; color: var(--dark); }
 .section-header a { font-size: 13px; color: var(--rose); cursor: pointer; font-weight: 600; }
-.see-more-btn { background: none; border: none; font-size: 13px; color: var(--rose); font-weight: 700; font-family: 'El Messiri', sans-serif; cursor: pointer; padding: 0; }
+/* ===== LUXURY ANIMATED "SEE MORE" PILL BUTTON SYSTEM ===== */
+.see-more-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: linear-gradient(135deg, rgba(255, 240, 245, 0.95) 0%, rgba(250, 218, 225, 0.88) 100%) !important;
+  border: 1.2px solid rgba(196, 86, 122, 0.3) !important;
+  color: #7b1d40 !important;
+  font-family: 'El Messiri', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+  border-radius: 99px !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-shadow: 0 3px 10px rgba(155, 27, 59, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s ease,
+              color 0.25s ease,
+              border-color 0.25s ease !important;
+  will-change: transform;
+}
+
+.see-more-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: block;
+}
+
+[dir="rtl"] .see-more-btn svg {
+  transform: scaleX(-1);
+}
+
+.see-more-btn:hover {
+  background: linear-gradient(135deg, #7b1d40 0%, #9b1b3b 100%) !important;
+  color: #ffffff !important;
+  border-color: #7b1d40 !important;
+  box-shadow: 0 6px 18px rgba(123, 29, 64, 0.25), 0 0 12px rgba(229, 193, 88, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.see-more-btn:hover svg {
+  transform: translateX(-3px);
+}
+
+[dir="rtl"] .see-more-btn:hover svg {
+  transform: scaleX(-1) translateX(-3px);
+}
+
+.see-more-btn:active {
+  transform: scale(0.92) translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(123, 29, 64, 0.15) !important;
+}
 
 /* Horizontal scroll list for home sections */
 .home-h-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-x: contain; }
@@ -2237,6 +2292,197 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
 /* 6. Soft Shadow Depths across cards */
 .salon-card, .featured-card, .service-cat-card, .profile-menu, .loyalty-card, .beauty-card, .review-card, .booking-item {
   box-shadow: 0 4px 20px rgba(107, 15, 43, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* ===== MASTER LUXURY SALON COVER SLIDER & VIDEO EXPERIENCE ===== */
+.salon-cover {
+  height: 330px !important;
+  position: relative;
+  background: linear-gradient(135deg, #2A0818, #5A0E28);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.salon-cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 3, 12, 0.35) 0%,
+    rgba(0, 0, 0, 0) 25%,
+    rgba(15, 2, 8, 0.4) 60%,
+    rgba(10, 1, 5, 0.95) 100%
+  ) !important;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.salon-cover-info {
+  position: relative;
+  z-index: 3;
+  padding: 20px 20px 18px;
+  color: white;
+  width: 100%;
+}
+
+.salon-cover-info h2 {
+  font-size: 25px !important;
+  font-weight: 800 !important;
+  margin-bottom: 8px !important;
+  color: #ffffff !important;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9), 0 0 20px rgba(229, 193, 88, 0.35) !important;
+}
+
+.salon-meta {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.salon-meta span {
+  font-size: 12.5px !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  padding: 4px 12px !important;
+  border-radius: 99px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Luxury Floating Pill Dots */
+.cover-dots {
+  position: absolute;
+  bottom: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(15, 2, 8, 0.52);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.cover-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: block;
+}
+
+.cover-dot.active {
+  width: 24px !important;
+  height: 7px !important;
+  background: linear-gradient(90deg, #e5c158 0%, #ffffff 100%) !important;
+  box-shadow: 0 0 10px rgba(229, 193, 88, 0.85) !important;
+}
+
+/* ===== CINEMATIC LUXURY SALON VIDEO SECTION ===== */
+.salon-video-section {
+  margin: 16px 16px 8px !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  height: 200px !important;
+  background: linear-gradient(135deg, #1A040D 0%, #3D091B 100%) !important;
+  box-shadow: 0 12px 32px rgba(107, 15, 43, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease !important;
+}
+
+.salon-video-section:active {
+  transform: scale(0.985) !important;
+}
+
+.svs-thumb {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  filter: brightness(0.85) contrast(1.05) !important;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease !important;
+}
+
+.salon-video-section:hover .svs-thumb {
+  transform: scale(1.05) !important;
+  filter: brightness(0.95) contrast(1.08) !important;
+}
+
+.svs-play {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  background: linear-gradient(135deg, rgba(20, 3, 12, 0.45) 0%, rgba(107, 15, 43, 0.35) 100%) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  cursor: pointer !important;
+  z-index: 2 !important;
+}
+
+.svs-play-btn {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fff0f5 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 30px rgba(123, 29, 64, 0.45), 0 0 25px rgba(229, 193, 88, 0.5) !important;
+  border: 2px solid rgba(255, 255, 255, 0.95) !important;
+  color: #7b1d40 !important;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease !important;
+  animation: svsPlayPulse 2.4s infinite ease-in-out alternate;
+}
+
+@keyframes svsPlayPulse {
+  0% { transform: scale(1); box-shadow: 0 8px 30px rgba(123, 29, 64, 0.45), 0 0 20px rgba(229, 193, 88, 0.4); }
+  100% { transform: scale(1.08); box-shadow: 0 12px 36px rgba(123, 29, 64, 0.6), 0 0 35px rgba(229, 193, 88, 0.75); }
+}
+
+.svs-play:hover .svs-play-btn {
+  transform: scale(1.15) !important;
+}
+
+.svs-play-btn svg {
+  width: 22px !important;
+  height: 22px !important;
+  margin-left: -2px;
+}
+
+.svs-label {
+  background: linear-gradient(135deg, rgba(123, 29, 64, 0.88) 0%, rgba(60, 10, 30, 0.92) 100%) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(229, 193, 88, 0.6) !important;
+  color: #ffffff !important;
+  font-family: 'El Messiri', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 6px 18px !important;
+  border-radius: 99px !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(229, 193, 88, 0.25) !important;
+  letter-spacing: 0.2px;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
 }
 
 
