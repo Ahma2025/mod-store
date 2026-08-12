@@ -3075,12 +3075,15 @@ async function loadRecommendations() {
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-  // Hide native splash immediately - HTML splash takes over
-  if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-    try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {}
-  }
-  // Show HTML splash with logo + animation
+  // Show the HTML splash FIRST, then hide the native splash only after it has actually painted.
+  // This removes the empty purple gap between the native splash and the app's own splash
+  // (native splash stays put because launchAutoHide is false).
   showScreen('splash');
+  if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+    const hideNative = () => { try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {} };
+    requestAnimationFrame(() => requestAnimationFrame(hideNative));  // after the HTML splash paints
+    setTimeout(hideNative, 2500);                                    // safety fallback
+  }
   // After animation, navigate to real screen
   setTimeout(() => {
     try {

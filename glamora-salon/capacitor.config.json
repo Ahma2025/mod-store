@@ -17,7 +17,7 @@
     },
     "SplashScreen": {
       "launchShowDuration": 0,
-      "launchAutoHide": true,
+      "launchAutoHide": false,
       "backgroundColor": "#1A0A0F",
       "showSpinner": false,
       "androidSpinnerStyle": "small",
