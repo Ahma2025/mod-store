@@ -20,13 +20,27 @@ router.get('/my', authenticate, async (req, res) => {
       return new Date(b.booking_date) - new Date(a.booking_date);
     });
     const result = await Promise.all(bookings.map(async b => {
-      const service = await DB.services.findOne(s => s.id === b.service_id);
       const stylist = await DB.stylists.findOne(s => s.id === b.stylist_id);
       const stylistUser = stylist ? await DB.users.findById(stylist.user_id) : null;
       const salon = await DB.salons.findOne(s => s.id === b.salon_id);
       const owner = await getSalonOwner(b.salon_id);
       const stylistName = stylist?.user_id ? stylistUser?.name : stylist?.name;
-      return { ...b, service_name: service?.name, name_ar: service?.name_ar, category: service?.category, duration_minutes: service?.duration_minutes, stylist_name: stylistName, stylist_id: stylist?.id, stylist_user_id: owner?.id, salon_name: salon?.name };
+      // ALL services on this booking (multi-service support)
+      let ids = [];
+      try { ids = b.service_ids ? JSON.parse(b.service_ids) : []; } catch (e) {}
+      if (!ids.length && b.service_id) ids = [b.service_id];
+      const svcs = (await Promise.all(ids.map(id => DB.services.findOne(s => s.id === parseInt(id))))).filter(Boolean);
+      const services = svcs.map(s => ({ id: s.id, name: s.name_ar || s.name, category: s.category, price: parseFloat(s.price || 0), duration_minutes: s.duration_minutes || 0 }));
+      const total_duration = b.total_duration || services.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+      const total_price = (b.total_price != null ? parseFloat(b.total_price) : services.reduce((sum, s) => sum + (s.price || 0), 0));
+      const joined = services.map(s => s.name).join(' + ');
+      return {
+        ...b, services,
+        service_name: joined || '-', name_ar: joined || svcs[0]?.name_ar,
+        category: services[0]?.category, duration_minutes: services[0]?.duration_minutes,
+        total_duration, total_price,
+        stylist_name: stylistName, stylist_id: stylist?.id, stylist_user_id: owner?.id, salon_name: salon?.name,
+      };
     }));
     res.json(result);
   } catch (e) {

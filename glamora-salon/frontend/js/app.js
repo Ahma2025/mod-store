@@ -275,6 +275,16 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// Format a duration in minutes as "1 ساعة و30 دقيقة" / "1h 30m"
+function fmtDur(min) {
+  min = parseInt(min) || 0;
+  const h = Math.floor(min / 60), m = min % 60;
+  const en = window.VELOUR_LANG === 'en';
+  if (h && m) return en ? `${h}h ${m}m` : `${h} ساعة و${m} دقيقة`;
+  if (h) return en ? `${h}h` : (h === 1 ? 'ساعة' : `${h} ساعات`);
+  return en ? `${m}m` : `${m} دقيقة`;
+}
+
 async function filterTopRated(el) {
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
@@ -1623,8 +1633,10 @@ function filterBookings(type, btn) {
         <span>🏠 ${b.salon_name || '-'}</span>
         <span>📅 ${formatDateAr(b.booking_date)}</span>
         <span>🕐 ${b.booking_time}</span>
+        <span>⏱ ${fmtDur(b.total_duration || b.duration_minutes)}</span>
         <span>💰 ₪${b.total_price}</span>
       </div>
+      ${(b.services && b.services.length > 1) ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">${b.services.map(x => `${x.name} <span style="opacity:.7">(${fmtDur(x.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
       ${b.status === 'pending' ? `<div style="font-size:12px;color:#856404;background:#FFF3CD;border-radius:8px;padding:8px 10px;margin-top:8px">⏳ ${window.VELOUR_LANG === 'en' ? 'Awaiting stylist approval — you will be notified upon confirmation' : 'بانتظار موافقة الكوفيرة - ستصلك إشعار فور التأكيد'}</div>` : ''}
       ${b.status === 'rejected' ? `<div style="font-size:12px;color:#721c24;background:#F8D7DA;border-radius:8px;padding:8px 10px;margin-top:8px">❌ ${window.VELOUR_LANG === 'en' ? 'Booking rejected — you can choose another time' : 'تم رفض الحجز - يمكنك اختيار وقت آخر'}</div>` : ''}
       ${(b.status === 'pending' || b.status === 'confirmed') && b.booking_date >= today ? `

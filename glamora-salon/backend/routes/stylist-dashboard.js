@@ -302,22 +302,32 @@ router.get('/bookings', authenticate, async (req, res) => {
 
     const result = await Promise.all(bookings.map(async b => {
       const client = await DB.users.findById(b.client_id);
-      const service = await DB.services.findOne(s => s.id === b.service_id);
       const bStylist = await DB.stylists.findOne(s => s.id === b.stylist_id);
       const bStylistUser = bStylist?.user_id ? await DB.users.findById(bStylist.user_id) : null;
       const bStylistName = bStylist?.user_id ? bStylistUser?.name : bStylist?.name;
       const isAssignedStylist = bStylist?.user_id === req.user.id;
       const canSeeContact = isAssignedStylist || isOwner;
+      // ALL services on this booking (multi-service support), not just the first one
+      let ids = [];
+      try { ids = b.service_ids ? JSON.parse(b.service_ids) : []; } catch (e) {}
+      if (!ids.length && b.service_id) ids = [b.service_id];
+      const svcs = (await Promise.all(ids.map(id => DB.services.findOne(s => s.id === parseInt(id))))).filter(Boolean);
+      const services = svcs.map(s => ({ id: s.id, name: s.name_ar || s.name, category: s.category, price: parseFloat(s.price || 0), duration_minutes: s.duration_minutes || 0 }));
+      const total_duration = b.total_duration || services.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+      const total_price = (b.total_price != null ? parseFloat(b.total_price) : services.reduce((sum, s) => sum + (s.price || 0), 0));
       return {
         ...b,
         client_name: client?.name,
         client_phone: canSeeContact ? client?.phone : undefined,
         client_email: canSeeContact ? client?.email : undefined,
-        service_name: service?.name_ar || service?.name,
-        service_category: service?.category,
-        service_price: service?.price,
+        services,                                                   // full list [{name,category,price,duration_minutes}]
+        service_name: services.map(s => s.name).join(' + ') || '-', // all names joined
+        service_category: services[0]?.category,
+        service_price: services[0]?.price,
+        duration_minutes: services[0]?.duration_minutes,
+        total_duration,
+        total_price,
         stylist_name: bStylistName,
-        duration_minutes: service?.duration_minutes
       };
     }));
 

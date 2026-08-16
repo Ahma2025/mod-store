@@ -264,7 +264,8 @@ function buildStBookingCard(b) {
             <span class="st-bk-detail-icon">${icon}</span>
             <div>
               <div class="st-bk-svc-name" translate="no">${b.service_name || '-'}</div>
-              <div class="st-bk-svc-meta">${b.duration_minutes || '-'} ${_isEN ? 'min' : 'دقيقة'} · ${b.service_price || b.total_price}₪</div>
+              <div class="st-bk-svc-meta">⏱ ${fmtDur(b.total_duration || b.duration_minutes)} · ${(b.total_price != null ? b.total_price : (b.service_price || 0))}₪${(b.services && b.services.length > 1) ? ` · ${b.services.length} ${_isEN ? 'services' : 'خدمات'}` : ''}</div>
+              ${(b.services && b.services.length > 1) ? `<div class="st-bk-svc-list" style="margin-top:4px;font-size:12px;color:var(--gray)">${b.services.map(s => `${s.name} <span style="opacity:.7">(${fmtDur(s.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
             </div>
           </div>
           <div class="st-bk-detail-row">
