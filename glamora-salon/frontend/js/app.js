@@ -587,6 +587,19 @@ async function loadHomeNearYou(salons) {
   _renderNearYou();               // 3) upgrade to real nearest once coordinates arrive
 }
 
+// "See more" for popular services — reveals the extra services (skincare, treatments)
+// in place, no new screen. Toggles back to "مشاهدة المزيد".
+function toggleMoreServices() {
+  const grid = document.getElementById('services-grid');
+  const btn = document.getElementById('services-more-btn');
+  if (!grid) return;
+  const extras = grid.querySelectorAll('.scc-extra');
+  if (!extras.length) return;
+  const nowHidden = extras[0].classList.contains('hidden');
+  extras.forEach(e => e.classList.toggle('hidden', !nowHidden));
+  if (btn) btn.querySelector('span').textContent = nowHidden ? 'عرض أقل' : 'مشاهدة المزيد';
+}
+
 async function filterByService(serviceName) {
   showScreen('service-filter');
   document.getElementById('service-filter-title').textContent = serviceName;

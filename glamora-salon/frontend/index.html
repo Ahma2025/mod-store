@@ -204,36 +204,31 @@
         <div class="section">
           <div class="section-header">
             <h3>🌸 الخدمات الشائعة</h3>
+            <button class="see-more-btn" id="services-more-btn" onclick="toggleMoreServices()"><span>مشاهدة المزيد</span> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
           </div>
-          <div class="services-grid">
+          <div class="services-grid" id="services-grid">
             <div class="service-cat-card" onclick="filterByService('مكياج')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=300&h=200&q=80" alt="مكياج" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
+              <img class="scc-img" src="images/services/makeup.jpg" alt="مكياج" onerror="this.style.display='none'">
               <div class="scc-name">مكياج</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('أظافر')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=300&h=200&q=80" alt="أظافر" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
+              <img class="scc-img" src="images/services/nails.jpg" alt="أظافر" onerror="this.style.display='none'">
               <div class="scc-name">أظافر</div>
             </div>
             <div class="service-cat-card" onclick="filterByService('شعر')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=300&h=200&q=80" alt="شعر" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
+              <img class="scc-img" src="images/services/hair.jpg" alt="شعر" onerror="this.style.display='none'">
               <div class="scc-name">شعر</div>
             </div>
-            <div class="service-cat-card" onclick="filterByService('عناية بالبشرة')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=300&h=200&q=80" alt="عناية بالبشرة" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
-              <div class="scc-name">عناية بالبشرة</div>
-            </div>
             <div class="service-cat-card" onclick="filterByService('عرائس')">
-              <img class="scc-img" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300&h=200&q=80" alt="عرائس" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
+              <img class="scc-img" src="images/services/brides.jpg" alt="عرائس" onerror="this.style.display='none'">
               <div class="scc-name">عرائس</div>
             </div>
-            <div class="service-cat-card" onclick="filterByService('علاجات')">
+            <div class="service-cat-card scc-extra hidden" onclick="filterByService('عناية بالبشرة')">
+              <img class="scc-img" src="images/services/skincare.jpg" alt="عناية بالبشرة" onerror="this.style.display='none'">
+              <div class="scc-name">عناية بالبشرة</div>
+            </div>
+            <div class="service-cat-card scc-extra hidden" onclick="filterByService('علاجات')">
               <img class="scc-img" src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=300&h=200&q=80" alt="علاجات" onerror="this.style.display='none'">
-              <div class="scc-overlay"></div>
               <div class="scc-name">علاجات</div>
             </div>
           </div>
