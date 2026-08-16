@@ -425,10 +425,10 @@ const DB = {
 
   bookings: {
     insert: async (data) => {
-      const { client_id, stylist_id, service_id, salon_id, booking_date, booking_time, notes = null, total_price, status = 'pending', payment_status = 'unpaid' } = data;
+      const { client_id, stylist_id, service_id, service_ids = null, salon_id, booking_date, booking_time, notes = null, total_price, total_duration = null, status = 'pending', payment_status = 'unpaid' } = data;
       const r = await query(
-        `INSERT INTO bookings (client_id,stylist_id,service_id,salon_id,booking_date,booking_time,notes,total_price,status,payment_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [client_id, stylist_id, service_id, salon_id, booking_date, booking_time, notes, total_price, status, payment_status]
+        `INSERT INTO bookings (client_id,stylist_id,service_id,service_ids,salon_id,booking_date,booking_time,notes,total_price,total_duration,status,payment_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        [client_id, stylist_id, service_id, service_ids, salon_id, booking_date, booking_time, notes, total_price, total_duration, status, payment_status]
       );
       return row(r.rows[0]);
     },
