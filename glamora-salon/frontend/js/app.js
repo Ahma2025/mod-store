@@ -3151,15 +3151,16 @@ function initKeyboardViewportFix() {
   const vv = window.visualViewport;
   const app = document.getElementById('app');
   if (!vv || !app) return;
-  let raf = null;
+  let lastH = 0;
+  // ONLY react to the keyboard opening/closing (resize). Never touch scroll — listening to
+  // the scroll event and calling scrollTo created a feedback loop that made the screen shake.
   const apply = () => {
-    raf = null;
-    app.style.height = Math.round(vv.height) + 'px';
-    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    const h = Math.round(vv.height);
+    if (Math.abs(h - lastH) < 2) return;   // ignore sub-pixel jitter
+    lastH = h;
+    app.style.height = h + 'px';
   };
-  const onChange = () => { if (!raf) raf = requestAnimationFrame(apply); };
-  vv.addEventListener('resize', onChange);
-  vv.addEventListener('scroll', onChange);
+  vv.addEventListener('resize', apply);
   apply();
 }
 
