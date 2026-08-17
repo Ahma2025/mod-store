@@ -3143,29 +3143,7 @@ async function loadRecommendations() {
 }
 
 // ===== INIT =====
-// Keep the layout glued to the visible area when the on-screen keyboard opens. iOS does NOT
-// resize the webview for the keyboard, so it scrolls the page up and the chat header slides
-// off-screen. visualViewport reports the area above the keyboard — shrink #app to it so the
-// header stays put and the input bar sits right above the keyboard (Instagram-style).
-function initKeyboardViewportFix() {
-  const vv = window.visualViewport;
-  const app = document.getElementById('app');
-  if (!vv || !app) return;
-  let lastH = 0;
-  // ONLY react to the keyboard opening/closing (resize). Never touch scroll — listening to
-  // the scroll event and calling scrollTo created a feedback loop that made the screen shake.
-  const apply = () => {
-    const h = Math.round(vv.height);
-    if (Math.abs(h - lastH) < 2) return;   // ignore sub-pixel jitter
-    lastH = h;
-    app.style.height = h + 'px';
-  };
-  vv.addEventListener('resize', apply);
-  apply();
-}
-
 window.addEventListener('DOMContentLoaded', () => {
-  initKeyboardViewportFix();
   // Show the HTML splash FIRST, then hide the native splash only after it has actually painted.
   // This removes the empty purple gap between the native splash and the app's own splash
   // (native splash stays put because launchAutoHide is false).
