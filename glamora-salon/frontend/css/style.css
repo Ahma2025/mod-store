@@ -462,8 +462,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .home-salon-card .hsc-dist { font-size: 11px; color: var(--rose); font-weight: 600; }
 
 /* Popular services grid */
-.services-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; }
-.service-cat-card { position: relative; background: none; box-shadow: none; border-radius: 0; overflow: visible; padding-top: 0; cursor: pointer; text-align: center; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); will-change: transform; }
+.services-grid { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-x: contain; }
+.services-grid::-webkit-scrollbar { display: none; }
+.service-cat-card { flex: 0 0 82px; position: relative; background: none; box-shadow: none; border-radius: 0; overflow: visible; padding-top: 0; cursor: pointer; text-align: center; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); will-change: transform; }
 .service-cat-card:active { transform: scale(0.92); }
 .scc-img { position: static; display: block; width: 100%; aspect-ratio: 1 / 1; height: auto; object-fit: cover; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 5px 16px rgba(140,28,61,0.20); }
 .scc-overlay { display: none; }
@@ -2113,6 +2114,15 @@ textarea.bp-input {
   border-color: var(--rose) !important;
   background: rgba(155, 27, 59, 0.06) !important;
 }
+
+/* product image: small square preview + small square card thumbnail (not full-bleed) */
+#bp-new-img { width: 120px !important; height: 120px !important; object-fit: cover !important; border-radius: 14px !important; margin: 0 auto 8px !important; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+#bp-new-img.hidden { display: none !important; }
+.bp-img { width: 64px !important; height: 64px !important; min-width: 64px !important; object-fit: cover !important; border-radius: 12px !important; display: flex !important; align-items: center; justify-content: center; font-size: 26px; background: var(--cream2); flex-shrink: 0; }
+/* real product-card layout: square image beside the text */
+.beauty-products-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.beauty-product-card { display: flex; gap: 12px; align-items: flex-start; background: var(--white, #fff); border-radius: 14px; padding: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.beauty-product-card .bp-body { flex: 1; min-width: 0; }
 
 /* ── 19. CONVERSATIONS CARD SEPARATION & GIRLISH CHAT UI ─────── */
 .conversations-list {

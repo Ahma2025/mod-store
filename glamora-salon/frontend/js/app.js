@@ -1892,6 +1892,28 @@ function _clearConvUnread(userId) {
   }
 }
 
+// Update a conversation's "last message" preview INSTANTLY (on send or receive) so the
+// list never shows a stale old message: updates the rendered list + the cached conversations.
+function _bumpConversation(otherId, lastMessage, lastTime) {
+  lastTime = lastTime || new Date().toISOString();
+  // 1) live preview text in any rendered list (customer or stylist)
+  document.querySelectorAll(`.conv-item[data-conv-id="${otherId}"] .conv-last`).forEach(el => { el.textContent = lastMessage || ''; });
+  // 2) persist in the cached conversations and move it to the top
+  try {
+    const convos = _pageCacheGet('convos');
+    if (Array.isArray(convos)) {
+      const i = convos.findIndex(c => String(c.other_id) === String(otherId));
+      if (i >= 0) {
+        convos[i].last_message = lastMessage;
+        convos[i].last_time = lastTime;
+        convos.unshift(convos.splice(i, 1)[0]);   // newest conversation first
+        _pageCacheSet('convos', convos);
+        if (document.getElementById('conversations-list')) _renderConversations(convos);
+      }
+    }
+  } catch (e) {}
+}
+
 function buildMsgHtml(msg) {
   const isMe = msg.sender_id === currentUser?.id;
   const type = msg.msg_type || 'text';
@@ -1957,6 +1979,7 @@ function sendChatMessage() {
   input.focus();
   const fakeMsg = { content, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'text' };
   appendChatMessage(fakeMsg, true);
+  _bumpConversation(currentChatUserId, content);   // update the list preview instantly
 
   if (socket?.connected) {
     socket.emit('send_message', { receiver_id: currentChatUserId, content });
@@ -1976,6 +1999,7 @@ async function sendChatImage() {
     // Show the image instantly from a local preview; upload happens in the background.
     const localUrl = URL.createObjectURL(file);
     const el = appendChatMessage({ media_url: localUrl, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'image', content: '' }, true);
+    _bumpConversation(currentChatUserId, '📷 صورة');
     try {
       const res = await Api.messages.uploadChatFile(file);
       if (res.url) {
@@ -2050,6 +2074,7 @@ async function stopVoiceRecord() {
     // Show the voice note instantly from the local recording; upload in the background.
     const localUrl = URL.createObjectURL(blob);
     const el = appendChatMessage({ media_url: localUrl, sender_id: currentUser?.id, created_at: new Date().toISOString(), msg_type: 'voice', content: '' }, true);
+    _bumpConversation(currentChatUserId, '🎤 رسالة صوتية');
     try {
       const file = new File([blob], 'voice.webm', { type: 'audio/webm' });
       const res = await Api.messages.uploadChatFile(file);
@@ -3118,7 +3143,28 @@ async function loadRecommendations() {
 }
 
 // ===== INIT =====
+// Keep the layout glued to the visible area when the on-screen keyboard opens. iOS does NOT
+// resize the webview for the keyboard, so it scrolls the page up and the chat header slides
+// off-screen. visualViewport reports the area above the keyboard — shrink #app to it so the
+// header stays put and the input bar sits right above the keyboard (Instagram-style).
+function initKeyboardViewportFix() {
+  const vv = window.visualViewport;
+  const app = document.getElementById('app');
+  if (!vv || !app) return;
+  let raf = null;
+  const apply = () => {
+    raf = null;
+    app.style.height = Math.round(vv.height) + 'px';
+    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+  };
+  const onChange = () => { if (!raf) raf = requestAnimationFrame(apply); };
+  vv.addEventListener('resize', onChange);
+  vv.addEventListener('scroll', onChange);
+  apply();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  initKeyboardViewportFix();
   // Show the HTML splash FIRST, then hide the native splash only after it has actually painted.
   // This removes the empty purple gap between the native splash and the app's own splash
   // (native splash stays put because launchAutoHide is false).

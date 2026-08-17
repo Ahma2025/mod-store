@@ -237,6 +237,11 @@ function initSocket() {
 
     const isMyMsg = msg.sender_id === currentUser?.id;
     if (isMyMsg) return;
+    // update the conversation-list preview to this incoming message instantly
+    if (typeof _bumpConversation === 'function') {
+      const preview = msg.content || (msg.msg_type === 'voice' ? '🎤 رسالة صوتية' : msg.msg_type === 'image' ? '📷 صورة' : '');
+      _bumpConversation(msg.sender_id, preview, msg.created_at);
+    }
     const chatActive = document.getElementById('screen-chat-conv')?.classList.contains('active');
     if (chatActive) {
       appendChatMessage(msg, false);

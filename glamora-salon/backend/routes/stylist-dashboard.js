@@ -286,15 +286,24 @@ router.get('/bookings', authenticate, async (req, res) => {
       bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id) && b.status === 'pending');
     } else if (filter === 'confirmed') {
       bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id) && b.status === 'confirmed');
+    } else if (filter === 'today') {
+      // all of today's appointments (Palestine time), pending + confirmed, any who booked for today
+      const todayP = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id) && b.booking_date === todayP && b.status !== 'cancelled' && b.status !== 'rejected');
     } else {
       bookings = await DB.bookings.find(b => salonStylistIds.includes(b.stylist_id));
     }
 
-    bookings.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      return new Date(b.booking_date + 'T' + b.booking_time) - new Date(a.booking_date + 'T' + a.booking_time);
-    });
+    if (filter === 'today') {
+      // earliest → latest by time
+      bookings.sort((a, b) => (a.booking_time || '').localeCompare(b.booking_time || ''));
+    } else {
+      bookings.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (b.status === 'pending' && a.status !== 'pending') return 1;
+        return new Date(b.booking_date + 'T' + b.booking_time) - new Date(a.booking_date + 'T' + a.booking_time);
+      });
+    }
 
     // ✅ SECURITY: client_phone and client_email are private — only expose to the assigned stylist or salon owner
     const currentStylist = await DB.stylists.findOne(st => st.user_id === req.user.id);
