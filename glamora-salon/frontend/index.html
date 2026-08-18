@@ -488,14 +488,6 @@
       <div id="salon-info-content" class="salon-info"></div>
     </div>
     <div style="height:90px"></div>
-    <!-- floating cart bar -->
-    <div id="cart-bar" class="cart-bar" onclick="openCheckout()">
-      <div class="cart-bar-left">
-        <div class="cart-bar-count" id="cart-bar-count">0</div>
-        <div class="cart-bar-total">السلة<small id="cart-bar-sub">0 ₪</small></div>
-      </div>
-      <button class="cart-bar-go" onclick="event.stopPropagation();openCheckout()">إتمام الطلب ←</button>
-    </div>
   </div>
 
   <!-- ======= BOOKING WIZARD ======= -->
@@ -1319,6 +1311,15 @@
         <button class="btn-secondary" style="flex:1" onclick="document.getElementById('modal-inventory').classList.add('hidden')">إلغاء</button>
       </div>
     </div>
+  </div>
+
+  <!-- floating cart bar (top-level: must NOT sit inside a transformed .screen) -->
+  <div id="cart-bar" class="cart-bar" onclick="openCheckout()">
+    <div class="cart-bar-left">
+      <div class="cart-bar-count" id="cart-bar-count">0</div>
+      <div class="cart-bar-total">السلة<small id="cart-bar-sub">0 ₪</small></div>
+    </div>
+    <button class="cart-bar-go" onclick="event.stopPropagation();openCheckout()">إتمام الطلب ←</button>
   </div>
 
   <!-- ======= PRODUCT DETAIL SHEET ======= -->

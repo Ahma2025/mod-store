@@ -2144,7 +2144,7 @@ textarea.bp-input {
 .shop-section { margin-top: 8px; }
 .shop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .shop-head h3 { font-size: 18px; font-weight: 800; color: var(--dark2); display: flex; align-items: center; gap: 7px; }
-.shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 100px; }
 .shop-card { background: var(--white); border-radius: 18px; overflow: hidden; box-shadow: 0 3px 14px rgba(140,50,70,0.10); display: flex; flex-direction: column; position: relative; }
 .shop-card.sold-out { opacity: 0.72; }
 .shop-card-imgwrap { position: relative; width: 100%; aspect-ratio: 1/1; background: var(--cream2); }

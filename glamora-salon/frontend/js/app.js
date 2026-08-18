@@ -18,6 +18,10 @@ function showScreen(id) {
   const flexScreens = ['login', 'register'];
   target.style.display = flexScreens.includes(id) ? 'flex' : 'block';
 
+  // the floating cart bar belongs to the salon page only
+  if (id === 'salon') { if (typeof renderCartBar === 'function') renderCartBar(); }
+  else document.getElementById('cart-bar')?.classList.remove('show');
+
   // rAF ensures display:block is painted before the class (and transition) fires
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -48,6 +52,8 @@ function goBack() {
   if (!target) { showScreen('main'); return; }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   requestAnimationFrame(() => target.classList.add('active'));
+  if (prev === 'salon') { if (typeof renderCartBar === 'function') renderCartBar(); }
+  else document.getElementById('cart-bar')?.classList.remove('show');
 }
 
 function switchTab(name, btn) {
@@ -2806,7 +2812,8 @@ async function restockProduct(id, current) {
 // ===== Delivery prices (per region) =====
 async function loadDeliveryPrices() {
   try {
-    const salon = await Api.stylistDash.mySalon();
+    const resp = await Api.stylistDash.mySalon();
+    const salon = resp && resp.salon ? resp.salon : resp;
     if (!salon || !salon.id) return;
     window._mySalonId = salon.id;
     let prices = {};
@@ -2819,7 +2826,7 @@ async function loadDeliveryPrices() {
 }
 
 async function saveDeliveryPrices() {
-  const salonId = window._mySalonId;
+  const salonId = window._mySalonId || (typeof stSalonData !== 'undefined' && stSalonData && stSalonData.id);
   if (!salonId) { showToast('⚠️ لم يتم العثور على صالونك'); return; }
   const btn = document.getElementById('dp-save-btn');
   btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
