@@ -268,29 +268,50 @@ router.post('/chat', authenticate, async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
     if (res.flushHeaders) res.flushHeaders();
 
-    const stream = client.messages.stream({
-      model: 'claude-opus-5',
-      max_tokens: 2000,
-      output_config: { effort: 'low' },
-      system,
-      messages: anthMessages,
-    });
-
+    // The API can return a transient "overloaded_error". Retry with a small backoff,
+    // falling back to a lighter model, but only while we haven't streamed anything yet.
+    const MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-sonnet-5'];
     let buf = '';       // full text so far
     let sent = 0;       // chars already written to client
-    stream.on('text', (delta) => {
-      buf += delta;
-      // never emit the [[PRODUCTS ...]] marker: hold back from '[[' onward,
-      // otherwise flush everything except the last char (a '[' may split across deltas)
-      const mIdx = buf.indexOf('[[');
-      const flushEnd = mIdx >= 0 ? mIdx : Math.max(sent, buf.length - 1);
-      if (flushEnd > sent) {
-        res.write(buf.slice(sent, flushEnd));
-        sent = flushEnd;
-      }
-    });
+    let started = false;
+    let lastErr = null;
 
-    await stream.finalMessage();
+    for (let attempt = 0; attempt < MODELS.length; attempt++) {
+      try {
+        const params = { model: MODELS[attempt], max_tokens: 2000, system, messages: anthMessages };
+        if (MODELS[attempt].startsWith('claude-opus')) params.output_config = { effort: 'low' };
+        const stream = client.messages.stream(params);
+        stream.on('text', (delta) => {
+          if (!started) { started = true; if (res.flushHeaders) res.flushHeaders(); }
+          buf += delta;
+          // never emit the [[PRODUCTS ...]] marker: hold back from '[[' onward,
+          // otherwise flush everything except the last char (a '[' may split across deltas)
+          const mIdx = buf.indexOf('[[');
+          const flushEnd = mIdx >= 0 ? mIdx : Math.max(sent, buf.length - 1);
+          if (flushEnd > sent) { res.write(buf.slice(sent, flushEnd)); sent = flushEnd; }
+        });
+        await stream.finalMessage();
+        lastErr = null;
+        break; // success
+      } catch (e) {
+        lastErr = e;
+        // if we already emitted text we can't safely restart — stop here
+        if (started || sent > 0 || buf.length > 0) break;
+        const msg = (e && e.message) || '';
+        const retriable = e.status === 429 || e.status === 529 || /overload|rate|timeout|econnreset|503|502/i.test(msg);
+        if (attempt < MODELS.length - 1 && retriable) { await new Promise(r => setTimeout(r, 500 * (attempt + 1))); continue; }
+        break;
+      }
+    }
+
+    // Never produced anything → stream a friendly, in-bubble message instead of failing hard.
+    if (lastErr && sent === 0 && buf.length === 0) {
+      console.error('beauty chat overloaded after retries:', lastErr.message);
+      if (res.flushHeaders) res.flushHeaders();
+      res.write('🌷 عذراً حبيبتي، أنا مشغولة شوي هلأ. بعتيلي رسالتك مرة ثانية بعد لحظات وبكون جاهزة إلك 💕');
+      res.write('\x1e' + JSON.stringify({ products: [] }));
+      return res.end();
+    }
 
     // strip the marker, resolve products, flush any remaining visible text
     let full = buf;
@@ -486,17 +507,33 @@ router.post('/stylist-assistant', authenticate, async (req, res) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('X-Accel-Buffering', 'no');
-    if (res.flushHeaders) res.flushHeaders();
 
-    const stream = client.messages.stream({
-      model: 'claude-opus-5',
-      max_tokens: 2000,
-      output_config: { effort: 'low' },
-      system,
-      messages: trimmed,
-    });
-    stream.on('text', (delta) => { res.write(delta); });
-    await stream.finalMessage();
+    // retry transient overloads with a lighter fallback model, only while nothing streamed yet
+    const MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-sonnet-5'];
+    let started = false, lastErr = null;
+    for (let attempt = 0; attempt < MODELS.length; attempt++) {
+      try {
+        const params = { model: MODELS[attempt], max_tokens: 2000, system, messages: trimmed };
+        if (MODELS[attempt].startsWith('claude-opus')) params.output_config = { effort: 'low' };
+        const stream = client.messages.stream(params);
+        stream.on('text', (delta) => { if (!started) { started = true; if (res.flushHeaders) res.flushHeaders(); } res.write(delta); });
+        await stream.finalMessage();
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (started) break;
+        const msg = (e && e.message) || '';
+        const retriable = e.status === 429 || e.status === 529 || /overload|rate|timeout|econnreset|503|502/i.test(msg);
+        if (attempt < MODELS.length - 1 && retriable) { await new Promise(r => setTimeout(r, 500 * (attempt + 1))); continue; }
+        break;
+      }
+    }
+    if (lastErr && !started) {
+      console.error('stylist assistant overloaded after retries:', lastErr.message);
+      if (res.flushHeaders) res.flushHeaders();
+      res.write('🌷 عذراً، أنا مشغولة شوي هلأ — جرّبي تبعتي رسالتك مرة ثانية بعد لحظات.');
+    }
     res.end();
   } catch (e) {
     console.error('stylist assistant error:', e.message);
