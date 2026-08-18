@@ -405,6 +405,7 @@
     <div id="salon-video-section" class="salon-video-section hidden"></div>
     <div class="salon-tabs">
       <button class="stab active" onclick="switchSalonTab('services', this)">الخدمات</button>
+      <button class="stab" id="stab-shop" onclick="switchSalonTab('shop', this)">🛍️ المتجر</button>
       <button class="stab" onclick="switchSalonTab('stylists', this)">الكوفيرات</button>
       <button class="stab" onclick="switchSalonTab('reviews', this)">التقييمات</button>
       <button class="stab" onclick="switchSalonTab('info', this)">المعلومات</button>
@@ -412,6 +413,14 @@
     <div id="salon-tab-services" class="salon-tab-content active">
       <div class="services-filter" id="services-filter"></div>
       <div id="salon-services-list" class="services-list"></div>
+    </div>
+    <div id="salon-tab-shop" class="salon-tab-content">
+      <div style="padding:16px">
+        <div class="shop-head">
+          <h3>🛍️ متجر الصالون</h3>
+        </div>
+        <div id="salon-shop-list" class="shop-grid"></div>
+      </div>
     </div>
     <div id="salon-tab-stylists" class="salon-tab-content">
       <div id="salon-stylists-list" class="salon-stylists"></div>
@@ -479,6 +488,14 @@
       <div id="salon-info-content" class="salon-info"></div>
     </div>
     <div style="height:90px"></div>
+    <!-- floating cart bar -->
+    <div id="cart-bar" class="cart-bar" onclick="openCheckout()">
+      <div class="cart-bar-left">
+        <div class="cart-bar-count" id="cart-bar-count">0</div>
+        <div class="cart-bar-total">السلة<small id="cart-bar-sub">0 ₪</small></div>
+      </div>
+      <button class="cart-bar-go" onclick="event.stopPropagation();openCheckout()">إتمام الطلب ←</button>
+    </div>
   </div>
 
   <!-- ======= BOOKING WIZARD ======= -->
@@ -735,12 +752,12 @@
   <div id="screen-beauty-products" class="screen slide-up">
     <div class="page-header">
       <button class="back-btn" onclick="goBack()" aria-label="رجوع"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-      <h2>🧴 منتجات المستشار AI</h2>
+      <h2>🛍️ منتجاتي</h2>
     </div>
     <div class="home-content" style="padding:16px">
       <div class="beauty-card">
         <h4 class="beauty-section-title">➕ إضافة منتج</h4>
-        <p style="font-size:12.5px;color:#a08a94;margin-bottom:10px">المنتجات الي تضيفيها هون بيقترحها الذكاء الاصطناعي على الزبونات حسب حالتهن، بصورها وشرحها.</p>
+        <p style="font-size:12.5px;color:#a08a94;margin-bottom:10px">المنتج بيظهر بمكانين: يقترحه الذكاء الاصطناعي على الزبونات حسب حالتهن، وبيتعرض بمتجر صالونك للبيع مباشرة 🛒</p>
         <label class="bp-upload" id="bp-upload-label">
           <img id="bp-new-img" class="hidden">
           <span id="bp-upload-text">📷 اضغطي لإضافة صورة المنتج</span>
@@ -757,13 +774,90 @@
         <input id="bp-new-tags" class="bp-input" placeholder="مناسب لـ (افصلي بفاصلة): بشرة دهنية، تفتيح...">
         <textarea id="bp-new-desc" class="bp-input" rows="2" placeholder="وصف قصير للمنتج"></textarea>
         <textarea id="bp-new-how" class="bp-input" rows="2" placeholder="طريقة الاستخدام"></textarea>
-        <input id="bp-new-price" class="bp-input" type="number" inputmode="decimal" placeholder="السعر (₪) — اختياري">
+        <div style="display:flex;gap:8px">
+          <input id="bp-new-price" class="bp-input" type="number" inputmode="decimal" placeholder="السعر (₪) *" style="flex:1">
+          <input id="bp-new-stock" class="bp-input" type="number" inputmode="numeric" placeholder="الكمية بالمخزون *" style="flex:1">
+        </div>
         <button class="btn-primary full" id="bp-add-btn" onclick="addBeautyProduct()">➕ إضافة المنتج</button>
+      </div>
+
+      <!-- Delivery prices per region -->
+      <div class="beauty-card" style="margin-top:12px">
+        <h4 class="beauty-section-title">🚚 أسعار التوصيل</h4>
+        <p style="font-size:12.5px;color:#a08a94;margin-bottom:10px">حددي سعر التوصيل لكل منطقة. الزبونة بتختار الاستلام من الصالون (مجاناً) أو التوصيل.</p>
+        <div class="dp-row"><span class="dp-label">🏙️ الضفة الغربية</span><input id="dp-west_bank" class="bp-input dp-input" type="number" inputmode="decimal" placeholder="₪"></div>
+        <div class="dp-row"><span class="dp-label">🕌 القدس</span><input id="dp-jerusalem" class="bp-input dp-input" type="number" inputmode="decimal" placeholder="₪"></div>
+        <div class="dp-row"><span class="dp-label">🌊 الداخل</span><input id="dp-inside" class="bp-input dp-input" type="number" inputmode="decimal" placeholder="₪"></div>
+        <button class="btn-primary full" id="dp-save-btn" onclick="saveDeliveryPrices()" style="margin-top:6px">💾 حفظ أسعار التوصيل</button>
       </div>
       <div class="beauty-card" style="margin-top:12px">
         <h4 class="beauty-section-title">📦 المنتجات الحالية</h4>
         <div id="bp-admin-list"></div>
       </div>
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
+  <!-- ======= STYLIST ORDERS (الطلبات) ======= -->
+  <div id="screen-stylist-orders" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()" aria-label="رجوع"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <h2>🧾 طلبات المتجر</h2>
+    </div>
+    <div class="home-content" style="padding:16px">
+      <div id="st-orders-list"><p style="text-align:center;color:#a08a94;padding:20px">⏳ جاري التحميل...</p></div>
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
+  <!-- ======= CUSTOMER CHECKOUT (إتمام الطلب) ======= -->
+  <div id="screen-checkout" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()" aria-label="رجوع"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <h2>🛒 إتمام الطلب</h2>
+    </div>
+    <div class="home-content co-wrap">
+      <!-- items -->
+      <div class="co-card">
+        <h4>🧴 منتجاتك</h4>
+        <div id="co-items"></div>
+      </div>
+      <!-- method -->
+      <div class="co-card">
+        <h4>📦 طريقة الاستلام</h4>
+        <div class="co-methods">
+          <div class="co-method active" id="co-m-pickup" onclick="setCheckoutMethod('pickup')">
+            <div class="ico">🏬</div><div class="lbl">استلام من الصالون</div><div class="sub">مجاناً</div>
+          </div>
+          <div class="co-method" id="co-m-delivery" onclick="setCheckoutMethod('delivery')">
+            <div class="ico">🚚</div><div class="lbl">توصيل</div><div class="sub">حسب المنطقة</div>
+          </div>
+        </div>
+        <!-- delivery details -->
+        <div id="co-delivery-box" style="display:none;margin-top:14px">
+          <div style="font-size:13px;font-weight:700;color:var(--dark2);margin-bottom:8px">اختاري منطقة التوصيل</div>
+          <div class="co-regions" id="co-regions"></div>
+          <div style="height:12px"></div>
+          <input id="co-city" class="co-input" placeholder="المدينة *">
+          <textarea id="co-address" class="co-input" rows="2" placeholder="العنوان التفصيلي (الحي، الشارع، أقرب معلم) *"></textarea>
+        </div>
+      </div>
+      <!-- contact -->
+      <div class="co-card">
+        <h4>📱 بيانات التواصل</h4>
+        <input id="co-name" class="co-input" placeholder="الاسم *">
+        <input id="co-phone" class="co-input" type="tel" inputmode="tel" placeholder="رقم الجوال *">
+        <textarea id="co-notes" class="co-input" rows="2" placeholder="ملاحظات للطلب (اختياري)"></textarea>
+      </div>
+      <!-- summary -->
+      <div class="co-card">
+        <h4>🧮 الملخص</h4>
+        <div class="co-summary-row"><span>المجموع الفرعي</span><span id="co-subtotal">0 ₪</span></div>
+        <div class="co-summary-row" id="co-fee-row"><span>رسوم التوصيل</span><span id="co-fee">0 ₪</span></div>
+        <div class="co-summary-row total"><span>الإجمالي</span><span id="co-total">0 ₪</span></div>
+        <p style="font-size:12px;color:#a08a94;margin-top:10px;text-align:center">💵 الدفع عند الاستلام</p>
+      </div>
+      <button class="co-place-btn" id="co-place-btn" onclick="placeOrder()">تأكيد الطلب 🌹</button>
       <div style="height:40px"></div>
     </div>
   </div>
@@ -991,15 +1085,6 @@
             <div id="st-blocked-list"></div>
           </div>
 
-          <!-- Inventory -->
-          <div class="mgmt-section">
-            <div class="mgmt-section-header">
-              <h4>📦 المخزون</h4>
-              <button class="btn-sm btn-sm-primary" onclick="showAddInventory()">+ إضافة</button>
-            </div>
-            <div id="st-inventory-list"><div class="media-hint">لا يوجد منتجات مضافة بعد</div></div>
-          </div>
-
           <!-- Quick Links -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
             <button class="analytics-quick-btn" onclick="showAnalytics()">
@@ -1008,10 +1093,14 @@
             <button class="analytics-quick-btn" onclick="showClients()">
               <span>👥</span><span>الزبونات</span>
             </button>
-            <button class="analytics-quick-btn" onclick="showScreen('beauty-products'); loadBeautyProductsAdmin()">
-              <span>🧴</span><span>منتجات المستشار AI</span>
+            <button class="analytics-quick-btn" onclick="showScreen('beauty-products'); loadBeautyProductsAdmin(); loadDeliveryPrices()">
+              <span>🛍️</span><span>منتجاتي</span>
             </button>
-            <button class="analytics-quick-btn" onclick="showScreen('stylist-assistant'); loadStylistAssistant()">
+            <button class="analytics-quick-btn" style="position:relative" onclick="showScreen('stylist-orders'); loadStylistOrders()">
+              <span>🧾</span><span>الطلبات</span>
+              <span id="st-orders-badge" class="qbtn-badge hidden">0</span>
+            </button>
+            <button class="analytics-quick-btn" onclick="showScreen('stylist-assistant'); loadStylistAssistant()" style="grid-column:1/-1">
               <span>🤝</span><span>جوري 🌹 مساعِدتك</span>
             </button>
           </div>
@@ -1228,6 +1317,25 @@
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-primary" style="flex:1" onclick="saveInventoryItem()">حفظ</button>
         <button class="btn-secondary" style="flex:1" onclick="document.getElementById('modal-inventory').classList.add('hidden')">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= PRODUCT DETAIL SHEET ======= -->
+  <div id="modal-product" class="modal-overlay hidden" onclick="if(event.target===this)closeModalById('modal-product')">
+    <div class="modal-box" style="max-width:440px;padding:0;overflow:hidden">
+      <div id="pd-img" style="width:100%;aspect-ratio:1/1;background:var(--cream2);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:56px"></div>
+      <div style="padding:18px">
+        <div id="pd-name" style="font-size:19px;font-weight:800;color:var(--dark2)"></div>
+        <div id="pd-brand" style="font-size:13px;color:var(--gray);margin-top:2px"></div>
+        <div id="pd-price" style="font-size:22px;font-weight:800;color:var(--rose);margin:8px 0"></div>
+        <div id="pd-desc" style="font-size:14px;color:var(--dark2);line-height:1.7"></div>
+        <div id="pd-how-wrap" style="margin-top:12px;display:none">
+          <div style="font-size:13px;font-weight:800;color:var(--rose);margin-bottom:4px">💡 طريقة الاستخدام</div>
+          <div id="pd-how" style="font-size:13.5px;color:var(--dark2);line-height:1.7;background:var(--cream2);border-radius:12px;padding:10px 12px"></div>
+        </div>
+        <div id="pd-action" style="margin-top:16px"></div>
+        <button class="btn-secondary full" style="margin-top:10px" onclick="closeModalById('modal-product')">إغلاق</button>
       </div>
     </div>
   </div>

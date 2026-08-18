@@ -69,7 +69,7 @@ async function loadStylistDashboard() {
       loadBlockedSlots();
       loadStReviews();
       loadOffers(stSalonData.id);
-      loadInventory();
+      if (typeof refreshOrdersBadge === 'function') refreshOrdersBadge();
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -1178,6 +1178,7 @@ async function showClients() {
 async function loadInventory() {
   if (!stSalonData?.id) return;
   const el = document.getElementById('st-inventory-list');
+  if (!el) return;
   try {
     const _invEN = window.VELOUR_LANG === 'en';
     const { items } = await Api.stylistDash.getInventory(stSalonData.id);

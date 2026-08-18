@@ -481,6 +481,19 @@ router.post('/salon/:id/revenue-reset', authenticate, async (req, res) => {
   } catch (e) { console.error('revenue-reset error:', e); res.status(500).json({ error: 'خطأ' }); }
 });
 
+// Set per-region delivery prices for the shop (owner only)
+router.put('/salon/:id/delivery-prices', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id, 10);
+    const ownerStylist = await DB.stylists.findOne(s => s.salon_id === salonId && s.user_id === req.user.id);
+    if (!ownerStylist && req.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
+    const { west_bank = 0, jerusalem = 0, inside = 0 } = req.body;
+    const prices = { west_bank: parseFloat(west_bank) || 0, jerusalem: parseFloat(jerusalem) || 0, inside: parseFloat(inside) || 0 };
+    await DB.salons.update(s => s.id === salonId, { delivery_prices: JSON.stringify(prices) });
+    res.json({ ok: true, delivery_prices: prices });
+  } catch (e) { console.error('delivery-prices error:', e.message); res.status(500).json({ error: 'خطأ' }); }
+});
+
 // ===== 64: CLIENT LIST =====
 router.get('/salon/:id/clients', authenticate, async (req, res) => {
   try {

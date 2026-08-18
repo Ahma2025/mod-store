@@ -259,6 +259,27 @@ async function initDatabase() {
       price NUMERIC(10,2),
       is_active INTEGER DEFAULT 1
     )`,
+    // ===== product shop =====
+    `ALTER TABLE beauty_products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`,
+    `ALTER TABLE salons ADD COLUMN IF NOT EXISTS delivery_prices TEXT`,   // JSON {west_bank,jerusalem,inside}
+    `CREATE TABLE IF NOT EXISTS product_orders (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      salon_id INTEGER REFERENCES salons(id) ON DELETE CASCADE,
+      client_id INTEGER REFERENCES users(id),
+      status TEXT DEFAULT 'pending',
+      items TEXT DEFAULT '[]',
+      subtotal NUMERIC(10,2) DEFAULT 0,
+      delivery_method TEXT DEFAULT 'pickup',
+      delivery_region TEXT,
+      delivery_fee NUMERIC(10,2) DEFAULT 0,
+      total NUMERIC(10,2) DEFAULT 0,
+      customer_name TEXT,
+      customer_phone TEXT,
+      city TEXT,
+      address TEXT,
+      notes TEXT DEFAULT ''
+    )`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (e) { /* column may already exist */ }
@@ -652,10 +673,10 @@ const DB = {
 
   beauty_products: {
     insert: async (data) => {
-      const { salon_id = null, category, name, brand = '', image_url = null, tags = '[]', description = '', how_to_use = '', price = null, is_active = 1 } = data;
+      const { salon_id = null, category, name, brand = '', image_url = null, tags = '[]', description = '', how_to_use = '', price = null, is_active = 1, stock = 0 } = data;
       const r = await query(
-        `INSERT INTO beauty_products (salon_id,category,name,brand,image_url,tags,description,how_to_use,price,is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [salon_id, category, name, brand, image_url, tags, description, how_to_use, price, is_active]
+        `INSERT INTO beauty_products (salon_id,category,name,brand,image_url,tags,description,how_to_use,price,is_active,stock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [salon_id, category, name, brand, image_url, tags, description, how_to_use, price, is_active, stock]
       );
       return row(r.rows[0]);
     },
@@ -678,6 +699,27 @@ const DB = {
       for (const p of matched) {
         const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
         await query(`UPDATE beauty_products SET ${fields} WHERE id=$1`, [p.id, ...Object.values(data)]);
+      }
+    },
+  },
+
+  product_orders: {
+    insert: async (data) => {
+      const { salon_id, client_id, status = 'pending', items = '[]', subtotal = 0, delivery_method = 'pickup', delivery_region = null, delivery_fee = 0, total = 0, customer_name = '', customer_phone = '', city = null, address = null, notes = '' } = data;
+      const r = await query(
+        `INSERT INTO product_orders (salon_id,client_id,status,items,subtotal,delivery_method,delivery_region,delivery_fee,total,customer_name,customer_phone,city,address,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+        [salon_id, client_id, status, items, subtotal, delivery_method, delivery_region, delivery_fee, total, customer_name, customer_phone, city, address, notes]
+      );
+      return row(r.rows[0]);
+    },
+    find: async (filter) => { const r = await query('SELECT * FROM product_orders'); return rows(r.rows).filter(filter); },
+    findOne: async (filter) => { const r = await query('SELECT * FROM product_orders'); return rows(r.rows).find(filter) || null; },
+    update: async (filter, data) => {
+      const r = await query('SELECT * FROM product_orders');
+      const matched = rows(r.rows).filter(filter);
+      for (const o of matched) {
+        const fields = Object.keys(data).map((k, i) => `${k}=$${i + 2}`).join(',');
+        await query(`UPDATE product_orders SET ${fields} WHERE id=$1`, [o.id, ...Object.values(data)]);
       }
     },
   },

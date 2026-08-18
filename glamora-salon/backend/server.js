@@ -86,6 +86,7 @@ app.use('/api/media', require('./routes/media'));
 app.use('/api/blocked-slots', require('./routes/blocked-slots'));
 
 app.use('/api/bookings', (req, res, next) => { req.io = io; next(); }, require('./routes/bookings'));
+app.use('/api/orders', (req, res, next) => { req.io = io; next(); }, require('./routes/orders'));
 app.use('/api/messages', (req, res, next) => { req.io = io; next(); }, require('./routes/messages'));
 app.use('/api/beauty', require('./routes/beauty'));
 

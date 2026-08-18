@@ -141,7 +141,9 @@ const Api = {
     chat: (messages, image_base64, onText) => streamPost('/beauty/chat', { messages, image_base64 }, onText),
     stylistAssistant: (messages, onText) => streamPost('/beauty/stylist-assistant', { messages }, onText),
     listProducts: () => apiCall('GET', '/beauty/products'),
+    salonProducts: (salonId) => apiCall('GET', `/beauty/salon/${salonId}/products`),
     addProduct: (data) => apiCall('POST', '/beauty/products', data),
+    updateProduct: (id, data) => apiCall('PUT', '/beauty/products/' + id, data),
     deleteProduct: (id) => apiCall('DELETE', '/beauty/products/' + id),
     uploadProductImage: async (file) => {
       const fd = new FormData();
@@ -199,11 +201,18 @@ const Api = {
     updateBooking: (id, status) => apiCall('PUT', `/bookings/${id}/status`, { status }),
     analytics: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/analytics`),
     resetRevenue: (salonId) => apiCall('POST', `/stylist/salon/${salonId}/revenue-reset`),
+    setDeliveryPrices: (salonId, prices) => apiCall('PUT', `/stylist/salon/${salonId}/delivery-prices`, prices),
     clients: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/clients`),
     getInventory: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/inventory`),
     addInventory: (salonId, data) => apiCall('POST', `/stylist/salon/${salonId}/inventory`, data),
     updateInventory: (id, data) => apiCall('PUT', `/stylist/inventory/${id}`, data),
     deleteInventory: (id) => apiCall('DELETE', `/stylist/inventory/${id}`),
+  },
+  orders: {
+    create: (data) => apiCall('POST', '/orders', data),
+    salonOrders: () => apiCall('GET', '/orders/salon'),
+    myOrders: () => apiCall('GET', '/orders/my'),
+    setStatus: (id, status) => apiCall('PUT', `/orders/${id}/status`, { status }),
   },
 };
 
@@ -256,6 +265,12 @@ function initSocket() {
     incrementNotifBadge();
     if (data.type === 'message') {
       // also handled by new_message event
+    }
+    if (data.type === 'order') {
+      if (typeof refreshOrdersBadge === 'function') refreshOrdersBadge();
+      // if the stylist is viewing the orders screen, refresh it live
+      const os = document.getElementById('screen-stylist-orders');
+      if (os && os.classList.contains('active') && typeof loadStylistOrders === 'function') loadStylistOrders();
     }
   });
 

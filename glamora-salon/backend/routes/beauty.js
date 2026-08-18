@@ -316,10 +316,14 @@ router.post('/chat', authenticate, async (req, res) => {
 
 // ===== Beauty product catalog (managed by stylists, recommended by the AI) =====
 
-// GET /api/beauty/products — list active products (any authenticated user)
+// GET /api/beauty/products — the caller's product list. Stylists see only their own salon's.
 router.get('/products', authenticate, async (req, res) => {
   try {
-    const all = (await DB.beauty_products.find(p => p.is_active !== 0)) || [];
+    let all = (await DB.beauty_products.find(p => p.is_active !== 0)) || [];
+    if (req.user.role === 'stylist') {
+      const stylist = await DB.stylists.findOne(s => s.user_id === req.user.id);
+      all = stylist ? all.filter(p => p.salon_id === stylist.salon_id) : [];
+    }
     all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json(all);
   } catch (e) {
@@ -327,20 +331,66 @@ router.get('/products', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/beauty/products — add a product (stylists only)
+// GET /api/beauty/salon/:salonId/products — a salon's shop (active products, for customers)
+router.get('/salon/:salonId/products', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.salonId, 10);
+    const all = (await DB.beauty_products.find(p => p.is_active !== 0 && p.salon_id === salonId)) || [];
+    all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json(all);
+  } catch (e) {
+    res.status(500).json({ error: 'خطأ' });
+  }
+});
+
+// POST /api/beauty/products — add a product (stylists only; auto-linked to their salon)
 router.post('/products', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'stylist' && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'غير مصرح' });
     }
-    const { category, name, brand = '', image_url = null, tags = [], description = '', how_to_use = '', price = null, salon_id = null } = req.body;
+    const { category, name, brand = '', image_url = null, tags = [], description = '', how_to_use = '', price = null, stock = 0 } = req.body;
     if (!category || !name) return res.status(400).json({ error: 'الفئة والاسم مطلوبان' });
+    const stylist = await DB.stylists.findOne(s => s.user_id === req.user.id);
+    const salon_id = stylist ? stylist.salon_id : null;
     const tagsStr = Array.isArray(tags) ? JSON.stringify(tags) : (typeof tags === 'string' ? tags : '[]');
-    const p = await DB.beauty_products.insert({ salon_id, category, name, brand, image_url, tags: tagsStr, description, how_to_use, price });
+    const p = await DB.beauty_products.insert({ salon_id, category, name, brand, image_url, tags: tagsStr, description, how_to_use, price, stock: parseInt(stock) || 0 });
     res.json(p);
   } catch (e) {
     console.error('add product error:', e.message);
     res.status(500).json({ error: 'خطأ في الإضافة' });
+  }
+});
+
+// PUT /api/beauty/products/:id — update a product (restock/edit; stylists only)
+router.put('/products/:id', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'stylist' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'غير مصرح' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const existing = await DB.beauty_products.findOne(p => p.id === id);
+    if (!existing) return res.status(404).json({ error: 'المنتج غير موجود' });
+    if (req.user.role !== 'admin') {
+      const stylist = await DB.stylists.findOne(s => s.user_id === req.user.id);
+      if (!stylist || existing.salon_id !== stylist.salon_id) return res.status(403).json({ error: 'غير مصرح' });
+    }
+    const patch = {};
+    const b = req.body;
+    if (b.stock !== undefined) patch.stock = Math.max(0, parseInt(b.stock) || 0);
+    if (b.price !== undefined) patch.price = b.price === null || b.price === '' ? null : parseFloat(b.price);
+    if (b.name !== undefined) patch.name = String(b.name).trim();
+    if (b.description !== undefined) patch.description = String(b.description);
+    if (b.how_to_use !== undefined) patch.how_to_use = String(b.how_to_use);
+    if (b.category !== undefined) patch.category = b.category;
+    if (b.brand !== undefined) patch.brand = String(b.brand);
+    if (b.image_url !== undefined) patch.image_url = b.image_url;
+    if (b.tags !== undefined) patch.tags = Array.isArray(b.tags) ? JSON.stringify(b.tags) : (b.tags || '[]');
+    await DB.beauty_products.update(p => p.id === id, patch);
+    res.json({ ok: true, ...patch });
+  } catch (e) {
+    console.error('update product error:', e.message);
+    res.status(500).json({ error: 'خطأ في التعديل' });
   }
 });
 
