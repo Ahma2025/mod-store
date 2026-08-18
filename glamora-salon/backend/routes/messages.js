@@ -158,10 +158,10 @@ router.post('/', authenticate, async (req, res) => {
     // Skip the notification if the recipient is already viewing this exact conversation.
     const viewing = req.io?.activeConv?.get(parseInt(receiver_id)) === req.user.id;
     if (!viewing) {
-      await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message' });
+      await DB.notifications.insert({ user_id: parseInt(receiver_id), title: `رسالة من ${sender?.name || 'مستخدمة'} 💬`, body: notifBody, type: 'message', ref_id: req.user.id });
       req.io?.to(`user_${receiver_id}`).emit('new_notif', { type: 'message', sender_id: req.user.id });
       if (receiver?.fcm_token) {
-        fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة').catch(() => {});
+        fcm.notifyNewMessage(receiver.fcm_token, sender?.name || 'مستخدمة', req.user.id).catch(() => {});
       }
     }
 

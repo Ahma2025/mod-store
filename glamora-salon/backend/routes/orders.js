@@ -55,10 +55,10 @@ router.post('/', authenticate, async (req, res) => {
     const ownerStylist = await DB.stylists.findOne(s => s.salon_id === sid && s.user_id);
     if (ownerStylist) {
       const ownerId = ownerStylist.user_id;
-      await DB.notifications.insert({ user_id: ownerId, title: 'طلب منتجات جديد 🛍️', body: `${order.customer_name} طلبت ${snapshot.length} منتج · ${total} ₪`, type: 'order' });
-      req.io?.to(`user_${ownerId}`).emit('new_notif', { type: 'order' });
+      await DB.notifications.insert({ user_id: ownerId, title: 'طلب منتجات جديد 🛍️', body: `${order.customer_name} طلبت ${snapshot.length} منتج · ${total} ₪`, type: 'order', ref_id: order.id });
+      req.io?.to(`user_${ownerId}`).emit('new_notif', { type: 'order', order_id: order.id });
       const owner = await DB.users.findById(ownerId);
-      if (owner?.fcm_token) fcm.sendPushNotification(owner.fcm_token, 'طلب منتجات جديد 🛍️', `${order.customer_name} · ${total} ₪`, { type: 'order' }).catch(() => {});
+      if (owner?.fcm_token) fcm.sendPushNotification(owner.fcm_token, 'طلب منتجات جديد 🛍️', `${order.customer_name} · ${total} ₪`, { type: 'order', order_id: String(order.id) }).catch(() => {});
     }
 
     res.json({ order });
@@ -114,10 +114,10 @@ router.put('/:id/status', authenticate, async (req, res) => {
 
     const title = status === 'confirmed' ? 'تم تأكيد طلبك ✅' : 'تم رفض طلبك ❌';
     const body = status === 'confirmed' ? 'طلبك جاهز! تواصلي مع الصالون للاستلام/التوصيل 💝' : 'للأسف تعذّر تنفيذ طلبك حالياً';
-    await DB.notifications.insert({ user_id: order.client_id, title, body, type: 'order' });
-    req.io?.to(`user_${order.client_id}`).emit('new_notif', { type: 'order' });
+    await DB.notifications.insert({ user_id: order.client_id, title, body, type: 'order', ref_id: order.id });
+    req.io?.to(`user_${order.client_id}`).emit('new_notif', { type: 'order', order_id: order.id });
     const client = await DB.users.findById(order.client_id);
-    if (client?.fcm_token) fcm.sendPushNotification(client.fcm_token, title, body, { type: 'order' }).catch(() => {});
+    if (client?.fcm_token) fcm.sendPushNotification(client.fcm_token, title, body, { type: 'order', order_id: String(order.id) }).catch(() => {});
 
     res.json({ ok: true });
   } catch (e) { console.error('order status error:', e.message); res.status(500).json({ error: 'خطأ' }); }

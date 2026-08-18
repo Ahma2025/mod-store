@@ -135,30 +135,30 @@ function fcmRequest(payload, accessToken) {
 
 // ===== NOTIFICATION TEMPLATES =====
 
-async function notifyBookingConfirmed(userFcmToken, serviceName, date, time) {
+async function notifyBookingConfirmed(userFcmToken, serviceName, date, time, bookingId) {
   return sendPushNotification(
     userFcmToken,
     'تم تأكيد حجزك ✅',
     `${serviceName} · ${date} · ${time}`,
-    { type: 'booking', action: 'view_booking' }
+    { type: 'booking', action: 'view_booking', booking_id: bookingId != null ? String(bookingId) : '' }
   );
 }
 
-async function notifyBookingCancelled(userFcmToken, serviceName) {
+async function notifyBookingCancelled(userFcmToken, serviceName, bookingId) {
   return sendPushNotification(
     userFcmToken,
     'تم إلغاء الحجز ❌',
     `تم إلغاء حجز ${serviceName}`,
-    { type: 'booking', action: 'view_booking' }
+    { type: 'booking', action: 'view_booking', booking_id: bookingId != null ? String(bookingId) : '' }
   );
 }
 
-async function notifyNewMessage(userFcmToken, senderName) {
+async function notifyNewMessage(userFcmToken, senderName, senderId) {
   return sendPushNotification(
     userFcmToken,
     'رسالة جديدة 💬',
     `${senderName} أرسلت لك رسالة`,
-    { type: 'message', action: 'open_chat' }
+    { type: 'message', action: 'open_chat', sender_id: senderId != null ? String(senderId) : '' }
   );
 }
 
@@ -171,21 +171,21 @@ async function notifyLoyaltyPoints(userFcmToken, points, tierName) {
   );
 }
 
-async function notifyBookingReminder(userFcmToken, serviceName, time) {
+async function notifyBookingReminder(userFcmToken, serviceName, time, bookingId) {
   return sendPushNotification(
     userFcmToken,
     'موعدك اليوم ⏰',
     `${serviceName} الساعة ${time} - لا تنسي!`,
-    { type: 'reminder', action: 'view_booking' }
+    { type: 'reminder', action: 'view_booking', booking_id: bookingId != null ? String(bookingId) : '' }
   );
 }
 
-async function notifyNewBookingToStylist(fcmToken, clientName, serviceName, date, time) {
+async function notifyNewBookingToStylist(fcmToken, clientName, serviceName, date, time, bookingId) {
   return sendPushNotification(
     fcmToken,
     `زبونة جديدة حجزت عندك 🎉`,
     `${clientName} · ${serviceName} · ${date} ${time}`,
-    { type: 'booking', action: 'open_bookings' }
+    { type: 'booking', action: 'open_bookings', booking_id: bookingId != null ? String(bookingId) : '' }
   );
 }
 
@@ -208,12 +208,12 @@ async function notifyFavoriteSalonAvailability(fcmToken, salonName) {
   );
 }
 
-async function notifySpecialOffer(fcmToken, salonName, offerTitle) {
+async function notifySpecialOffer(fcmToken, salonName, offerTitle, salonId) {
   return sendPushNotification(
     fcmToken,
     `عرض خاص من ${salonName} 🎁`,
     offerTitle,
-    { type: 'offer', action: 'open_home' }
+    { type: 'offer', action: 'open_salon', ref_id: salonId != null ? String(salonId) : '' }
   );
 }
 

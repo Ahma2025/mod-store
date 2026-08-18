@@ -192,7 +192,7 @@ router.post('/', authenticate, async (req, res) => {
       await DB.notifications.insert({ user_id: stylist.user_id, title: 'زبونة جديدة حجزت عندك 🎉', body: `${clientName} · ${serviceName} · ${booking_date} ${booking_time}`, type: 'booking', booking_id: booking.id });
       io?.to(`user_${stylist.user_id}`).emit('new_notif', { type: 'booking', booking_id: booking.id });
       if (stylistUser.fcm_token) {
-        fcm.notifyNewBookingToStylist(stylistUser.fcm_token, clientName, serviceName, booking_date, booking_time).catch(() => {});
+        fcm.notifyNewBookingToStylist(stylistUser.fcm_token, clientName, serviceName, booking_date, booking_time, booking.id).catch(() => {});
       }
     }
 
@@ -250,19 +250,19 @@ router.put('/:id/status', authenticate, async (req, res) => {
       await DB.notifications.insert({ user_id: booking.client_id, title: 'تم قبول حجزك ✅', body: `تم تأكيد ${serviceName} · ${booking.booking_date} · ${booking.booking_time}`, type: 'booking', booking_id: booking.id });
       io?.to(`user_${booking.client_id}`).emit('new_notif', { type: 'booking', booking_id: booking.id });
       if (client?.fcm_token) {
-        fcm.notifyBookingConfirmed(client.fcm_token, serviceName, booking.booking_date, booking.booking_time).catch(() => {});
+        fcm.notifyBookingConfirmed(client.fcm_token, serviceName, booking.booking_date, booking.booking_time, booking.id).catch(() => {});
       }
     } else if (status === 'rejected') {
       await DB.notifications.insert({ user_id: booking.client_id, title: 'الحجز غير متاح ❌', body: `للأسف تم رفض حجز ${serviceName} · ${booking.booking_date}. يرجى اختيار وقت آخر`, type: 'booking', booking_id: booking.id });
       io?.to(`user_${booking.client_id}`).emit('new_notif', { type: 'booking', booking_id: booking.id });
       if (client?.fcm_token) {
-        fcm.sendPushNotification(client.fcm_token, 'الحجز غير متاح ❌', `تم رفض ${serviceName} · ${booking.booking_date}. اختاري وقتاً آخر`, { type: 'booking' }).catch(() => {});
+        fcm.sendPushNotification(client.fcm_token, 'الحجز غير متاح ❌', `تم رفض ${serviceName} · ${booking.booking_date}. اختاري وقتاً آخر`, { type: 'booking', booking_id: String(booking.id) }).catch(() => {});
       }
     } else if (status === 'cancelled') {
       await DB.notifications.insert({ user_id: booking.client_id, title: 'تم إلغاء الحجز ❌', body: `تم إلغاء حجز ${serviceName}`, type: 'booking', booking_id: booking.id });
       io?.to(`user_${booking.client_id}`).emit('new_notif', { type: 'booking', booking_id: booking.id });
       if (client?.fcm_token) {
-        fcm.notifyBookingCancelled(client.fcm_token, serviceName).catch(() => {});
+        fcm.notifyBookingCancelled(client.fcm_token, serviceName, booking.id).catch(() => {});
       }
     }
 

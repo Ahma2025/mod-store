@@ -259,6 +259,8 @@ async function initDatabase() {
       price NUMERIC(10,2),
       is_active INTEGER DEFAULT 1
     )`,
+    // deep-link target for a notification (booking_id / order_id / sender user_id / salon_id)
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ref_id INTEGER`,
     // ===== product shop =====
     `ALTER TABLE beauty_products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS delivery_prices TEXT`,   // JSON {west_bank,jerusalem,inside}
@@ -590,10 +592,10 @@ const DB = {
 
   notifications: {
     insert: async (data) => {
-      const { user_id, title, body, type, booking_id = null, is_read = 0 } = data;
+      const { user_id, title, body, type, booking_id = null, ref_id = null, is_read = 0 } = data;
       const r = await query(
-        `INSERT INTO notifications (user_id,title,body,type,booking_id,is_read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-        [user_id, title, body, type, booking_id, is_read]
+        `INSERT INTO notifications (user_id,title,body,type,booking_id,ref_id,is_read) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        [user_id, title, body, type, booking_id, ref_id, is_read]
       );
       return row(r.rows[0]);
     },

@@ -381,9 +381,9 @@ router.post('/salon/:id/offers', authenticate, async (req, res) => {
     for (const cid of clientIds) {
       const client = await DB.users.findById(cid);
       if (client?.fcm_token) {
-        fcm.notifySpecialOffer(client.fcm_token, salon?.name || 'صالون', title.trim()).catch(() => {});
+        fcm.notifySpecialOffer(client.fcm_token, salon?.name || 'صالون', title.trim(), salonId).catch(() => {});
       }
-      await DB.notifications.insert({ user_id: cid, title: `عرض خاص من ${salon?.name || 'الصالون'} 🎁`, body: title.trim(), type: 'offer' });
+      await DB.notifications.insert({ user_id: cid, title: `عرض خاص من ${salon?.name || 'الصالون'} 🎁`, body: title.trim(), type: 'offer', ref_id: salonId });
       req.io?.to(`user_${cid}`).emit('new_notif', { type: 'offer' });
     }
 

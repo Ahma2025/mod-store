@@ -152,6 +152,8 @@ function enterApp(user) {
     initFirebaseNotifications();
   }
   requestLocationPermission();
+  // If the app was opened by tapping a push notification, route to it once the UI settles.
+  setTimeout(flushPendingNotifRoute, 1500);
   if (user.role === 'stylist' || user.role === 'salon_owner') {
     enterStylistDashboard(user);
     return;
@@ -2263,10 +2265,11 @@ function _renderNotifs(notifs) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔔</div><h3>${window.VELOUR_LANG === 'en' ? 'No notifications' : 'لا توجد إشعارات'}</h3></div>`;
     return;
   }
+  const routable = ['booking', 'reminder', 'message', 'order', 'review', 'offer', 'loyalty'];
   el.innerHTML = notifs.map(n => {
     const isUnread = !n.is_read;
-    const clickable = n.type === 'booking' && n.booking_id;
-    const onclick = clickable ? `navigateToBooking(${n.booking_id})` : (n.type === 'message' ? `switchTab('chat', document.querySelector('.nav-btn:nth-child(4)')); goBack();` : '');
+    const clickable = routable.includes(n.type);
+    const onclick = clickable ? `routeFromNotifIds('${n.type}', ${n.booking_id || 'null'}, ${n.ref_id || 'null'})` : '';
     return `
         <div class="notif-item ${isUnread ? 'notif-unread' : ''}" ${onclick ? `onclick="${onclick}" style="cursor:pointer"` : ''}>
           <div class="notif-icon">${notifIcon(n.type)}</div>
@@ -2316,6 +2319,119 @@ function navigateToBooking(bookingId) {
       card?.classList.add('highlight-pulse');
       setTimeout(() => card?.classList.remove('highlight-pulse'), 2000);
     }, 300);
+  }
+}
+
+// ═══════════════ NOTIFICATION DEEP-LINK ROUTER ═══════════════
+// One place that turns a notification's {type + id} into the right screen.
+// Fed by three sources: OS push tap, in-app notification card, in-app banner.
+function routeFromNotif(data) {
+  if (!data || !data.type) return;
+  // Cold start: the app isn't authenticated yet → remember and route once ready.
+  if (typeof currentUser === 'undefined' || !currentUser) { window._pendingNotifRoute = data; return; }
+  const num = (v) => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
+  const type = data.type;
+  const refId = num(data.ref_id);
+  const bookingId = num(data.booking_id) || ((type === 'booking' || type === 'reminder') ? refId : null);
+  const orderId = num(data.order_id) || (type === 'order' ? refId : null);
+  const senderId = num(data.sender_id) || (type === 'message' ? refId : null);
+
+  switch (type) {
+    case 'booking':
+    case 'reminder':
+      if (bookingId) navigateToBooking(bookingId);
+      else _openBookingsList();
+      break;
+    case 'message':
+      if (senderId) openConversationById(senderId);
+      else _openChatList();
+      break;
+    case 'order':
+      openOrderTarget(orderId);
+      break;
+    case 'review':
+      _openStylistReviews();
+      break;
+    case 'offer':
+      if (refId) openSalon(refId);
+      break;
+    case 'loyalty':
+      if (typeof showLoyaltyHistory === 'function') showLoyaltyHistory();
+      break;
+  }
+}
+
+// Called from the in-app notification cards (avoids embedding JSON in an onclick attribute).
+function routeFromNotifIds(type, bookingId, refId) {
+  routeFromNotif({ type, booking_id: bookingId, ref_id: refId });
+}
+
+function _isStylist() { return currentUser && (currentUser.role === 'stylist' || currentUser.role === 'salon_owner'); }
+
+function _openBookingsList() {
+  if (_isStylist()) {
+    if (!document.getElementById('screen-stylist')?.classList.contains('active')) showScreen('stylist');
+    stSwitchTab('bookings', document.querySelector('#screen-stylist .nav-btn:nth-child(3)'));
+  } else {
+    showScreen('main');
+    switchTab('bookings', document.querySelector('#screen-main .nav-btn:nth-child(2)'));
+  }
+}
+
+function _openChatList() {
+  if (_isStylist()) {
+    if (!document.getElementById('screen-stylist')?.classList.contains('active')) showScreen('stylist');
+    stSwitchTab('chat', document.querySelector('#screen-stylist .nav-btn:nth-child(4)'));
+  } else {
+    showScreen('main');
+    switchTab('chat', document.querySelector('#screen-main .nav-btn:nth-child(4)'));
+  }
+}
+
+async function openConversationById(userId) {
+  if (!userId) { _openChatList(); return; }
+  let name = 'محادثة', avatar = null;
+  try {
+    const convs = await Api.messages.conversations();
+    const c = (convs || []).find(x => String(x.other_id) === String(userId));
+    if (c) { name = c.other_name || c.name || name; avatar = c.other_avatar || c.avatar || null; }
+  } catch (e) {}
+  openChatWith(userId, name, avatar);
+}
+
+function openOrderTarget(orderId) {
+  if (_isStylist()) { showScreen('stylist-orders'); loadStylistOrders(); }
+  else { showScreen('my-orders'); loadMyOrders(); }
+  if (orderId) _highlightWhenReady(`[data-order-id="${orderId}"]`);
+}
+
+function _openStylistReviews() {
+  if (!_isStylist()) return;
+  if (!document.getElementById('screen-stylist')?.classList.contains('active')) showScreen('stylist');
+  stSwitchTab('salon', document.querySelector('#screen-stylist .nav-btn:nth-child(1)'));
+  setTimeout(() => { document.getElementById('st-reviews-list')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 450);
+}
+
+// Poll briefly for an element (list may still be loading), then scroll to + pulse it.
+function _highlightWhenReady(selector, tries) {
+  tries = tries || 0;
+  setTimeout(() => {
+    const card = document.querySelector(selector);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.add('highlight-pulse');
+      setTimeout(() => card.classList.remove('highlight-pulse'), 2000);
+    } else if (tries < 8) {
+      _highlightWhenReady(selector, tries + 1);
+    }
+  }, tries === 0 ? 400 : 300);
+}
+
+function flushPendingNotifRoute() {
+  if (window._pendingNotifRoute) {
+    const d = window._pendingNotifRoute;
+    window._pendingNotifRoute = null;
+    routeFromNotif(d);
   }
 }
 
@@ -3185,7 +3301,7 @@ function renderOrderCard(o) {
         <button class="order-btn reject" onclick="orderAction(${o.id}, 'rejected')">✕ رفض</button>
       </div>` : '';
   const t = o.created_at ? new Date(o.created_at).toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-  return `<div class="order-card ${o.status}">
+  return `<div class="order-card ${o.status}" data-order-id="${o.id}">
     <div class="order-head">
       <div><div class="order-cust">${_esc(o.customer_name || 'زبونة')}</div><div class="order-time">${t}</div></div>
       <span class="order-badge ${o.status}">${statusLabel}</span>
@@ -3226,6 +3342,59 @@ async function refreshOrdersBadge() {
     if (document.getElementById('screen-stylist-orders')?.classList.contains('active')) _renderOrders(orders);
   } catch (e) {}
 }
+
+// ===== Customer "طلباتي" (product orders) =====
+function _renderMyOrders(orders) {
+  const list = document.getElementById('my-orders-list');
+  if (!list) return;
+  if (!orders || !orders.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🛍️</div><h3>لا يوجد طلبات بعد</h3><p>طلباتك من متاجر الصالونات بتظهر هون</p></div>';
+    return;
+  }
+  const label = { pending: '⏳ بانتظار الموافقة', confirmed: '✅ مؤكّد', rejected: '❌ مرفوض' };
+  list.innerHTML = orders.map(o => {
+    const items = (o.items || []).map(it => `<div class="order-item">
+        ${it.image_url ? `<img src="${_esc(it.image_url)}">` : `<div style="width:40px;height:40px;border-radius:9px;background:var(--cream2);display:flex;align-items:center;justify-content:center">🧴</div>`}
+        <div class="oi-name">${_esc(it.name)}</div>
+        <div class="oi-qty">×${it.qty} · ${(parseFloat(it.price) || 0) * it.qty} ₪</div>
+      </div>`).join('');
+    const isDelivery = o.delivery_method === 'delivery';
+    const meta = isDelivery
+      ? `<div class="order-meta">🚚 <b>توصيل</b> — ${REGION_NAMES[o.delivery_region] || ''}<br>📍 ${_esc(o.city || '')} · ${_esc(o.address || '')}</div>`
+      : `<div class="order-meta">🏬 <b>استلام من الصالون</b></div>`;
+    const t = o.created_at ? new Date(o.created_at).toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="order-card ${o.status}" data-order-id="${o.id}">
+      <div class="order-head">
+        <div><div class="order-cust">طلب #${o.id}</div><div class="order-time">${t}</div></div>
+        <span class="order-badge ${o.status}">${label[o.status] || o.status}</span>
+      </div>
+      <div class="order-items">${items}</div>
+      ${meta}
+      <div class="order-totals"><span>الإجمالي${isDelivery ? ` (مع التوصيل ${o.delivery_fee} ₪)` : ''}</span><span class="grand">${o.total} ₪</span></div>
+      <p style="font-size:11.5px;color:#a08a94;margin-top:8px">💵 الدفع عند الاستلام</p>
+    </div>`;
+  }).join('');
+}
+
+async function loadMyOrders() {
+  const list = document.getElementById('my-orders-list');
+  const cacheKey = 'velour_myorders_' + ((currentUser && currentUser.id) || 'g');
+  let painted = false;
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (Array.isArray(cached)) { _renderMyOrders(cached); painted = true; }
+  } catch (e) {}
+  if (!painted && list) list.innerHTML = '<p style="text-align:center;color:#a08a94;padding:24px">⏳ جاري التحميل...</p>';
+  try {
+    const orders = await Api.orders.myOrders();
+    try { localStorage.setItem(cacheKey, JSON.stringify(orders)); } catch (e) {}
+    _renderMyOrders(orders);
+  } catch (e) {
+    if (!painted && list) list.innerHTML = '<p style="text-align:center;color:#e05a6a;padding:24px">⚠️ خطأ في التحميل</p>';
+  }
+}
+
+function showMyOrders() { showScreen('my-orders'); loadMyOrders(); }
 
 // ===== Stylist AI assistant (business + craft + marketing + replies) =====
 let stylistConvo = null;

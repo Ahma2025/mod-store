@@ -61,7 +61,7 @@ async function initWebNotifications() {
     }
 
     messaging.onMessage((payload) => {
-      showInAppNotification(payload.notification?.title, payload.notification?.body, payload.data?.type);
+      showInAppNotification(payload.notification?.title, payload.notification?.body, payload.data?.type, payload.data);
     });
   } catch (e) {
     console.warn('Web notifications failed:', e.message);
@@ -144,7 +144,7 @@ async function initNativeNotifications() {
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      showInAppNotification(notification.title, notification.body, notification.data?.type);
+      showInAppNotification(notification.title, notification.body, notification.data?.type, notification.data);
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
@@ -240,17 +240,24 @@ async function saveFCMToken(token, platform = 'web') {
 }
 
 // ===== IN-APP NOTIFICATION BANNER =====
-function showInAppNotification(title, body, type = '') {
+function showInAppNotification(title, body, type = '', data = null) {
   const banner = document.createElement('div');
   banner.className = 'fcm-banner';
+  banner.style.cursor = 'pointer';
   banner.innerHTML = `
     <div class="fcm-icon">${getNotifIcon(type)}</div>
     <div class="fcm-text">
       <div class="fcm-title">${title || ''}</div>
       <div class="fcm-body">${body || ''}</div>
     </div>
-    <button class="fcm-close" onclick="this.parentElement.remove()">×</button>
+    <button class="fcm-close">×</button>
   `;
+  // Tap the banner → deep-link to its target; tap the × → just dismiss.
+  banner.addEventListener('click', (e) => {
+    if (e.target.classList.contains('fcm-close')) { banner.remove(); return; }
+    if (typeof routeFromNotif === 'function') routeFromNotif(data || { type });
+    banner.remove();
+  });
   document.body.appendChild(banner);
   setTimeout(() => banner?.remove(), 5000);
 
@@ -266,9 +273,8 @@ function getNotifIcon(type) {
 
 function handleNotificationAction(data) {
   if (!data) return;
-  if (data.type === 'booking') switchTab('bookings', null);
-  else if (data.type === 'message') switchTab('chat', null);
-  else if (data.type === 'loyalty') switchTab('profile', null);
+  // Deep-link to the exact target (booking / conversation / order / …).
+  if (typeof routeFromNotif === 'function') routeFromNotif(data);
 }
 
 // ===== SEND NOTIFICATION FROM BACKEND (helper) =====
