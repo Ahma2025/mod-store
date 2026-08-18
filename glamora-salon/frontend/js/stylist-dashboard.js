@@ -70,6 +70,10 @@ async function loadStylistDashboard() {
       loadStReviews();
       loadOffers(stSalonData.id);
       if (typeof refreshOrdersBadge === 'function') refreshOrdersBadge();
+      // warm the clients cache so the الزبونات page opens instantly
+      Api.stylistDash.clients(stSalonData.id)
+        .then(r => { try { localStorage.setItem('velour_clients_' + stSalonData.id, JSON.stringify(r.clients)); } catch (e) {} })
+        .catch(() => {});
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -1147,31 +1151,52 @@ async function resetRevenue() {
 }
 
 // ===== 64: CLIENTS =====
+function _renderClients(clients) {
+  const el = document.getElementById('clients-list');
+  if (!el) return;
+  const _clEN = window.VELOUR_LANG === 'en';
+  if (!clients.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>${_clEN ? 'No clients yet' : 'لا توجد زبونات بعد'}</p></div>`; return; }
+  el.innerHTML = clients.map(c => {
+    const lastB = (c.bookings || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+    const total = c.total_spent != null
+      ? parseFloat(c.total_spent)
+      : (c.bookings || []).filter(b => b.earned || b.status === 'completed').reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+    return `<div class="client-card">
+      <div class="client-card-header">
+        <span class="client-name">${c.name}</span>
+        <span class="client-badge">${(c.bookings || []).length} ${_clEN ? 'booking' : 'حجز'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="client-last-visit">${_clEN ? 'Last visit' : 'آخر زيارة'}: ${lastB?.date || '-'}</span>
+        <span class="client-total">₪${total.toFixed(0)} ${_clEN ? 'total' : 'إجمالي'}</span>
+      </div>
+      ${c.phone ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">📞 ${c.phone}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 async function showClients() {
   showScreen('clients');
   if (!stSalonData?.id) return;
   const el = document.getElementById('clients-list');
-  el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  const cacheKey = 'velour_clients_' + stSalonData.id;
+
+  // instant paint from cache — no spinner
+  let painted = false;
   try {
-    const _clEN = window.VELOUR_LANG === 'en';
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (Array.isArray(cached)) { _renderClients(cached); painted = true; }
+  } catch (e) {}
+  if (!painted) el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+  // refresh silently
+  try {
     const { clients } = await Api.stylistDash.clients(stSalonData.id);
-    if (!clients.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>${_clEN ? 'No clients yet' : 'لا توجد زبونات بعد'}</p></div>`; return; }
-    el.innerHTML = clients.map(c => {
-      const lastB = c.bookings.sort((a, b) => b.date?.localeCompare(a.date))[0];
-      const total = c.bookings.filter(b => b.status === 'completed').reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
-      return `<div class="client-card">
-        <div class="client-card-header">
-          <span class="client-name">${c.name}</span>
-          <span class="client-badge">${c.bookings.length} ${_clEN ? 'booking' : 'حجز'}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="client-last-visit">${_clEN ? 'Last visit' : 'آخر زيارة'}: ${lastB?.date || '-'}</span>
-          <span class="client-total">₪${total.toFixed(0)} ${_clEN ? 'total' : 'إجمالي'}</span>
-        </div>
-        ${c.phone ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">📞 ${c.phone}</div>` : ''}
-      </div>`;
-    }).join('');
-  } catch (e) { el.innerHTML = `<div style="color:red;padding:20px">${window.VELOUR_LANG === 'en' ? 'Loading failed' : 'فشل التحميل'}</div>`; }
+    try { localStorage.setItem(cacheKey, JSON.stringify(clients)); } catch (e) {}
+    _renderClients(clients);
+  } catch (e) {
+    if (!painted) el.innerHTML = `<div style="color:red;padding:20px">${window.VELOUR_LANG === 'en' ? 'Loading failed' : 'فشل التحميل'}</div>`;
+  }
 }
 
 // ===== 62: INVENTORY =====

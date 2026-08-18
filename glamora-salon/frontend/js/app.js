@@ -3134,19 +3134,36 @@ async function placeOrder() {
 }
 
 // ═══════════════ STYLIST ORDERS (الطلبات) ═══════════════
+function _renderOrders(orders) {
+  const list = document.getElementById('st-orders-list');
+  if (!list) return;
+  if (!orders || !orders.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🧾</div><h3>لا توجد طلبات بعد</h3><p>الطلبات الجديدة من متجرك بتظهر هون</p></div>';
+    return;
+  }
+  list.innerHTML = orders.map(renderOrderCard).join('');
+}
+
 async function loadStylistOrders() {
   const list = document.getElementById('st-orders-list');
-  if (list) list.innerHTML = '<p style="text-align:center;color:#a08a94;padding:24px">⏳ جاري التحميل...</p>';
+  const cacheKey = 'velour_orders_' + ((currentUser && currentUser.id) || 'g');
+
+  // instant paint from cache — no spinner
+  let painted = false;
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (Array.isArray(cached)) { _renderOrders(cached); updateOrdersBadge(cached); painted = true; }
+  } catch (e) {}
+  if (!painted && list) list.innerHTML = '<p style="text-align:center;color:#a08a94;padding:24px">⏳ جاري التحميل...</p>';
+
+  // refresh silently
   try {
     const orders = await Api.orders.salonOrders();
+    try { localStorage.setItem(cacheKey, JSON.stringify(orders)); } catch (e) {}
     updateOrdersBadge(orders);
-    if (!orders || !orders.length) {
-      if (list) list.innerHTML = '<div class="empty-state"><div class="empty-icon">🧾</div><h3>لا توجد طلبات بعد</h3><p>الطلبات الجديدة من متجرك بتظهر هون</p></div>';
-      return;
-    }
-    if (list) list.innerHTML = orders.map(renderOrderCard).join('');
+    _renderOrders(orders);
   } catch (e) {
-    if (list) list.innerHTML = '<p style="text-align:center;color:#e05a6a;padding:24px">⚠️ خطأ في التحميل</p>';
+    if (!painted && list) list.innerHTML = '<p style="text-align:center;color:#e05a6a;padding:24px">⚠️ خطأ في التحميل</p>';
   }
 }
 
@@ -3203,7 +3220,10 @@ async function refreshOrdersBadge() {
   try {
     if (!currentUser || currentUser.role !== 'stylist') return;
     const orders = await Api.orders.salonOrders();
+    try { localStorage.setItem('velour_orders_' + (currentUser.id || 'g'), JSON.stringify(orders)); } catch (e) {}
     updateOrdersBadge(orders);
+    // if the orders screen is open, refresh it live
+    if (document.getElementById('screen-stylist-orders')?.classList.contains('active')) _renderOrders(orders);
   } catch (e) {}
 }
 

@@ -499,18 +499,44 @@ router.get('/salon/:id/clients', authenticate, async (req, res) => {
   try {
     const salonId = parseInt(req.params.id);
     const bookings = await DB.bookings.find(b => b.salon_id === salonId);
+
+    // price of a booking — use stored total_price, else sum the booking's service prices
+    const svcRows = await DB.services.find(s => s.salon_id === salonId);
+    const svcPrice = {}; svcRows.forEach(s => { svcPrice[s.id] = parseFloat(s.price) || 0; });
+    const priceOf = (b) => {
+      if (b.total_price != null && b.total_price !== '') return parseFloat(b.total_price) || 0;
+      let ids = [];
+      try { ids = b.service_ids ? JSON.parse(b.service_ids) : (b.service_id ? [b.service_id] : []); } catch (e) {}
+      if (!ids.length && b.service_id) ids = [b.service_id];
+      return ids.reduce((s, id) => s + (svcPrice[parseInt(id)] || 0), 0);
+    };
+
+    // a booking counts as earned once completed, or once a confirmed appointment has passed
+    const nowMs = Date.now();
+    const endMs = (b) => {
+      if (!b.booking_date) return 0;
+      const t = /^\d{1,2}:\d{2}/.test(b.booking_time || '') ? b.booking_time.slice(0, 5) : '23:59';
+      const start = new Date(`${b.booking_date}T${t}:00`).getTime();
+      if (isNaN(start)) return 0;
+      return start + (parseInt(b.total_duration) || 0) * 60000;
+    };
+    const isEarned = (b) => b.status === 'completed' || (b.status === 'confirmed' && endMs(b) <= nowMs);
+
     const clientMap = {};
     for (const b of bookings) {
       if (!b.client_id) continue;
       if (!clientMap[b.client_id]) {
         const user = await DB.users.findById(b.client_id);
-        clientMap[b.client_id] = { id: b.client_id, name: user?.name || 'زبونة', phone: user?.phone || '', bookings: [] };
+        clientMap[b.client_id] = { id: b.client_id, name: user?.name || 'زبونة', phone: user?.phone || '', bookings: [], total_spent: 0, completed_count: 0 };
       }
-      clientMap[b.client_id].bookings.push({ date: b.booking_date, time: b.booking_time, status: b.status, total_price: b.total_price });
+      const price = priceOf(b);
+      const earned = isEarned(b);
+      clientMap[b.client_id].bookings.push({ date: b.booking_date, time: b.booking_time, status: b.status, total_price: price, earned });
+      if (earned) { clientMap[b.client_id].total_spent += price; clientMap[b.client_id].completed_count += 1; }
     }
-    const clients = Object.values(clientMap).sort((a, b) => b.bookings.length - a.bookings.length);
+    const clients = Object.values(clientMap).sort((a, b) => b.total_spent - a.total_spent || b.bookings.length - a.bookings.length);
     res.json({ clients });
-  } catch (e) { res.status(500).json({ error: 'خطأ' }); }
+  } catch (e) { console.error('clients error:', e.message); res.status(500).json({ error: 'خطأ' }); }
 });
 
 // ===== 62: INVENTORY =====
