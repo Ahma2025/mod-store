@@ -857,6 +857,7 @@ function _paintSalon(data, id) {
   renderSalonRatings(data);
   renderSalonInfo(data);
   loadSalonGallery(id != null ? id : data.id);
+  prefetchSalonShop(id != null ? id : data.id);
   const cats = [...new Set((data.services || []).map(s => s.category))];
   document.getElementById('services-filter').innerHTML =
     `<div class="svc-filter-chip active" onclick="filterSalonServices(this, '')">الكل</div>` +
@@ -2848,22 +2849,51 @@ async function saveDeliveryPrices() {
 const REGION_NAMES = { west_bank: '🏙️ الضفة الغربية', jerusalem: '🕌 القدس', inside: '🌊 الداخل' };
 let cart = { salonId: null, salonName: '', items: {} }; // items: { [id]: {product, qty} }
 let _shopProducts = [];
+let _shopSalonId = null;
+
+// Kick off a silent fetch the moment the salon opens, so the متجر tab is instant.
+function prefetchSalonShop(salonId) {
+  if (!salonId) return;
+  Api.beauty.salonProducts(salonId).then(products => {
+    _shopProducts = products || [];
+    _shopSalonId = salonId;
+    try { localStorage.setItem('velour_shop_' + salonId, JSON.stringify(_shopProducts)); } catch (e) {}
+    // if the shop tab is already open for this same salon, paint it now
+    if (currentSalonData && currentSalonData.id === salonId &&
+        document.getElementById('salon-tab-shop')?.classList.contains('active')) renderShop();
+  }).catch(() => {});
+}
 
 async function loadSalonShop(salonId) {
   const list = document.getElementById('salon-shop-list');
   if (!salonId) salonId = currentSalonData && currentSalonData.id;
   if (!salonId) return;
-  if (list) list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#a08a94;padding:24px">⏳ جاري التحميل...</p>';
+  if (cart.salonId && cart.salonId !== salonId) clearCart();
+  cart.salonId = salonId;
+  cart.salonName = (currentSalonData && currentSalonData.name) || '';
+
+  // 1) instant paint — from memory (prefetch) or localStorage cache, no spinner
+  let painted = false;
+  if (_shopSalonId === salonId && _shopProducts.length) { renderShop(); painted = true; }
+  if (!painted) {
+    try {
+      const cached = JSON.parse(localStorage.getItem('velour_shop_' + salonId) || 'null');
+      if (Array.isArray(cached) && cached.length) { _shopProducts = cached; _shopSalonId = salonId; renderShop(); painted = true; }
+    } catch (e) {}
+  }
+  if (!painted && list) list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#a08a94;padding:24px">⏳ جاري التحميل...</p>';
+  renderCartBar();
+
+  // 2) refresh silently in the background
   try {
     const products = await Api.beauty.salonProducts(salonId);
     _shopProducts = products || [];
-    if (cart.salonId && cart.salonId !== salonId) clearCart();
-    cart.salonId = salonId;
-    cart.salonName = (currentSalonData && currentSalonData.name) || '';
+    _shopSalonId = salonId;
+    try { localStorage.setItem('velour_shop_' + salonId, JSON.stringify(_shopProducts)); } catch (e) {}
     renderShop();
     renderCartBar();
   } catch (e) {
-    if (list) list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#e05a6a;padding:24px">⚠️ خطأ في التحميل</p>';
+    if (!painted && list) list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#e05a6a;padding:24px">⚠️ خطأ في التحميل</p>';
   }
 }
 
