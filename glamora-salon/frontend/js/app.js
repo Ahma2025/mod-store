@@ -2752,7 +2752,7 @@ function openBeautyConversation(id) {
 function _renderBeautyConvo() {
   const box = document.getElementById('beauty-chat-messages');
   if (box) box.innerHTML = '';
-  appendBeautyMsg('them', BEAUTY_GREETING);
+  appendBeautyMsg('them', window.t(BEAUTY_GREETING));
   (beautyConvo.messages || []).forEach(m => {
     if (m.role === 'user') appendBeautyMsg('me', m.content, m.image || null);
     else { appendBeautyMsg('them', m.content); if (Array.isArray(m.products) && m.products.length) appendBeautyProducts(m.products); }
@@ -3432,7 +3432,7 @@ function openStylistConversation(id) {
 function _renderStylistConvo() {
   const box = document.getElementById('sa-chat-messages');
   if (box) box.innerHTML = '';
-  appendSaMsg('them', STYLIST_GREETING);
+  appendSaMsg('them', window.t(STYLIST_GREETING));
   (stylistConvo.messages || []).forEach(m => appendSaMsg(m.role === 'user' ? 'me' : 'them', m.content));
   if (box) box.scrollTop = box.scrollHeight;
 }

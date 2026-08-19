@@ -939,6 +939,105 @@ const TR = {
   '⏳ جاري الإضافة...': '⏳ Adding...',
   '⏳ جاري الرفع...': '⏳ Uploading...',
   '✅ تم رفع الصورة (اضغطي للتغيير)': '✅ Photo uploaded (tap to change)',
+
+  // === FULL AUDIT SWEEP — remaining app strings ===
+  'الكل': 'All',
+  'عرض أقل': 'Show Less',
+  'رد الصالون': 'Salon reply',
+  'خطأ:': 'Error:',
+  '✅ الموقع محدد على الخريطة': '✅ Location set on the map',
+  'لا توجد تقييمات بعد': 'No reviews yet',
+  'جاري الإرسال...': 'Sending...',
+  '⏳ جاري الحجز...': '⏳ Booking...',
+  'بانتظار موافقة الكوفيرة - ستصلك إشعار عند التأكيد': "Awaiting stylist approval — you'll be notified once confirmed",
+  '📷 صورة': '📷 Photo',
+  '🎤 رسالة صوتية': '🎤 Voice message',
+  '⚠️ لا يمكن الوصول للميكروفون': '⚠️ Cannot access the microphone',
+  'التسجيل قصير جداً': 'Recording too short',
+  'تم تحديث صورتك ✓': 'Your photo was updated ✓',
+  'الفضي': 'Silver',
+  'الذهبي': 'Gold',
+  'البلاتيني': 'Platinum',
+  'أعلى مستوى ✦': 'Top tier ✦',
+  'صبغة': 'Hair color',
+  'الآن': 'Now',
+  'أمس': 'Yesterday',
+  'لا يوجد تذكير مضبوط حالياً': 'No reminder set yet',
+  'وصفة لون': 'Color recipe',
+  'تعذّر تحميل الملف الجمالي': "Couldn't load the beauty profile",
+  '✅ تم حفظ ملفك الجمالي': '✅ Your beauty profile was saved',
+  '⚠️ فشل ضبط التذكير': '⚠️ Failed to set the reminder',
+  '💆 تذكير: حان وقت صبغة شعرك!': '💆 Reminder: time to color your hair!',
+  'ما في محادثات محفوظة بعد ✨': 'No saved conversations yet ✨',
+  'ابدئي محادثة وراح تنحفظ هون تلقائياً.': "Start a conversation and it'll be saved here automatically.",
+  'طريقة الاستخدام:': 'How to use:',
+  'عذراً، ما قدرت أرد الآن.': "Sorry, I couldn't reply right now.",
+  '⚠️ صار خطأ، جربي مرة ثانية.': '⚠️ Something went wrong, please try again.',
+  'حللي صورتي وأعطيني نصائح.': 'Analyze my photo and give me tips.',
+  '⚠️ تعذّر قراءة الصورة': "⚠️ Couldn't read the image",
+  '⏳ جاري التحليل...': '⏳ Analyzing...',
+  '⚠️ فشل التحليل، جربي مرة أخرى': '⚠️ Analysis failed, please try again',
+  'لا توجد نتائج': 'No results',
+  'عرض النتيجة ✨': 'View result ✨',
+  '✨ احصلي على توصياتك': '✨ Get your recommendations',
+
+  // Beauty AI greetings
+  'أهلاً حبيبتي! 💖 أنا **جوري** 🌹 مستشارة جمالك. اسأليني عن أي شي — أظافرك 💅 مكياجك 💄 شعرك 💇 أو بشرتك 🧴\n\nوإذا حابة تحليل دقيق لملامحك، ارفعي صورتك 📸 وأنا أحللها لك وأعطيك نصايح مخصصة ✨': "Hi dear! 💖 I'm **Jouri** 🌹 your beauty advisor. Ask me anything — your nails 💅 makeup 💄 hair 💇 or skin 🧴\n\nAnd if you'd like a detailed analysis of your features, upload your photo 📸 and I'll analyze it and give you personalized tips ✨",
+  'أهلين 👋 أنا **جوري** 🌹 مساعِدتك الذكية. بقدر أساعدك بـ:\n\n📊 **تحليل أرقامك** ونصايح تزيد دخلك\n💬 **ردود جاهزة** لرسائل زبوناتك\n🎨 **أسئلة تقنية** (فورمولات صبغة، علاجات...)\n📣 **محتوى تسويقي** (عروض، كابشنات، وصف خدمات)\n\nشو بتحبي نبلّش فيه؟': "Hi 👋 I'm **Jouri** 🌹 your smart assistant. I can help you with:\n\n📊 **Analyzing your numbers** and tips to grow your income\n💬 **Ready replies** for your clients' messages\n🎨 **Technical questions** (color formulas, treatments...)\n📣 **Marketing content** (offers, captions, service descriptions)\n\nWhat would you like to start with?",
+
+  // Hair color calculator
+  'بني شوكولاتة داكن': 'Dark chocolate brown',
+  'يناسب البشرة القمحية والداكنة ويعطي عمقاً طبيعياً': 'Suits wheatish & dark skin, giving natural depth',
+  'أضيفي هايلايت كراميل لإضاءة الوجه': 'Add caramel highlights to brighten the face',
+  'بني كراميل ذهبي': 'Golden caramel brown',
+  'يُضيء البشرة الفاتحة ويعطي دفئاً جميلاً': 'Brightens fair skin and gives a lovely warmth',
+  'رائع مع بالياج منتشر من المنتصف': 'Great with a balayage from mid-length',
+  'أشقر رمادي بارد': 'Cool ash blonde',
+  'يُبرز العيون الزرقاء والخضراء بشكل مذهل': 'Stunningly highlights blue & green eyes',
+  'يحتاج صيانة كل 4-5 أسابيع': 'Needs upkeep every 4-5 weeks',
+  'بني رمادي أسود': 'Black-grey brown',
+  'أنيق وعصري، يناسب جميع مناسبات العمل': 'Elegant and modern, fits all work occasions',
+  'ألمع مع شامبو اللون الأسود': 'Shinier with black-color shampoo',
+  'نحاسي دافئ': 'Warm copper',
+  'لون جريء يُبرز تفاصيل الوجه ويعطي حيوية': 'A bold color that highlights features and adds vibrance',
+  'احمي لونك بواقي الألوان يومياً': 'Protect your color with color-care daily',
+  'بلاتيني فاتح': 'Light platinum',
+  'تغيير جذري وجريء، مثالي للبشرة الفاتحة': 'A radical, bold change — ideal for fair skin',
+  'يحتاج فترات استراحة بين الجلسات': 'Needs rest periods between sessions',
+  'بني طبيعي دافئ': 'Warm natural brown',
+  'الأقل ضرراً والأكثر طبيعية لأي بشرة': 'The least damaging, most natural for any skin',
+  'خيار مثالي إذا كنتِ تفضلين الشعر الصحي': 'Ideal if you prefer healthy hair',
+  'أحمر برغندي': 'Burgundy red',
+  'لون عاطفي وجريء يناسب الشخصيات القوية': 'A passionate, bold color for strong personalities',
+  'البرغندي الداكن يناسب الجميع': 'Dark burgundy suits everyone',
+  'الطبيعية': 'Natural',
+  'الجريئة': 'Bold',
+  'الدافئة': 'Warm',
+  'الأنيقة الباردة': 'Cool & Elegant',
+  'بناءً على لون بشرتك وعيونك وأسلوبك': 'Based on your skin tone, eyes & style',
+
+  // Stylist dashboard
+  'لم تُضبط مواعيد الدوام بعد': 'Working hours not set yet',
+  'ضبط مواعيد الدوام': 'Set working hours',
+  'تواصل': 'Contact',
+  'تم التحديث': 'Updated',
+  'فشل رفع صورة الصالون': 'Failed to upload salon photo',
+  'الصباحي': 'Morning',
+  'المسائي': 'Evening',
+  'إضافة شيفت مسائي': 'Add evening shift',
+  'تم تحديث الصورة ✓': 'Photo updated ✓',
+  'صورتي': 'My photo',
+  '✅ تم تصفير الدخل': '✅ Revenue reset',
+  'فشل التصفير': 'Reset failed',
+  'إضافة صالون جديد': 'Add new salon',
+  'تعديل معلومات الصالون': 'Edit salon info',
+  'إجازة': 'Off',
+  'إضافة خدمة جديدة': 'Add new service',
+  'تعديل الخدمة': 'Edit service',
+  'صبغ الشعر': 'Hair coloring',
+  'جاري الإضافة...': 'Adding...',
+  'إرسال العرض 🎁': 'Send offer 🎁',
+  'قطعة': 'pcs',
 };
 
 // ---- Core translation function ----
@@ -1018,26 +1117,36 @@ function updateLangToggle() {
 let _translating = false;
 function startObserver() {
   if (window.VELOUR_LANG !== 'en') return;
+  const translateTextNode = (node) => {
+    if (!node || node.nodeType !== 3) return;
+    const trimmed = node.textContent.trim();
+    if (!trimmed) return;
+    if (node.parentElement?.closest('[translate="no"]')) return;
+    const en = TR[trimmed];
+    if (en && trimmed !== en) node.textContent = node.textContent.replace(trimmed, en);
+  };
   const observer = new MutationObserver((mutations) => {
     if (_translating) return;
     _translating = true;
     requestAnimationFrame(() => {
       mutations.forEach(m => {
+        if (m.type === 'characterData') {
+          // element.textContent = '...' changes existing text nodes (not childList)
+          translateTextNode(m.target);
+          return;
+        }
         m.addedNodes.forEach(node => {
           if (node.nodeType === 1) {
             if (!node.closest('[translate="no"]')) applyTranslations(node);
-          } else if (node.nodeType === 3 && node.textContent.trim()) {
-            if (!node.parentElement?.closest('[translate="no"]')) {
-              const en = TR[node.textContent.trim()];
-              if (en) node.textContent = node.textContent.replace(node.textContent.trim(), en);
-            }
+          } else if (node.nodeType === 3) {
+            translateTextNode(node);
           }
         });
       });
       _translating = false;
     });
   });
-  observer.observe(document.body, { childList: true, subtree: true, characterData: false });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
 // ---- On page load: apply if English ----
