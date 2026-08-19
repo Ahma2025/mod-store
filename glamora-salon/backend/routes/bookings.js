@@ -1,5 +1,5 @@
 const express = require('express');
-const { DB } = require('../database');
+const { DB, query } = require('../database');
 const { authenticate } = require('./auth');
 const fcm = require('../fcm');
 
@@ -13,7 +13,7 @@ async function getSalonOwner(salonId) {
 
 router.get('/my', authenticate, async (req, res) => {
   try {
-    const bookings = await DB.bookings.find(b => b.client_id === req.user.id);
+    const { rows: bookings } = await query('SELECT * FROM bookings WHERE client_id=$1', [req.user.id]);
     bookings.sort((a, b) => {
       if (a.status === 'pending' && b.status !== 'pending') return -1;
       if (b.status === 'pending' && a.status !== 'pending') return 1;
@@ -133,11 +133,10 @@ router.post('/', authenticate, async (req, res) => {
     const primaryService = services[0];
 
     // Conflict check: any existing booking overlaps with [booking_time, booking_time + totalDuration]
-    const activeBookings = await DB.bookings.find(b =>
-      b.stylist_id === parseInt(stylist_id) &&
-      b.booking_date === booking_date &&
-      (b.status === 'pending' || b.status === 'confirmed')
-    );
+    const activeBookings = (await query(
+      `SELECT * FROM bookings WHERE stylist_id=$1 AND booking_date=$2 AND status IN ('pending','confirmed')`,
+      [parseInt(stylist_id), booking_date]
+    )).rows;
     const newStart = timeToMin(booking_time);
     const newEnd = newStart + totalDuration;
     for (const b of activeBookings) {

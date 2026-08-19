@@ -1,10 +1,13 @@
 const { Pool } = require('pg');
 
+const _dbUrl = process.env.DATABASE_URL || '';
+const _noSsl = _dbUrl.includes('railway.internal') || _dbUrl.includes('localhost') || _dbUrl.includes('127.0.0.1') || _dbUrl.includes('sslmode=disable');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway.internal')
-    ? false
-    : { rejectUnauthorized: false }
+  ssl: _noSsl ? false : { rejectUnauthorized: false },
+  max: parseInt(process.env.PG_POOL_MAX || '30', 10),   // was default 10 → bottleneck under load
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 const query = (text, params) => pool.query(text, params);
@@ -282,9 +285,30 @@ async function initDatabase() {
       address TEXT,
       notes TEXT DEFAULT ''
     )`,
+    // ===== performance indexes (huge win once queries filter in SQL) =====
+    `CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_bookings_client ON bookings(client_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_bookings_salon ON bookings(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_bookings_stylist_date ON bookings(stylist_id, booking_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_bookings_created ON bookings(created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_stylists_salon ON stylists(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_stylists_user ON stylists(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_services_salon ON services(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_salon_media_salon ON salon_media(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_salon_ratings_salon ON salon_ratings(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_reviews_stylist ON reviews(stylist_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_salon_ratings_client ON salon_ratings(client_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_salon_hours_salon ON salon_hours(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_beauty_products_salon ON beauty_products(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_product_orders_salon ON product_orders(salon_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_product_orders_client ON product_orders(client_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_stylist_availability_stylist ON stylist_availability(stylist_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_blocked_slots_stylist ON stylist_blocked_slots(stylist_id)`,
   ];
   for (const m of migrations) {
-    try { await pool.query(m); } catch (e) { /* column may already exist */ }
+    try { await pool.query(m); } catch (e) { /* column/index may already exist */ }
   }
 
   console.log('[DB] PostgreSQL schema ready');

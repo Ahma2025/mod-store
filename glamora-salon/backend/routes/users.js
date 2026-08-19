@@ -19,8 +19,10 @@ router.get('/loyalty', authenticate, async (req, res) => {
 
 router.get('/notifications', authenticate, async (req, res) => {
   try {
-    const notifs = (await DB.notifications.find(n => n.user_id === req.user.id))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 30);
+    const { rows: notifs } = await query(
+      'SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',
+      [req.user.id]
+    );
     res.json(notifs);
   } catch (e) {
     res.status(500).json({ error: 'خطأ' });

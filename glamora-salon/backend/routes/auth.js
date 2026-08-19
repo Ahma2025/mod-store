@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { DB } = require('../database');
+const { DB, query } = require('../database');
 
 const router = express.Router();
 // ✅ SECURITY: No fallback — server.js already enforces JWT_SECRET presence at startup
@@ -17,7 +17,7 @@ router.post('/register', async (req, res) => {
 
     // ✅ SECURITY: only 'client' or 'stylist' may self-register — never admin/salon_owner.
     const safeRole = role === 'stylist' ? 'stylist' : 'client';
-    const hash = await bcrypt.hash(password, 12);
+    const hash = await bcrypt.hash(password, 10);   // cost 10: secure + ~4× faster than 12
     const user = await DB.users.insert({ name, phone, email: email || null, password_hash: hash, role: safeRole, loyalty_points: 50 });
 
     await DB.loyalty_transactions.insert({ user_id: user.id, points: 50, type: 'earned', description: 'مكافأة التسجيل 🎉' });
@@ -43,6 +43,15 @@ router.post('/login', async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غلط' });
     }
+
+    // Opportunistically down-cost legacy hashes (12 → 10) so future logins are faster.
+    try {
+      const rounds = parseInt((user.password_hash || '').split('$')[2], 10);
+      if (rounds > 10) {
+        const nh = await bcrypt.hash(password, 10);
+        await query('UPDATE users SET password_hash=$1 WHERE id=$2', [nh, user.id]);
+      }
+    } catch (e) { /* never block login on a rehash failure */ }
 
     // ✅ SECURITY: 7d expiry instead of 30d
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });

@@ -1,5 +1,5 @@
 const express = require('express');
-const { DB } = require('../database');
+const { DB, query } = require('../database');
 const { authenticate } = require('./auth');
 const fcm = require('../fcm');
 
@@ -21,8 +21,9 @@ router.get('/conversations', authenticate, async (req, res) => {
       const salon = await getSalonUserIds(uid);
       if (!salon) return res.json([]);
 
-      const msgs = await DB.messages.find(m =>
-        salon.userIds.includes(m.sender_id) || salon.userIds.includes(m.receiver_id)
+      const { rows: msgs } = await query(
+        'SELECT * FROM messages WHERE sender_id = ANY($1) OR receiver_id = ANY($1)',
+        [salon.userIds]
       );
 
       const convMap = {};
@@ -48,7 +49,7 @@ router.get('/conversations', authenticate, async (req, res) => {
       return res.json(convs.sort((a, b) => new Date(b.last_time) - new Date(a.last_time)));
     }
 
-    const msgs = await DB.messages.find(m => m.sender_id === uid || m.receiver_id === uid);
+    const { rows: msgs } = await query('SELECT * FROM messages WHERE sender_id = $1 OR receiver_id = $1', [uid]);
     const convMap = {};
     msgs.forEach(m => {
       const otherId = m.sender_id === uid ? m.receiver_id : m.sender_id;
@@ -57,19 +58,29 @@ router.get('/conversations', authenticate, async (req, res) => {
       }
     });
 
-    const convs = await Promise.all(Object.values(convMap).map(async c => {
-      const other = await DB.users.findById(c.other_id);
+    // Batch-fetch the "other" users + any salon they belong to (was 2 full scans per conversation).
+    const otherIds = Object.keys(convMap).map(Number);
+    let userMap = {}, salonByUser = {};
+    if (otherIds.length) {
+      (await query('SELECT id, name, avatar, role FROM users WHERE id = ANY($1)', [otherIds])).rows.forEach(u => { userMap[u.id] = u; });
+      const stRows = (await query('SELECT user_id, salon_id FROM stylists WHERE user_id = ANY($1)', [otherIds])).rows;
+      const salonIds = [...new Set(stRows.map(s => s.salon_id))];
+      const salonMap = {};
+      if (salonIds.length) (await query('SELECT id, name, cover_emoji FROM salons WHERE id = ANY($1)', [salonIds])).rows.forEach(s => { salonMap[s.id] = s; });
+      stRows.forEach(s => { if (salonMap[s.salon_id]) salonByUser[s.user_id] = salonMap[s.salon_id]; });
+    }
+    const convs = Object.values(convMap).map(c => {
+      const other = userMap[c.other_id];
+      const salon = salonByUser[c.other_id];
       const unread = msgs.filter(m => m.sender_id === c.other_id && m.receiver_id === uid && !m.is_read).length;
-      const stylist = await DB.stylists.findOne(s => s.user_id === c.other_id);
-      const salon = stylist ? await DB.salons.findOne(s => s.id === stylist.salon_id) : null;
       return {
         ...c,
         other_name: salon ? salon.name : (other?.name || ''),
         other_avatar: salon ? (salon.cover_emoji || '💅') : other?.avatar,
         other_role: other?.role,
-        unread_count: unread
+        unread_count: unread,
       };
-    }));
+    });
 
     res.json(convs.sort((a, b) => new Date(b.last_time) - new Date(a.last_time)));
   } catch (e) {
@@ -88,34 +99,28 @@ router.get('/:other_id', authenticate, async (req, res) => {
     if (user?.role === 'stylist') {
       const salon = await getSalonUserIds(uid);
       if (salon) {
-        msgs = await DB.messages.find(m =>
-          (salon.userIds.includes(m.sender_id) && m.receiver_id === otherId) ||
-          (m.sender_id === otherId && salon.userIds.includes(m.receiver_id))
-        );
-        await DB.messages.update(
-          m => m.sender_id === otherId && salon.userIds.includes(m.receiver_id),
-          { is_read: 1 }
-        );
+        msgs = (await query(
+          `SELECT * FROM messages WHERE (sender_id = ANY($1) AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = ANY($1))`,
+          [salon.userIds, otherId]
+        )).rows;
+        await query(`UPDATE messages SET is_read=1 WHERE sender_id=$1 AND receiver_id = ANY($2) AND is_read=0`, [otherId, salon.userIds]);
       } else {
         msgs = [];
       }
     } else {
       const salon = await getSalonUserIds(otherId);
       if (salon) {
-        msgs = await DB.messages.find(m =>
-          (m.sender_id === uid && salon.userIds.includes(m.receiver_id)) ||
-          (salon.userIds.includes(m.sender_id) && m.receiver_id === uid)
-        );
-        await DB.messages.update(
-          m => salon.userIds.includes(m.sender_id) && m.receiver_id === uid,
-          { is_read: 1 }
-        );
+        msgs = (await query(
+          `SELECT * FROM messages WHERE (sender_id = $1 AND receiver_id = ANY($2)) OR (sender_id = ANY($2) AND receiver_id = $1)`,
+          [uid, salon.userIds]
+        )).rows;
+        await query(`UPDATE messages SET is_read=1 WHERE sender_id = ANY($1) AND receiver_id=$2 AND is_read=0`, [salon.userIds, uid]);
       } else {
-        msgs = await DB.messages.find(m =>
-          (m.sender_id === uid && m.receiver_id === otherId) ||
-          (m.sender_id === otherId && m.receiver_id === uid)
-        );
-        await DB.messages.update(m => m.sender_id === otherId && m.receiver_id === uid, { is_read: 1 });
+        msgs = (await query(
+          `SELECT * FROM messages WHERE (sender_id=$1 AND receiver_id=$2) OR (sender_id=$2 AND receiver_id=$1)`,
+          [uid, otherId]
+        )).rows;
+        await query(`UPDATE messages SET is_read=1 WHERE sender_id=$1 AND receiver_id=$2 AND is_read=0`, [otherId, uid]);
       }
     }
 

@@ -371,23 +371,30 @@ router.post('/salon/:id/offers', authenticate, async (req, res) => {
       [salonId, title.trim(), description.trim(), discount_percent, valid_until]
     ).then(r => r.rows[0]);
 
-    const salon = await DB.salons.findOne(s => s.id === salonId);
-    // Notify all users in same city
     const fcm = require('../fcm');
-    const cityUsers = await DB.users.find(u => u.role === 'client' && u.fcm_token);
-    // Filter by city roughly: just send to clients who booked in this salon before
-    const salonBookings = await DB.bookings.find(b => b.salon_id === salonId);
-    const clientIds = [...new Set(salonBookings.map(b => b.client_id))];
-    for (const cid of clientIds) {
-      const client = await DB.users.findById(cid);
-      if (client?.fcm_token) {
-        fcm.notifySpecialOffer(client.fcm_token, salon?.name || 'صالون', title.trim(), salonId).catch(() => {});
-      }
-      await DB.notifications.insert({ user_id: cid, title: `عرض خاص من ${salon?.name || 'الصالون'} 🎁`, body: title.trim(), type: 'offer', ref_id: salonId });
-      req.io?.to(`user_${cid}`).emit('new_notif', { type: 'offer' });
-    }
+    const salon = (await query('SELECT * FROM salons WHERE id=$1', [salonId])).rows[0];
+    // Audience = clients who booked at this salon before (one indexed query, not a full scan).
+    const clientIds = (await query('SELECT DISTINCT client_id FROM bookings WHERE salon_id=$1 AND client_id IS NOT NULL', [salonId])).rows.map(r => r.client_id);
 
+    // Respond immediately; deliver the (potentially thousands of) notifications in the background.
     res.status(201).json({ offer, notified: clientIds.length });
+
+    setImmediate(async () => {
+      try {
+        if (!clientIds.length) return;
+        const notifTitle = `عرض خاص من ${salon?.name || 'الصالون'} 🎁`;
+        // one batch insert for every recipient
+        await query(
+          `INSERT INTO notifications (user_id, title, body, type, ref_id)
+           SELECT uid, $2, $3, 'offer', $4 FROM UNNEST($1::int[]) AS uid`,
+          [clientIds, notifTitle, title.trim(), salonId]
+        );
+        for (const cid of clientIds) req.io?.to(`user_${cid}`).emit('new_notif', { type: 'offer' });
+        const tokenRows = (await query('SELECT fcm_token FROM users WHERE id = ANY($1) AND fcm_token IS NOT NULL', [clientIds])).rows;
+        for (const t of tokenRows) fcm.notifySpecialOffer(t.fcm_token, salon?.name || 'صالون', title.trim(), salonId).catch(() => {});
+      } catch (e) { console.error('offer broadcast bg error:', e.message); }
+    });
+    return;
   } catch (e) { console.error('POST offers error:', e); res.status(500).json({ error: 'خطأ' }); }
 });
 
