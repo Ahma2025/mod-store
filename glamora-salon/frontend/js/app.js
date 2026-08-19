@@ -83,7 +83,7 @@ function closeModal() {
 
 function showToast(msg, duration = 3000) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.textContent = (typeof window.t === 'function') ? window.t(msg) : msg;
   t.classList.remove('hidden');
   t.classList.add('show');
   setTimeout(() => { t.classList.remove('show'); t.classList.add('hidden'); }, duration);
@@ -2820,15 +2820,15 @@ async function uploadBeautyProductImg(input) {
   const file = input.files[0];
   if (!file) return;
   const label = document.getElementById('bp-upload-text');
-  if (label) label.textContent = '⏳ جاري الرفع...';
+  if (label) label.textContent = window.t('⏳ جاري الرفع...');
   try {
     const url = await Api.beauty.uploadProductImage(file);
     bpNewImageUrl = url;
     const img = document.getElementById('bp-new-img');
     if (img) { img.src = url; img.classList.remove('hidden'); }
-    if (label) label.textContent = '✅ تم رفع الصورة (اضغطي للتغيير)';
+    if (label) label.textContent = window.t('✅ تم رفع الصورة (اضغطي للتغيير)');
   } catch (e) {
-    if (label) label.textContent = '📷 اضغطي لإضافة صورة المنتج';
+    if (label) label.textContent = window.t('📷 اضغطي لإضافة صورة المنتج');
     showToast('⚠️ فشل رفع الصورة');
   }
 }
@@ -2842,7 +2842,7 @@ async function addBeautyProduct() {
   const priceRaw = (document.getElementById('bp-new-price').value || '').trim();
   const stockRaw = (document.getElementById('bp-new-stock').value || '').trim();
   const btn = document.getElementById('bp-add-btn');
-  btn.disabled = true; btn.textContent = '⏳ جاري الإضافة...';
+  btn.disabled = true; btn.textContent = window.t('⏳ جاري الإضافة...');
   try {
     await Api.beauty.addProduct({
       category, name,
@@ -2858,12 +2858,12 @@ async function addBeautyProduct() {
     ['bp-new-name', 'bp-new-brand', 'bp-new-tags', 'bp-new-desc', 'bp-new-how', 'bp-new-price', 'bp-new-stock'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     bpNewImageUrl = null;
     const img = document.getElementById('bp-new-img'); if (img) img.classList.add('hidden');
-    const label = document.getElementById('bp-upload-text'); if (label) label.textContent = '📷 اضغطي لإضافة صورة المنتج';
+    const label = document.getElementById('bp-upload-text'); if (label) label.textContent = window.t('📷 اضغطي لإضافة صورة المنتج');
     loadBeautyProductsAdmin();
   } catch (e) {
     showToast('⚠️ فشل إضافة المنتج');
   } finally {
-    btn.disabled = false; btn.textContent = '➕ إضافة المنتج';
+    btn.disabled = false; btn.textContent = window.t('➕ إضافة المنتج');
   }
 }
 
@@ -2880,8 +2880,9 @@ async function loadBeautyProductsAdmin() {
       const img = p.image_url ? `<img class="bp-img" src="${_esc(p.image_url)}">` : `<div class="bp-img bp-img-ph">${_catEmoji(p.category)}</div>`;
       const price = (p.price != null && p.price !== '') ? `<div class="bp-price">${_esc(p.price)} ₪</div>` : '';
       const stock = p.stock || 0;
+      const _en = window.VELOUR_LANG === 'en';
       const stockBadge = stock > 0
-        ? `<span class="bp-stock-badge in">المخزون: ${stock}</span>`
+        ? `<span class="bp-stock-badge in">${_en ? 'Stock' : 'المخزون'}: ${stock}</span>`
         : `<span class="bp-stock-badge out">غير متوفر</span>`;
       return `<div class="beauty-product-card" style="margin-bottom:10px">
         ${img}
@@ -2903,7 +2904,7 @@ async function loadBeautyProductsAdmin() {
 }
 
 async function deleteBeautyProduct(id) {
-  if (!confirm('حذف هذا المنتج؟')) return;
+  if (!confirm(window.VELOUR_LANG === 'en' ? 'Delete this product?' : 'حذف هذا المنتج؟')) return;
   try {
     await Api.beauty.deleteProduct(id);
     loadBeautyProductsAdmin();
@@ -2913,7 +2914,7 @@ async function deleteBeautyProduct(id) {
 }
 
 async function restockProduct(id, current) {
-  const val = prompt('الكمية المتوفرة بالمخزون:', current);
+  const val = prompt(window.VELOUR_LANG === 'en' ? 'Available stock quantity:' : 'الكمية المتوفرة بالمخزون:', current);
   if (val === null) return;
   const n = parseInt(val);
   if (isNaN(n) || n < 0) { showToast('أدخلي رقماً صحيحاً'); return; }
@@ -2946,7 +2947,7 @@ async function saveDeliveryPrices() {
   const salonId = window._mySalonId || (typeof stSalonData !== 'undefined' && stSalonData && stSalonData.id);
   if (!salonId) { showToast('⚠️ لم يتم العثور على صالونك'); return; }
   const btn = document.getElementById('dp-save-btn');
-  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  btn.disabled = true; btn.textContent = window.t('⏳ جاري الحفظ...');
   try {
     await Api.stylistDash.setDeliveryPrices(salonId, {
       west_bank: parseFloat(document.getElementById('dp-west_bank').value) || 0,
@@ -2957,12 +2958,14 @@ async function saveDeliveryPrices() {
   } catch (e) {
     showToast('⚠️ فشل الحفظ');
   } finally {
-    btn.disabled = false; btn.textContent = '💾 حفظ أسعار التوصيل';
+    btn.disabled = false; btn.textContent = window.t('💾 حفظ أسعار التوصيل');
   }
 }
 
 // ═══════════════ PRODUCT SHOP / CART / CHECKOUT ═══════════════
 const REGION_NAMES = { west_bank: '🏙️ الضفة الغربية', jerusalem: '🕌 القدس', inside: '🌊 الداخل' };
+const REGION_NAMES_EN = { west_bank: '🏙️ West Bank', jerusalem: '🕌 Jerusalem', inside: '🌊 Inside (48)' };
+function regionName(r) { return (window.VELOUR_LANG === 'en' ? REGION_NAMES_EN : REGION_NAMES)[r] || ''; }
 let cart = { salonId: null, salonName: '', items: {} }; // items: { [id]: {product, qty} }
 let _shopProducts = [];
 let _shopSalonId = null;
@@ -3065,7 +3068,7 @@ function changeCartQty(id, delta) {
   if (!p) return;
   let qty = ((it && it.qty) || 0) + delta;
   const max = p.stock || 0;
-  if (qty > max) { showToast(`الكمية المتوفرة ${max} فقط`); qty = max; }
+  if (qty > max) { showToast(window.VELOUR_LANG === 'en' ? `Only ${max} available` : `الكمية المتوفرة ${max} فقط`); qty = max; }
   if (qty <= 0) delete cart.items[id];
   else cart.items[id] = { product: p, qty };
   renderShop(); renderCartBar();
@@ -3174,7 +3177,7 @@ function renderRegions() {
   box.innerHTML = ['west_bank', 'jerusalem', 'inside'].map(r => {
     const price = parseFloat(prices[r] || 0);
     return `<div class="co-region${checkoutRegion === r ? ' active' : ''}" id="rg-${r}" onclick="selectRegion('${r}')">
-      <span class="rg-name">${REGION_NAMES[r]}</span>
+      <span class="rg-name">${regionName(r)}</span>
       <span class="rg-price">${price > 0 ? price + ' ₪' : 'مجاناً'}</span>
     </div>`;
   }).join('');
@@ -3226,7 +3229,7 @@ async function placeOrder() {
   }
   const items = Object.values(cart.items).map(it => ({ product_id: it.product.id, qty: it.qty }));
   const btn = document.getElementById('co-place-btn');
-  btn.disabled = true; btn.textContent = '⏳ جاري إرسال الطلب...';
+  btn.disabled = true; btn.textContent = window.t('⏳ جاري إرسال الطلب...');
   try {
     await Api.orders.create({
       salon_id: cart.salonId,
@@ -3245,7 +3248,7 @@ async function placeOrder() {
   } catch (e) {
     showToast('⚠️ ' + (e.message || 'فشل إرسال الطلب'));
   } finally {
-    btn.disabled = false; btn.textContent = 'تأكيد الطلب 🌹';
+    btn.disabled = false; btn.textContent = window.t('تأكيد الطلب 🌹');
   }
 }
 
@@ -3292,9 +3295,13 @@ function renderOrderCard(o) {
     </div>`).join('');
   const isDelivery = o.delivery_method === 'delivery';
   const meta = isDelivery
-    ? `<div class="order-meta">🚚 <b>توصيل</b> — ${REGION_NAMES[o.delivery_region] || ''}<br>📍 ${_esc(o.city || '')} · ${_esc(o.address || '')}<br>📱 ${_esc(o.customer_phone || '')}</div>`
+    ? `<div class="order-meta">🚚 <b>توصيل</b> — ${regionName(o.delivery_region)}<br>📍 ${_esc(o.city || '')} · ${_esc(o.address || '')}<br>📱 ${_esc(o.customer_phone || '')}</div>`
     : `<div class="order-meta">🏬 <b>استلام من الصالون</b><br>📱 ${_esc(o.customer_phone || '')}</div>`;
-  const totals = `<div class="order-totals"><span>المجموع${isDelivery ? ` + توصيل ${o.delivery_fee} ₪` : ''}</span><span class="grand">${o.total} ₪</span></div>`;
+  const _en = window.VELOUR_LANG === 'en';
+  const totalsLabel = _en
+    ? `Total${isDelivery ? ` + delivery ${o.delivery_fee} ₪` : ''}`
+    : `المجموع${isDelivery ? ` + توصيل ${o.delivery_fee} ₪` : ''}`;
+  const totals = `<div class="order-totals"><span>${totalsLabel}</span><span class="grand">${o.total} ₪</span></div>`;
   const actions = o.status === 'pending'
     ? `<div class="order-actions">
         <button class="order-btn approve" onclick="orderAction(${o.id}, 'confirmed')">✅ موافقة</button>
@@ -3314,7 +3321,7 @@ function renderOrderCard(o) {
 }
 
 async function orderAction(id, status) {
-  if (status === 'rejected' && !confirm('رفض هذا الطلب؟')) return;
+  if (status === 'rejected' && !confirm(window.VELOUR_LANG === 'en' ? 'Reject this order?' : 'رفض هذا الطلب؟')) return;
   try {
     await Api.orders.setStatus(id, status);
     showToast(status === 'confirmed' ? '✅ تم تأكيد الطلب' : '❌ تم رفض الطلب');
@@ -3351,6 +3358,7 @@ function _renderMyOrders(orders) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">🛍️</div><h3>لا يوجد طلبات بعد</h3><p>طلباتك من متاجر الصالونات بتظهر هون</p></div>';
     return;
   }
+  const _en = window.VELOUR_LANG === 'en';
   const label = { pending: '⏳ بانتظار الموافقة', confirmed: '✅ مؤكّد', rejected: '❌ مرفوض' };
   list.innerHTML = orders.map(o => {
     const items = (o.items || []).map(it => `<div class="order-item">
@@ -3360,17 +3368,20 @@ function _renderMyOrders(orders) {
       </div>`).join('');
     const isDelivery = o.delivery_method === 'delivery';
     const meta = isDelivery
-      ? `<div class="order-meta">🚚 <b>توصيل</b> — ${REGION_NAMES[o.delivery_region] || ''}<br>📍 ${_esc(o.city || '')} · ${_esc(o.address || '')}</div>`
+      ? `<div class="order-meta">🚚 <b>توصيل</b> — ${regionName(o.delivery_region)}<br>📍 ${_esc(o.city || '')} · ${_esc(o.address || '')}</div>`
       : `<div class="order-meta">🏬 <b>استلام من الصالون</b></div>`;
     const t = o.created_at ? new Date(o.created_at).toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const totalLabel = _en
+      ? `Total${isDelivery ? ` (incl. delivery ${o.delivery_fee} ₪)` : ''}`
+      : `الإجمالي${isDelivery ? ` (مع التوصيل ${o.delivery_fee} ₪)` : ''}`;
     return `<div class="order-card ${o.status}" data-order-id="${o.id}">
       <div class="order-head">
-        <div><div class="order-cust">طلب #${o.id}</div><div class="order-time">${t}</div></div>
+        <div><div class="order-cust">${_en ? 'Order' : 'طلب'} #${o.id}</div><div class="order-time">${t}</div></div>
         <span class="order-badge ${o.status}">${label[o.status] || o.status}</span>
       </div>
       <div class="order-items">${items}</div>
       ${meta}
-      <div class="order-totals"><span>الإجمالي${isDelivery ? ` (مع التوصيل ${o.delivery_fee} ₪)` : ''}</span><span class="grand">${o.total} ₪</span></div>
+      <div class="order-totals"><span>${totalLabel}</span><span class="grand">${o.total} ₪</span></div>
       <p style="font-size:11.5px;color:#a08a94;margin-top:8px">💵 الدفع عند الاستلام</p>
     </div>`;
   }).join('');
