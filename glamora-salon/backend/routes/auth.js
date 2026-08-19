@@ -23,8 +23,8 @@ router.post('/register', async (req, res) => {
     await DB.loyalty_transactions.insert({ user_id: user.id, points: 50, type: 'earned', description: 'مكافأة التسجيل 🎉' });
     await DB.notifications.insert({ user_id: user.id, title: 'أهلاً بك في Glamora 🌸', body: 'كسبتِ 50 نقطة كمكافأة تسجيل!', type: 'loyalty' });
 
-    // ✅ SECURITY: 7d expiry instead of 30d
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
+    // 30-day token; silently renewed on activity by the authenticate middleware (sliding session)
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '30d' });
     const { password_hash, ...safeUser } = user;
     res.json({ token, user: safeUser });
   } catch (e) {
@@ -53,8 +53,8 @@ router.post('/login', async (req, res) => {
       }
     } catch (e) { /* never block login on a rehash failure */ }
 
-    // ✅ SECURITY: 7d expiry instead of 30d
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
+    // 30-day token; silently renewed on activity by the authenticate middleware (sliding session)
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '30d' });
     const { password_hash, ...safeUser } = user;
     res.json({ token, user: safeUser });
   } catch (e) {
@@ -74,11 +74,23 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+const TOKEN_TTL = '30d';
+
 function authenticate(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
   try {
     req.user = jwt.verify(token, SECRET);
+    // Sliding session (Instagram-style): once the token is >1 day old, silently issue a fresh
+    // 30-day token via a response header. An active user therefore never has to log in again;
+    // only a device left untouched for 30+ days (or an explicit logout) ends the session.
+    try {
+      const ageSec = Math.floor(Date.now() / 1000) - (req.user.iat || 0);
+      if (ageSec > 86400) {
+        const fresh = jwt.sign({ id: req.user.id, role: req.user.role }, SECRET, { expiresIn: TOKEN_TTL });
+        res.setHeader('X-Renew-Token', fresh);
+      }
+    } catch (e) { /* renewal is best-effort, never block the request */ }
     next();
   } catch {
     res.status(401).json({ error: 'جلسة منتهية، سجلي دخولك مجدداً' });

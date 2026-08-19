@@ -31,6 +31,20 @@ function clearAuth() {
   renderedMsgIds.clear();
 }
 
+// Sliding session: the server sends a fresh token in X-Renew-Token once the current one
+// is >1 day old. Save it silently so an active user's session never expires.
+function _maybeRenewToken(headerVal) {
+  try {
+    if (headerVal && headerVal !== authToken) {
+      authToken = headerVal;
+      localStorage.setItem('glamora_token', headerVal);
+      if (typeof currentUser !== 'undefined' && currentUser) {
+        try { localStorage.setItem('glamora_user', JSON.stringify(currentUser)); } catch (e) {}
+      }
+    }
+  } catch (e) {}
+}
+
 async function apiCall(method, path, body = null) {
   const headers = { 'Content-Type': 'application/json' };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
@@ -43,6 +57,7 @@ async function apiCall(method, path, body = null) {
   } catch (fetchErr) {
     throw new Error(`[${method} ${url}] ${fetchErr.message}`);
   }
+  _maybeRenewToken(res.headers.get('X-Renew-Token'));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'حدث خطأ ما');
   return data;
@@ -66,6 +81,7 @@ function streamPost(path, body, onText) {
     };
     xhr.onprogress = () => { if (onText) onText(parse(xhr.responseText).text); };
     xhr.onload = () => {
+      try { _maybeRenewToken(xhr.getResponseHeader('X-Renew-Token')); } catch (e) {}
       if (xhr.status >= 200 && xhr.status < 300) {
         const { text, meta } = parse(xhr.responseText);
         if (onText) onText(text);

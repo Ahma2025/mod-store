@@ -41,7 +41,7 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 
 // ✅ SECURITY: CORS restricted to known origins
-app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true, exposedHeaders: ['X-Renew-Token'] }));
 
 app.use(express.json({ limit: '2mb' }));
 
