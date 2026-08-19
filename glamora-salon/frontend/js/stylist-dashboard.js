@@ -146,7 +146,7 @@ function renderServices() {
     <div class="service-mgmt-item">
       <div class="svc-cat-badge">${CAT_ICONS[s.category] || '💅'}</div>
       <div class="svc-mgmt-info">
-        <div class="svc-mgmt-name" translate="no">${s.name_ar || s.name}</div>
+        <div class="svc-mgmt-name" translate="no">${_esc(s.name_ar || s.name)}</div>
         <div class="svc-mgmt-meta" translate="no">${s.category} · ${s.duration_minutes} ${_svcEN ? 'min' : 'دقيقة'}</div>
       </div>
       <div>
@@ -178,22 +178,22 @@ function renderTeam() {
       <div class="team-card">
         <div class="team-card-top">
           <div class="team-avatar-wrap" onclick="document.getElementById('team-avatar-input-${st.id}').click()" style="position:relative;cursor:pointer;flex-shrink:0">
-            <div class="team-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
+            <div class="team-avatar">${st.avatar ? `<img class="avatar-img" src="${_attr(st.avatar)}" alt="${_attr(st.name)}">` : _esc((st.name || '؟')[0])}</div>
             <div style="position:absolute;bottom:-2px;left:-2px;background:var(--rose);color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2)">📷</div>
             <input type="file" id="team-avatar-input-${st.id}" accept="image/*" style="display:none" onchange="uploadTeamAvatar(${st.id}, this)">
           </div>
           <div class="team-info">
-            <div class="team-name">${st.name || '-'}</div>
+            <div class="team-name">${_esc(st.name) || '-'}</div>
             <div class="team-phone">📞 ${st.phone || '-'} · ${st.experience_years} ${_teamEN ? 'yrs exp' : 'سنوات خبرة'}</div>
           </div>
         </div>
-        ${specs.length ? `<div class="team-specs">${specs.map(sp => `<span class="team-spec-tag">${sp}</span>`).join('')}</div>` : ''}
+        ${specs.length ? `<div class="team-specs">${specs.map(sp => `<span class="team-spec-tag">${_esc(sp)}</span>`).join('')}</div>` : ''}
         ${avail.length ? `<div class="team-schedule">${avail.filter(a=>!a.is_off).map(a => {
           let shifts = `<span class="day-label">${DAYS()[a.day_of_week]}</span>: ${a.start_time}–${a.end_time}`;
           if (a.shift2_enabled && a.shift2_start) shifts += ` · ${a.shift2_start}–${a.shift2_end}`;
           return `<span class="team-schedule-item">${shifts}</span>`;
         }).join('')}</div>` : `<div style="font-size:12px;color:var(--gray);margin-top:8px;padding:8px;background:var(--cream2);border-radius:8px">⚠️ ${_teamEN ? 'Working hours not set yet' : 'لم تُضبط مواعيد الدوام بعد'}</div>`}
-        <button class="team-avail-btn" onclick="showAvailForm(${st.id}, '${st.name}')">⏰ ${_teamEN ? 'Set Working Hours' : 'ضبط مواعيد الدوام'}</button>
+        <button class="team-avail-btn" onclick="showAvailForm(${st.id}, ${_attr(JSON.stringify(st.name || ''))})">⏰ ${_teamEN ? 'Set Working Hours' : 'ضبط مواعيد الدوام'}</button>
       </div>
     `;
   }).join('');
@@ -256,9 +256,9 @@ function buildStBookingCard(b) {
       <div class="st-bk-status-bar ${st.cls}">${st.label}</div>
       <div class="st-bk-body">
         <div class="st-bk-client-section">
-          <div class="st-bk-client-avatar">${(b.client_name || '؟')[0]}</div>
+          <div class="st-bk-client-avatar">${_esc((b.client_name || '؟')[0])}</div>
           <div class="st-bk-client-info">
-            <div class="st-bk-client-name">${b.client_name || '-'}</div>
+            <div class="st-bk-client-name">${_esc(b.client_name) || '-'}</div>
             ${b.client_phone ? `<a href="tel:${b.client_phone}" class="st-bk-phone">📞 ${b.client_phone}</a>` : ''}
           </div>
         </div>
@@ -267,9 +267,9 @@ function buildStBookingCard(b) {
           <div class="st-bk-detail-row">
             <span class="st-bk-detail-icon">${icon}</span>
             <div>
-              <div class="st-bk-svc-name" translate="no">${b.service_name || '-'}</div>
+              <div class="st-bk-svc-name" translate="no">${_esc(b.service_name) || '-'}</div>
               <div class="st-bk-svc-meta">⏱ ${fmtDur(b.total_duration || b.duration_minutes)} · ${(b.total_price != null ? b.total_price : (b.service_price || 0))}₪${(b.services && b.services.length > 1) ? ` · ${b.services.length} ${_isEN ? 'services' : 'خدمات'}` : ''}</div>
-              ${(b.services && b.services.length > 1) ? `<div class="st-bk-svc-list" style="margin-top:4px;font-size:12px;color:var(--gray)">${b.services.map(s => `${s.name} <span style="opacity:.7">(${fmtDur(s.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
+              ${(b.services && b.services.length > 1) ? `<div class="st-bk-svc-list" style="margin-top:4px;font-size:12px;color:var(--gray)">${b.services.map(s => `${_esc(s.name)} <span style="opacity:.7">(${fmtDur(s.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
             </div>
           </div>
           <div class="st-bk-detail-row">
@@ -279,8 +279,8 @@ function buildStBookingCard(b) {
               <div class="st-bk-svc-meta">${_isEN ? 'At' : 'الساعة'} ${b.booking_time}</div>
             </div>
           </div>
-          ${b.stylist_name ? `<div class="st-bk-detail-row"><span class="st-bk-detail-icon">👩‍🎨</span><div class="st-bk-svc-name">${b.stylist_name}</div></div>` : ''}
-          ${b.notes ? `<div class="st-bk-notes">💬 ${b.notes}</div>` : ''}
+          ${b.stylist_name ? `<div class="st-bk-detail-row"><span class="st-bk-detail-icon">👩‍🎨</span><div class="st-bk-svc-name">${_esc(b.stylist_name)}</div></div>` : ''}
+          ${b.notes ? `<div class="st-bk-notes">💬 ${_esc(b.notes)}</div>` : ''}
         </div>
       </div>
       ${b.status === 'pending' ? `
@@ -290,7 +290,7 @@ function buildStBookingCard(b) {
         </div>` : ''}
       ${effStatus === 'confirmed' ? `
         <div class="st-bk-actions">
-          <button class="btn-chat-sm" onclick="openChatWith(${b.client_id || b.id}, '${b.client_name}')">${_isEN ? 'Contact' : 'تواصل'}</button>
+          <button class="btn-chat-sm" onclick="openChatWith(${b.client_id || b.id}, ${_attr(JSON.stringify(b.client_name || ''))})">${_isEN ? 'Contact' : 'تواصل'}</button>
           <button class="btn-reject" onclick="stUpdateBooking(${b.id},'cancelled')">${_isEN ? 'Cancel Booking' : 'إلغاء الحجز'}</button>
         </div>` : ''}
     </div>
@@ -319,11 +319,11 @@ async function loadStConversations() {
     const list = document.getElementById('st-conversations-list');
     if (!convs.length) { list.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">💬</div><h3>${window.VELOUR_LANG === 'en' ? 'No messages' : 'لا توجد رسائل'}</h3></div>`; return; }
     list.innerHTML = convs.map(c => `
-      <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
+      <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, ${_attr(JSON.stringify(c.other_name || ''))}, ${_attr(JSON.stringify(c.other_avatar || ''))})">
         <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
-          <div class="conv-name">${c.other_name}</div>
-          <div class="conv-preview">${c.last_message || ''}</div>
+          <div class="conv-name">${_esc(c.other_name)}</div>
+          <div class="conv-preview">${_esc(c.last_message || '')}</div>
         </div>
         ${c.unread > 0 ? `<span class="badge">${c.unread}</span>` : ''}
       </div>
@@ -796,7 +796,7 @@ async function loadOffers(salonId) {
     list.innerHTML = offers.map(o => `
       <div style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:8px;border-right:4px solid var(--rose);display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
-          <div style="font-weight:800;font-size:14px">🎁 ${o.title}</div>
+          <div style="font-weight:800;font-size:14px">🎁 ${_esc(o.title)}</div>
           ${o.discount_percent ? `<div style="font-size:12px;color:var(--rose-dark);margin-top:2px">${_loEN ? `${o.discount_percent}% discount` : `خصم ${o.discount_percent}%`}</div>` : ''}
           ${o.valid_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">${_loEN ? `Valid until ${o.valid_until}` : `صالح حتى ${o.valid_until}`}</div>` : ''}
         </div>
@@ -870,7 +870,7 @@ async function loadBlockedSlots() {
     list.innerHTML = blocks.map(b => `
       <div class="blocked-slot-item">
         <div class="blocked-slot-info">
-          <div class="blocked-slot-date">👩 ${b.stylist_name || (_blEN ? 'Stylist' : 'كوفيرة')} · 📅 ${formatDateAr(b.date)}</div>
+          <div class="blocked-slot-date">👩 ${_esc(b.stylist_name) || (_blEN ? 'Stylist' : 'كوفيرة')} · 📅 ${formatDateAr(b.date)}</div>
           <div class="blocked-slot-time">🕐 ${b.start_time} – ${b.end_time}${b.reason ? ' · ' + b.reason : ''}</div>
         </div>
         <button class="blocked-slot-del" onclick="unblockSlot(${b.id})">${_blEN ? 'Unblock' : 'فتح'}</button>
@@ -1077,16 +1077,16 @@ async function loadStReviews() {
     el.innerHTML = ratings.map(r => `
       <div class="review-card" style="margin:0 0 10px">
         <div class="review-header">
-          <div class="review-avatar">${(r.client_name||'؟')[0]}</div>
+          <div class="review-avatar">${_esc((r.client_name||'؟')[0])}</div>
           <div>
-            <div class="review-name">${r.client_name||(_rvEN ? 'Client' : 'زبونة')}</div>
+            <div class="review-name">${_esc(r.client_name)||(_rvEN ? 'Client' : 'زبونة')}</div>
             <div class="review-date">${new Date(r.created_at).toLocaleDateString(_rvEN ? 'en-US' : 'ar-SA')}</div>
           </div>
           <div style="margin-right:auto;color:#FFB800;font-size:14px">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>
         </div>
-        ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
+        ${r.comment ? `<div class="review-comment">${_esc(r.comment)}</div>` : ''}
         ${r.reply_text
-          ? `<div class="review-reply"><div class="review-reply-label">💬 ${_rvEN ? 'Your reply' : 'ردك'}</div><div class="review-reply-text">${r.reply_text}</div></div>`
+          ? `<div class="review-reply"><div class="review-reply-label">💬 ${_rvEN ? 'Your reply' : 'ردك'}</div><div class="review-reply-text">${_esc(r.reply_text)}</div></div>`
           : `<div style="margin-top:8px">
               <textarea id="reply-input-${r.id}" placeholder="${_rvEN ? 'Write your reply...' : 'اكتبي ردك على هذا التقييم...'}" rows="2" class="rating-comment-input" style="font-size:13px"></textarea>
               <button class="btn-sm btn-sm-primary" style="margin-top:6px;width:100%" onclick="sendReviewReply(${r.id})">${_rvEN ? 'Send Reply' : 'إرسال الرد'}</button>
@@ -1163,7 +1163,7 @@ function _renderClients(clients) {
       : (c.bookings || []).filter(b => b.earned || b.status === 'completed').reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
     return `<div class="client-card">
       <div class="client-card-header">
-        <span class="client-name">${c.name}</span>
+        <span class="client-name">${_esc(c.name)}</span>
         <span class="client-badge">${(c.bookings || []).length} ${_clEN ? 'booking' : 'حجز'}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1212,7 +1212,7 @@ async function loadInventory() {
       const isLow = parseFloat(item.quantity) <= parseInt(item.low_threshold);
       return `<div class="inventory-item ${isLow ? 'low-stock' : ''}">
         <div style="flex:1">
-          <div class="inv-name">${item.name}</div>
+          <div class="inv-name">${_esc(item.name)}</div>
           <div class="inv-qty">${item.quantity} ${item.unit}</div>
         </div>
         ${isLow ? `<span class="inv-low-badge">${_invEN ? 'Low stock ⚠️' : 'مخزون منخفض ⚠️'}</span>` : ''}

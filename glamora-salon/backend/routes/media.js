@@ -1,6 +1,10 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
+// Unguessable suffix (128-bit) so private media (chat photos, review before/after) can't be
+// enumerated by guessing user id + timestamp.
+const rid = () => crypto.randomBytes(16).toString('hex');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { DB, query } = require('../database');
 const { authenticate } = require('./auth');
@@ -148,7 +152,7 @@ router.post('/stylist/:stylistId/avatar', authenticate, handleUpload('file'), as
     if (!isOwn && !isSameSalon) return res.status(403).json({ error: 'غير مصرح' });
 
     const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `stylist_avatar_${stylist.user_id || stylistId}_${Date.now()}${ext}`;
+    const filename = `stylist_avatar_${stylist.user_id || stylistId}_${Date.now()}_${rid()}${ext}`;
 
     let url;
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
@@ -174,7 +178,7 @@ router.post('/stylist/avatar', authenticate, handleUpload('file'), async (req, r
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
 
     const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `stylist_avatar_${req.user.id}_${Date.now()}${ext}`;
+    const filename = `stylist_avatar_${req.user.id}_${Date.now()}_${rid()}${ext}`;
 
     let url;
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
@@ -202,7 +206,7 @@ router.post('/salon/:salonId/avatar', authenticate, handleUpload('file'), async 
     if (!stylist) return res.status(403).json({ error: 'Not authorized' });
 
     const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `salon_avatar_${salonId}_${Date.now()}${ext}`;
+    const filename = `salon_avatar_${salonId}_${Date.now()}_${rid()}${ext}`;
 
     let url;
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
@@ -224,7 +228,7 @@ router.post('/review/photo', authenticate, handleUpload('file'), async (req, res
   try {
     if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
     const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `review_${req.user.id}_${Date.now()}${ext}`;
+    const filename = `review_${req.user.id}_${Date.now()}_${rid()}${ext}`;
     let url;
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
       url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
@@ -245,7 +249,7 @@ router.post('/chat/upload', authenticate, handleUpload('file'), async (req, res)
     const isImage = req.file.mimetype.startsWith('image/');
     if (!isAudio && !isImage) return res.status(400).json({ error: 'نوع ملف غير مدعوم' });
     const ext = isAudio ? '.webm' : (req.file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)?.[0] || '.jpg');
-    const filename = `chat_${req.user.id}_${Date.now()}${ext}`;
+    const filename = `chat_${req.user.id}_${Date.now()}_${rid()}${ext}`;
     let url;
     if (process.env.CF_ACCOUNT_ID && process.env.CF_R2_ACCESS_KEY_ID) {
       url = await uploadToR2(req.file.buffer, filename, req.file.mimetype);

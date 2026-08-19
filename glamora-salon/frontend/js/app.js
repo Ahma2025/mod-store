@@ -322,11 +322,11 @@ async function filterTopRated(el) {
         <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-size:16px">${medal}</span>
-            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${_esc(s.name)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
-            <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${s.city}</span>
+            <span style="background:#f5eef2;color:#6B0F2B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${_esc(s.city)}</span>
           </div>
           <div style="font-family:El Messiri;font-size:12px;color:#999">${s.description ? s.description.substring(0,50)+'...' : ''}</div>
         </div>
@@ -392,7 +392,7 @@ async function openNearestScreen() {
         <div style="flex:1;padding:12px 12px 12px 8px;display:flex;flex-direction:column;justify-content:center;gap:4px">
           <div style="display:flex;align-items:center;gap:6px">
             ${rank ? `<span style="font-size:16px">${rank}</span>` : ''}
-            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${s.name}</span>
+            <span style="font-family:El Messiri;font-size:15px;font-weight:800;color:#1A0A0F">${_esc(s.name)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="background:#fff8f0;color:#C9728A;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #f0d8e0">⭐ ${s.rating} (${s.reviews_count})</span>
@@ -443,14 +443,14 @@ async function openMapScreen() {
       const salonIcon = L.divIcon({
         html: `<div style="background:#6B0F2B;border-radius:20px;padding:6px 10px;font-size:13px;white-space:nowrap;box-shadow:0 3px 10px rgba(107,15,43,0.4);font-family:El Messiri;font-weight:700;color:white;display:flex;align-items:center;gap:5px;position:relative">
           <span style="font-size:15px">${emoji}</span>
-          <span>${s.name}</span>
+          <span>${_esc(s.name)}</span>
           <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid #6B0F2B"></div>
         </div>`,
         iconAnchor:[40, 37], className:''
       });
       L.marker([s.latitude, s.longitude], { icon: salonIcon })
         .addTo(leafletMap)
-        .bindPopup(`<div style="font-family:El Messiri;text-align:right;min-width:140px"><b style="font-size:14px">${s.name}</b><br><span style="color:#888;font-size:12px">⭐ ${s.rating} · ${s.city}</span><br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A;font-size:13px;font-weight:700">عرض الصالون ←</a></div>`);
+        .bindPopup(`<div style="font-family:El Messiri;text-align:right;min-width:140px"><b style="font-size:14px">${_esc(s.name)}</b><br><span style="color:#888;font-size:12px">⭐ ${s.rating} · ${_esc(s.city)}</span><br><a href="#" onclick="openSalon(${s.id});goBack();return false;" style="color:#C9728A;font-size:13px;font-weight:700">عرض الصالون ←</a></div>`);
     });
     if (!salons.length) showToast(window.VELOUR_LANG === 'en' ? 'No salons with locations yet' : 'لا توجد صالونات بمواقع محددة بعد');
   } catch(e) { showToast('خطأ في تحميل مواقع الصالونات'); }
@@ -543,11 +543,11 @@ function homeSalonCard(s, distText) {
     : s.cover_emoji || '💅';
   const meta = distText
     ? `<div class="hsc-dist">📍 ${distText}</div>`
-    : `<div class="hsc-meta">⭐ ${s.rating} · ${s.city}</div>`;
+    : `<div class="hsc-meta">⭐ ${s.rating} · ${_esc(s.city)}</div>`;
   return `<div class="home-salon-card" onclick="openSalon(${s.id})">
     <div class="hsc-thumb">${thumb}</div>
     <div class="hsc-info">
-      <div class="hsc-name">${s.name}</div>
+      <div class="hsc-name">${_esc(s.name)}</div>
       ${meta}
     </div>
   </div>`;
@@ -645,10 +645,10 @@ async function filterByService(serviceName) {
         <button onclick="toggleFavorite(${s.id}, event)" style="position:absolute;top:10px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;z-index:2;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav ? '⭐' : '☆'}</button>
         <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
         <div class="salon-card-info">
-          <h4>${s.name}</h4>
+          <h4>${_esc(s.name)}</h4>
           <div class="salon-card-meta">
             <span class="salon-rating-badge">⭐ ${s.rating} (${s.reviews_count})</span>
-            <span style="color:#888;font-size:12px">📍 ${s.city}</span>
+            <span style="color:#888;font-size:12px">📍 ${_esc(s.city)}</span>
           </div>
           <p style="font-size:13px;color:var(--gray)">${s.description ? s.description.substring(0,60)+'...' : ''}</p>
         </div>
@@ -677,8 +677,8 @@ function renderFeaturedSalons(salons) {
     <div class="fslide" data-id="${s.id}" style="position:absolute;inset:0;${bg};transition:opacity 0.5s ease;opacity:${i===0?1:0};pointer-events:${i===0?'auto':'none'};display:flex;flex-direction:column;justify-content:flex-end">
       <div style="background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 100%);padding:16px 14px 14px;border-radius:0 0 18px 18px">
         ${!s.cover_url ? `<div style="font-size:42px;text-align:center;margin-bottom:6px">${s.cover_emoji||'💅'}</div>` : ''}
-        <div style="font-family:El Messiri;font-size:18px;font-weight:800;color:white">${s.name}</div>
-        <div style="font-family:El Messiri;font-size:13px;color:rgba(255,255,255,0.8);margin-top:2px">📍 ${s.city} · ⭐ ${s.rating}</div>
+        <div style="font-family:El Messiri;font-size:18px;font-weight:800;color:white">${_esc(s.name)}</div>
+        <div style="font-family:El Messiri;font-size:13px;color:rgba(255,255,255,0.8);margin-top:2px">📍 ${_esc(s.city)} · ⭐ ${s.rating}</div>
       </div>
     </div>`;
   }).join('');
@@ -757,13 +757,13 @@ function renderSalonsList(salons, showDistance = false) {
       : (s.cover_emoji || '💅');
     const distBadge = showDistance && s._dist != null
       ? `<span style="color:#C9728A;font-size:12px;font-weight:600">📍 ${s._dist < 1 ? (s._dist*1000).toFixed(0)+'م' : s._dist.toFixed(1)+'كم'}</span>`
-      : `<span style="color:#888;font-size:12px">📍 ${s.city}</span>`;
+      : `<span style="color:#888;font-size:12px">📍 ${_esc(s.city)}</span>`;
     return `
     <div class="salon-card" onclick="openSalon(${s.id})" style="position:relative">
       <button onclick="toggleFavorite(${s.id}, event)" style="position:absolute;top:10px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;z-index:2;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))">${isFav ? '⭐' : '☆'}</button>
       <div class="salon-thumb" style="${s.cover_url?'padding:0;overflow:hidden':''}">${thumb}</div>
       <div class="salon-card-info">
-        <h4>${s.name}</h4>
+        <h4>${_esc(s.name)}</h4>
         <div class="salon-badges-row">
           ${s.is_verified ? `<span class="salon-badge badge-verified">✓ ${window.VELOUR_LANG === 'en' ? 'Verified' : 'موثّق'}</span>` : ''}
           ${s.is_new ? `<span class="salon-badge badge-new">✨ ${window.VELOUR_LANG === 'en' ? 'New' : 'جديد'}</span>` : ''}
@@ -875,7 +875,7 @@ function renderSalonServices(services) {
         <span style="font-size:22px">${categoryIcon(s.category)}</span>
       </div>
       <div class="service-info">
-        <h4 translate="no">${s.name_ar || s.name}</h4>
+        <h4 translate="no">${_esc(s.name_ar || s.name)}</h4>
         <p translate="no">${s.description ? s.description.substring(0,55) + '...' : ''}</p>
         <div class="duration">⏱ ${s.duration_minutes} ${_ssEN ? 'min' : 'دقيقة'}</div>
       </div>
@@ -892,11 +892,11 @@ function renderSalonStylists(stylists) {
     try { specs = JSON.parse(st.specialties || '[]'); } catch {}
     return `
     <div class="stylist-card-full" onclick="openStylistBooking(${st.id})">
-      <div class="stylist-card-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
+      <div class="stylist-card-avatar">${st.avatar ? `<img class="avatar-img" src="${_attr(st.avatar)}" alt="${_attr(st.name)}">` : _esc((st.name || '؟')[0])}</div>
       <div class="stylist-card-info">
-        <h4>${st.name}</h4>
-        ${st.bio ? `<div class="stylist-bio">${st.bio}</div>` : ''}
-        <div class="specialty-tags">${specs.slice(0,3).map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <h4>${_esc(st.name)}</h4>
+        ${st.bio ? `<div class="stylist-bio">${_esc(st.bio)}</div>` : ''}
+        <div class="specialty-tags">${specs.slice(0,3).map(t => `<span class="tag">${_esc(t)}</span>`).join('')}</div>
       </div>
     </div>`;
   }).join('');
@@ -953,20 +953,20 @@ function renderSalonRatings(data) {
     const replyHtml = r.reply_text ? `
       <div class="review-reply">
         <div class="review-reply-label">💬 ${window.VELOUR_LANG === 'en' ? 'Salon Reply' : 'رد الصالون'}</div>
-        <div class="review-reply-text">${r.reply_text}</div>
+        <div class="review-reply-text">${_esc(r.reply_text)}</div>
       </div>` : '';
     return `
     <div class="review-card">
       <div class="review-header">
-        <div class="review-avatar">${(r.client_name || '؟')[0]}</div>
+        <div class="review-avatar">${_esc((r.client_name || '؟')[0])}</div>
         <div>
-          <div class="review-name">${r.client_name || (window.VELOUR_LANG === 'en' ? 'Client' : 'زبونة')}</div>
+          <div class="review-name">${_esc(r.client_name) || (window.VELOUR_LANG === 'en' ? 'Client' : 'زبونة')}</div>
           <div class="review-date">${new Date(r.created_at).toLocaleDateString(window.VELOUR_LANG === 'en' ? 'en-US' : 'ar-SA')}</div>
         </div>
       </div>
       <div class="review-stars-row">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</div>
       ${subTags.length ? `<div class="review-sub-ratings">${subTags.map(t => `<span class="review-sub-tag">${t}</span>`).join('')}</div>` : ''}
-      ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
+      ${r.comment ? `<div class="review-comment">${_esc(r.comment)}</div>` : ''}
       ${baHtml}
       ${replyHtml}
     </div>`;
@@ -1050,14 +1050,14 @@ function renderSalonReviews(reviews) {
   document.getElementById('salon-reviews-list').innerHTML = reviews.map(r => `
     <div class="review-item">
       <div class="review-header">
-        <div class="review-avatar">${(r.client_name || '؟')[0]}</div>
+        <div class="review-avatar">${_esc((r.client_name || '؟')[0])}</div>
         <div>
-          <div class="review-name">${r.client_name}</div>
+          <div class="review-name">${_esc(r.client_name)}</div>
           <div class="review-stars">${'⭐'.repeat(r.rating)}</div>
         </div>
         <div class="review-date" style="margin-right:auto">${formatDate(r.created_at)}</div>
       </div>
-      <div class="review-comment">${r.comment || ''}</div>
+      <div class="review-comment">${_esc(r.comment || '')}</div>
     </div>
   `).join('');
 }
@@ -1252,10 +1252,10 @@ function renderSalonInfo(data) {
     : `<span style="color:#888">${_siEN ? 'No days off' : 'لا يوجد أيام إجازة'}</span>`;
 
   document.getElementById('salon-info-content').innerHTML = `
-    <div class="info-row"><span class="info-icon">📍</span><div><div class="info-label">${_siEN ? 'Address' : 'العنوان'}</div><div class="info-value">${data.address || ''}, ${data.city}</div></div></div>
+    <div class="info-row"><span class="info-icon">📍</span><div><div class="info-label">${_siEN ? 'Address' : 'العنوان'}</div><div class="info-value">${_esc(data.address || '')}, ${_esc(data.city)}</div></div></div>
     <div class="info-row"><span class="info-icon">📞</span><div><div class="info-label">${_siEN ? 'Phone' : 'هاتف'}</div><div class="info-value">${data.phone || ''}</div></div></div>
     <div class="info-row"><span class="info-icon">🗓️</span><div><div class="info-label">${_siEN ? 'Days Off' : 'أيام الإجازة'}</div><div class="off-days-wrap">${offDaysHtml}</div></div></div>
-    <div class="info-row"><span class="info-icon">ℹ️</span><div><div class="info-label">${_siEN ? 'About' : 'عن الصالون'}</div><div class="info-value">${data.description || ''}</div></div></div>
+    <div class="info-row"><span class="info-icon">ℹ️</span><div><div class="info-label">${_siEN ? 'About' : 'عن الصالون'}</div><div class="info-value">${_esc(data.description || '')}</div></div></div>
   `;
 }
 
@@ -1333,7 +1333,7 @@ function renderWizardServices(services) {
         <span style="font-size:22px">${categoryIcon(s.category)}</span>
       </div>
       <div class="service-info">
-        <h4 translate="no">${s.name_ar || s.name}</h4>
+        <h4 translate="no">${_esc(s.name_ar || s.name)}</h4>
         <div class="duration">⏱ ${s.duration_minutes} ${window.VELOUR_LANG === 'en' ? 'min' : 'دقيقة'}</div>
       </div>
       <div class="service-price">₪${s.price}</div>
@@ -1393,11 +1393,11 @@ async function loadWizardStep2() {
       let specs = [];
       try { specs = JSON.parse(st.specialties || '[]'); } catch {}
       return `
-        <div class="wizard-stylist-item ${wizardState.stylist?.id === st.id ? 'selected' : ''}" onclick="selectWizardStylist(${st.id}, '${st.name}', '${st.rating}', ${st.salon_id || currentSalonData?.id || 1})">
-          <div class="wst-avatar">${st.avatar ? `<img class="avatar-img" src="${st.avatar}" alt="${st.name}">` : (st.name || '؟')[0]}</div>
+        <div class="wizard-stylist-item ${wizardState.stylist?.id === st.id ? 'selected' : ''}" onclick="selectWizardStylist(${st.id}, ${_attr(JSON.stringify(st.name || ''))}, '${st.rating}', ${st.salon_id || currentSalonData?.id || 1})">
+          <div class="wst-avatar">${st.avatar ? `<img class="avatar-img" src="${_attr(st.avatar)}" alt="${_attr(st.name)}">` : _esc((st.name || '؟')[0])}</div>
           <div class="service-info">
-            <h4>${st.name}</h4>
-            <div class="duration">⭐ ${st.rating} · ${specs.slice(0,2).join(' · ')}</div>
+            <h4>${_esc(st.name)}</h4>
+            <div class="duration">⭐ ${st.rating} · ${specs.slice(0,2).map(_esc).join(' · ')}</div>
           </div>
         </div>`;
     }).join('');
@@ -1498,7 +1498,7 @@ function renderBookingSummary() {
     </div>
     <div class="summary-row">
       <span class="summary-label">${_bsEN ? 'Stylist' : 'الكوفيرة'}</span>
-      <span class="summary-value">${s.stylist?.name || '-'}</span>
+      <span class="summary-value">${_esc(s.stylist?.name) || '-'}</span>
     </div>
     <div class="summary-row">
       <span class="summary-label">${_bsEN ? 'Date' : 'التاريخ'}</span>
@@ -1652,19 +1652,19 @@ function filterBookings(type, btn) {
         <div class="status-${b.status}">${statusLabel(b.status)}</div>
       </div>
       <div class="booking-detail">
-        <span>👩 ${b.stylist_name || '-'}</span>
-        <span>🏠 ${b.salon_name || '-'}</span>
+        <span>👩 ${_esc(b.stylist_name) || '-'}</span>
+        <span>🏠 ${_esc(b.salon_name) || '-'}</span>
         <span>📅 ${formatDateAr(b.booking_date)}</span>
         <span>🕐 ${b.booking_time}</span>
         <span>⏱ ${fmtDur(b.total_duration || b.duration_minutes)}</span>
         <span>💰 ₪${b.total_price}</span>
       </div>
-      ${(b.services && b.services.length > 1) ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">${b.services.map(x => `${x.name} <span style="opacity:.7">(${fmtDur(x.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
+      ${(b.services && b.services.length > 1) ? `<div style="font-size:12px;color:var(--gray);margin-top:4px">${b.services.map(x => `${_esc(x.name)} <span style="opacity:.7">(${fmtDur(x.duration_minutes)})</span>`).join(' • ')}</div>` : ''}
       ${b.status === 'pending' ? `<div style="font-size:12px;color:#856404;background:#FFF3CD;border-radius:8px;padding:8px 10px;margin-top:8px">⏳ ${window.VELOUR_LANG === 'en' ? 'Awaiting stylist approval — you will be notified upon confirmation' : 'بانتظار موافقة الكوفيرة - ستصلك إشعار فور التأكيد'}</div>` : ''}
       ${b.status === 'rejected' ? `<div style="font-size:12px;color:#721c24;background:#F8D7DA;border-radius:8px;padding:8px 10px;margin-top:8px">❌ ${window.VELOUR_LANG === 'en' ? 'Booking rejected — you can choose another time' : 'تم رفض الحجز - يمكنك اختيار وقت آخر'}</div>` : ''}
       ${(b.status === 'pending' || b.status === 'confirmed') && b.booking_date >= today ? `
         <div class="booking-actions">
-          ${b.status === 'confirmed' && b.stylist_user_id ? `<button class="btn-sm btn-sm-primary" onclick="openChatWith(${b.stylist_user_id}, '${(b.salon_name || b.stylist_name || '').replace(/'/g, '')}')">💬 ${window.VELOUR_LANG === 'en' ? 'Contact Salon' : 'تواصل مع الصالون'}</button>` : ''}
+          ${b.status === 'confirmed' && b.stylist_user_id ? `<button class="btn-sm btn-sm-primary" onclick="openChatWith(${b.stylist_user_id}, ${_attr(JSON.stringify(b.salon_name || b.stylist_name || ''))})">💬 ${window.VELOUR_LANG === 'en' ? 'Contact Salon' : 'تواصل مع الصالون'}</button>` : ''}
           <button class="btn-sm btn-sm-danger" onclick="cancelBooking(${b.id})">${window.VELOUR_LANG === 'en' ? 'Cancel' : 'إلغاء'}</button>
         </div>` : ''}
       ${b.booking_date < today && b.status === 'confirmed' ? `
@@ -1831,11 +1831,11 @@ function _renderConversations(convs) {
     const unread = isCurrentlyOpen ? 0 : (c.unread_count || 0);
     if (isCurrentlyOpen) c.unread_count = 0;
     return `
-      <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, '${c.other_name}', '${c.other_avatar || ''}')">
+      <div class="conv-item" data-conv-id="${c.other_id}" onclick="openChatWith(${c.other_id}, ${_attr(JSON.stringify(c.other_name || ''))}, ${_attr(JSON.stringify(c.other_avatar || ''))})">
         <div class="conv-avatar">${_avatarInner(c.other_avatar, c.other_name)}</div>
         <div class="conv-info">
-          <div class="conv-name">${c.other_name}</div>
-          <div class="conv-last">${c.last_message || ''}</div>
+          <div class="conv-name">${_esc(c.other_name)}</div>
+          <div class="conv-last">${_esc(c.last_message || '')}</div>
         </div>
         <div class="conv-meta">
           <div class="conv-time">${formatTime(c.last_time)}</div>
@@ -2125,9 +2125,9 @@ async function doLogout() {
 // ===== PROFILE =====
 // Returns an <img> for a real photo URL, the emoji itself for an emoji avatar, else the first letter.
 function _avatarInner(avatar, name) {
-  if (avatar && (avatar.startsWith('http') || avatar.startsWith('data:'))) return `<img class="avatar-img" src="${avatar}" alt="">`;
-  if (avatar) return avatar;
-  return (name || '?')[0];
+  if (avatar && (avatar.startsWith('http') || avatar.startsWith('data:'))) return `<img class="avatar-img" src="${_attr(avatar)}" alt="">`;
+  if (avatar) return _esc(avatar);
+  return _esc((name || '?')[0]);
 }
 
 function _paintMyAvatar() {
@@ -2222,16 +2222,16 @@ async function showColorHistory() {
         <div class="color-card-header">
           <div class="color-swatch" style="background:${formulaToColor(f.formula)}"></div>
           <div>
-            <h4>${f.color_name || (_chEN ? 'Color' : 'صبغة')}</h4>
-            <p>${f.stylist_name} · ${formatDateAr(f.visit_date)}</p>
+            <h4>${_esc(f.color_name) || (_chEN ? 'Color' : 'صبغة')}</h4>
+            <p>${_esc(f.stylist_name)} · ${formatDateAr(f.visit_date)}</p>
           </div>
         </div>
         <div class="color-card-body">
-          <div class="formula-code">${f.formula}</div>
-          ${f.notes ? `<div class="color-notes">📝 ${f.notes}</div>` : ''}
+          <div class="formula-code">${_esc(f.formula)}</div>
+          ${f.notes ? `<div class="color-notes">📝 ${_esc(f.notes)}</div>` : ''}
           <div class="color-meta">
             <span>📅 ${formatDateAr(f.visit_date)}</span>
-            <span>${f.stylist_name}</span>
+            <span>${_esc(f.stylist_name)}</span>
           </div>
         </div>
       </div>
@@ -2247,7 +2247,7 @@ async function showLoyaltyHistory() {
         <div class="notif-icon">${t.points > 0 ? '▴' : '▾'}</div>
         <div>
           <div class="notif-title" style="color:${t.points > 0 ? 'var(--success)' : 'var(--rose)'}">${t.points > 0 ? '+' : ''}${t.points} ${window.VELOUR_LANG === 'en' ? 'pts' : 'نقطة'}</div>
-          <div class="notif-body">${t.description}</div>
+          <div class="notif-body">${_esc(t.description)}</div>
           <div class="notif-time">${formatTime(t.created_at)}</div>
         </div>
       </div>
@@ -2274,8 +2274,8 @@ function _renderNotifs(notifs) {
         <div class="notif-item ${isUnread ? 'notif-unread' : ''}" ${onclick ? `onclick="${onclick}" style="cursor:pointer"` : ''}>
           <div class="notif-icon">${notifIcon(n.type)}</div>
           <div style="flex:1">
-            <div class="notif-title">${n.title}</div>
-            <div class="notif-body">${n.body}</div>
+            <div class="notif-title">${_esc(n.title)}</div>
+            <div class="notif-body">${_esc(n.body)}</div>
             <div class="notif-time">${formatTime(n.created_at)}</div>
           </div>
           ${clickable ? '<div style="color:var(--rose);font-size:18px">›</div>' : ''}
@@ -2581,7 +2581,7 @@ async function showBeautyProfile() {
         <div class="formula-card">
           <div class="formula-card-name">🎨 ${f.color_name || (_bpEN ? 'Color formula' : 'وصفة لون')}</div>
           <div class="formula-card-detail">${f.formula || ''}</div>
-          ${f.notes ? `<div class="formula-card-detail" style="color:var(--rose-dark)">${f.notes}</div>` : ''}
+          ${f.notes ? `<div class="formula-card-detail" style="color:var(--rose-dark)">${_esc(f.notes)}</div>` : ''}
           <div class="formula-card-detail">${f.visit_date || ''}</div>
         </div>
       `).join('');
@@ -2782,6 +2782,12 @@ function _beautyFmt(t) {
 
 function _esc(t) {
   return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Safe to drop inside an HTML attribute (e.g. an inline onclick). Pass the value already
+// JSON.stringify'd so it lands as a proper JS string: `onclick="f(${_attr(JSON.stringify(x))})"`.
+function _attr(t) {
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function _catEmoji(cat) {
@@ -3616,14 +3622,14 @@ function renderAiResults(data) {
 
   document.getElementById('ai-hairstyles-list').innerHTML = (data.hairstyles || []).map(h => `
     <div class="hairstyle-result-item">
-      <div class="hairstyle-result-name">💇 ${h.name}</div>
-      <div class="hairstyle-result-why">${h.why || ''}</div>
-      <div class="hairstyle-result-desc">${h.description || ''}</div>
+      <div class="hairstyle-result-name">💇 ${_esc(h.name)}</div>
+      <div class="hairstyle-result-why">${_esc(h.why || '')}</div>
+      <div class="hairstyle-result-desc">${_esc(h.description || '')}</div>
     </div>
   `).join('') || `<div style="color:var(--gray);font-size:13px">${_rnEN ? 'No results' : 'لا توجد نتائج'}</div>`;
 
   document.getElementById('ai-colors-list').innerHTML = (data.colors || []).map(c => `
-    <span class="color-result-chip">🎨 ${c.arabic_name || c.name} <small style="font-weight:400;color:var(--gray)">${c.why || ''}</small></span>
+    <span class="color-result-chip">🎨 ${_esc(c.arabic_name || c.name)} <small style="font-weight:400;color:var(--gray)">${_esc(c.why || '')}</small></span>
   `).join('');
 
   if (shapeName) {
@@ -3684,10 +3690,10 @@ function showColorCalcResult() {
   document.getElementById('calc-result-title').textContent = results.headline;
   document.getElementById('calc-result-desc').textContent = results.desc;
   document.getElementById('calc-result-list').innerHTML = results.colors.map(c => `
-    <div class="beauty-card" style="margin-bottom:10px;border-right:4px solid ${c.swatch}">
-      <div style="font-size:15px;font-weight:800;margin-bottom:4px">${c.name}</div>
-      <div style="font-size:13px;color:var(--gray)">${c.reason}</div>
-      <div style="font-size:12px;color:var(--rose-dark);margin-top:4px">${c.tip}</div>
+    <div class="beauty-card" style="margin-bottom:10px;border-right:4px solid ${_attr(c.swatch)}">
+      <div style="font-size:15px;font-weight:800;margin-bottom:4px">${_esc(c.name)}</div>
+      <div style="font-size:13px;color:var(--gray)">${_esc(c.reason)}</div>
+      <div style="font-size:12px;color:var(--rose-dark);margin-top:4px">${_esc(c.tip)}</div>
     </div>
   `).join('');
 }
