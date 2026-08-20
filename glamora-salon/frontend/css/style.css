@@ -2362,6 +2362,198 @@ html, body, .screen, .tab, .home-h-scroll, .cats-scroll, .featured-scroll, .salo
   overscroll-behavior-y: contain;
 }
 
+/* ===== MASTER METALLIC GOLD ACCENTS & STYLIST DASHBOARD LUXURY ===== */
+
+/* 1. Metallic Gold Accents on Cards & Containers */
+.salon-card, .home-salon-card, .featured-card, .service-cat-card, .beauty-card, .loyalty-card {
+  border: 1px solid rgba(229, 193, 88, 0.28) !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s ease !important;
+}
+
+.salon-card:hover, .home-salon-card:hover, .featured-card:hover {
+  border-color: rgba(229, 193, 88, 0.65) !important;
+  box-shadow: 0 8px 28px rgba(123, 29, 64, 0.12), 0 0 16px rgba(229, 193, 88, 0.22) !important;
+}
+
+/* 2. Liquid Gold Accent Lines on Headers & Badges */
+.greeting-small {
+  color: #e5c158 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 12px rgba(229, 193, 88, 0.5) !important;
+}
+
+.salon-rating-badge, .rating-badge, .badge, .client-badge {
+  border: 1px solid rgba(229, 193, 88, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(229, 193, 88, 0.15) !important;
+}
+
+/* 3. Glowing Metallic Gold Prices */
+.you-might-price, .svc-price, .service-item-price, .hsc-dist {
+  color: #d4af37 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 3px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* 4. Luxury Gold Focus Rings on Inputs */
+input:focus, textarea:focus, select:focus {
+  border-color: #e5c158 !important;
+  box-shadow: 0 0 0 3.5px rgba(229, 193, 88, 0.28), 0 6px 18px rgba(123, 29, 64, 0.1) !important;
+}
+
+/* 5. Gold Aura Spotlight on Floating Action Buttons */
+.nav-plus, .btn-primary {
+  box-shadow: 0 8px 25px rgba(107, 15, 43, 0.38), 0 0 18px rgba(229, 193, 88, 0.35) !important;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 10px 32px rgba(107, 15, 43, 0.5), 0 0 25px rgba(229, 193, 88, 0.55) !important;
+}
+
+/* 6. Silk Touch Elasticity (Super Gentle & Ultra-Soft Tap) */
+button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-chip, .svc-filter-chip, .stylist-mini-card, .role-card, .profile-menu-item, .conv-item, .notif-item, .booking-item {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.28s ease,
+              border-color 0.28s ease !important;
+}
+
+/* ===== STYLIST DASHBOARD SPECIFIC LUXURY UPGRADE ===== */
+
+/* Stylist Salon Header Card (.salon-mgmt-card) */
+#screen-stylist .salon-mgmt-card {
+  background: linear-gradient(135deg, #2D0514 0%, #5C0B24 50%, #7B1D40 100%) !important;
+  border: 1.5px solid rgba(229, 193, 88, 0.48) !important;
+  border-radius: 24px !important;
+  padding: 22px 20px !important;
+  margin: 16px 16px 20px !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 32px rgba(92, 11, 36, 0.32), 0 0 22px rgba(229, 193, 88, 0.25) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+#screen-stylist .salon-mgmt-card h3 {
+  color: #ffffff !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9), 0 0 16px rgba(229, 193, 88, 0.35) !important;
+}
+
+#screen-stylist .salon-mgmt-card p {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+#screen-stylist .salon-mgmt-emoji {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+  border: 2px solid rgba(229, 193, 88, 0.6) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 32px !important;
+}
+
+/* Management Cards (.mgmt-section) */
+#screen-stylist .mgmt-section {
+  background: #ffffff !important;
+  border-radius: 22px !important;
+  padding: 18px 16px !important;
+  margin: 0 16px 16px !important;
+  border: 1.5px solid rgba(232, 216, 223, 0.85) !important;
+  box-shadow: 0 4px 20px rgba(92, 11, 36, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease !important;
+}
+
+#screen-stylist .mgmt-section:hover {
+  border-color: rgba(229, 193, 88, 0.55) !important;
+  box-shadow: 0 8px 28px rgba(92, 11, 36, 0.12), 0 0 14px rgba(229, 193, 88, 0.2) !important;
+}
+
+#screen-stylist .mgmt-section-header h4 {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #5c0b24 !important;
+  border-right: 3px solid #e5c158 !important;
+  padding-right: 8px !important;
+}
+
+/* Quick Action Buttons (.analytics-quick-btn) */
+#screen-stylist .analytics-quick-btn {
+  background: linear-gradient(135deg, #FFF0F5 0%, #ffffff 100%) !important;
+  border: 1.5px solid rgba(196, 86, 122, 0.32) !important;
+  border-radius: 20px !important;
+  padding: 18px 12px !important;
+  box-shadow: 0 4px 16px rgba(92, 11, 36, 0.07) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease !important;
+}
+
+#screen-stylist .analytics-quick-btn:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  border-color: #e5c158 !important;
+  box-shadow: 0 8px 24px rgba(92, 11, 36, 0.16), 0 0 16px rgba(229, 193, 88, 0.35) !important;
+}
+
+#screen-stylist .analytics-quick-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* Category Chips in Stylist Dashboard */
+#cat-chips .cat-chip {
+  border-radius: 99px !important;
+  border: 1.5px solid rgba(196, 86, 122, 0.3) !important;
+  background: #ffffff !important;
+  font-weight: 700 !important;
+  transition: all 0.25s ease !important;
+}
+
+#cat-chips .cat-chip.selected {
+  background: linear-gradient(135deg, #5c0b24 0%, #7b1d40 100%) !important;
+  color: #ffffff !important;
+  border-color: #e5c158 !important;
+  box-shadow: 0 4px 14px rgba(92, 11, 36, 0.25), 0 0 12px rgba(229, 193, 88, 0.35) !important;
+}
+
+/* Booking Filter Bar in Stylist Dashboard */
+.st-booking-filter-bar {
+  display: flex !important;
+  gap: 6px !important;
+  background: rgba(255, 240, 245, 0.9) !important;
+  padding: 6px !important;
+  border-radius: 16px !important;
+  margin: 12px 16px 16px !important;
+  border: 1px solid rgba(196, 86, 122, 0.25) !important;
+}
+
+.st-booking-filter-bar .btab {
+  flex: 1 !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  transition: all 0.25s ease !important;
+}
+
+.st-booking-filter-bar .btab.active {
+  background: linear-gradient(135deg, #5c0b24 0%, #7b1d40 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(92, 11, 36, 0.22), 0 0 10px rgba(229, 193, 88, 0.3) !important;
+}
+
+/* Edit Profile Form in Stylist Profile */
+#st-edit-profile-panel {
+  background: #ffffff !important;
+  border-radius: 22px !important;
+  padding: 20px 16px !important;
+  border: 1.5px solid rgba(229, 193, 88, 0.4) !important;
+  box-shadow: 0 8px 28px rgba(92, 11, 36, 0.08) !important;
+}
+
 /* 2. Soft & Calming Focus Rings (Inputs & Textareas) */
 input:focus, textarea:focus, select:focus {
   border-color: rgba(196, 86, 122, 0.5) !important;
@@ -2603,8 +2795,10 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
   align-items: center !important;
   gap: 6px !important;
 }
-
-
-
-
-
+/* 6. Silk Touch Elasticity (Super Gentle & Ultra-Soft Tap) */
+button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-chip, .svc-filter-chip, .stylist-mini-card, .role-card, .profile-menu-item, .conv-item, .notif-item, .booking-item {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.28s ease,
+              border-color 0.28s ease !important;
+}
