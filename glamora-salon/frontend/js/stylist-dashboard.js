@@ -82,20 +82,23 @@ async function loadStylistDashboard() {
 }
 
 function stSwitchTab(name, btn) {
+  // Instant frame 0 UI tab switch (0ms lag, immediate feedback)
   document.querySelectorAll('#screen-stylist .tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('#screen-stylist .nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('stab-' + name)?.classList.add('active');
   btn?.classList.add('active');
 
-  if (name === 'bookings') loadStBookings('pending');
-  if (name === 'team') renderTeam();
-  if (name === 'chat') {
-    loadStConversations();
-    document.getElementById('st-chat-badge')?.classList.add('hidden');
-    // Show quick replies for stylists
-    document.getElementById('quick-replies-row')?.classList.remove('hidden');
-  }
-  if (name === 'profile') loadStProfile();
+  // Defer heavy list rendering to the next tick so the transition is 60fps butter-smooth
+  setTimeout(() => {
+    if (name === 'bookings') loadStBookings('pending');
+    else if (name === 'team') renderTeam();
+    else if (name === 'chat') {
+      loadStConversations();
+      document.getElementById('st-chat-badge')?.classList.add('hidden');
+      document.getElementById('quick-replies-row')?.classList.remove('hidden');
+    }
+    else if (name === 'profile') loadStProfile();
+  }, 10);
 }
 
 // ===== SALON HEADER =====

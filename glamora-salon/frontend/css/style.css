@@ -359,15 +359,16 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .tab {
   position: absolute; inset: 0; overflow-y: auto;
   opacity: 0; pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 0.17s ease-out,
-              transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate3d(0, 4px, 0);
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: 80px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   will-change: opacity, transform;
+  backface-visibility: hidden;
 }
-.tab.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+.tab.active { opacity: 1; pointer-events: all; transform: translate3d(0, 0, 0); }
 
 /* ===== HOME ===== */
 .home-header { background: linear-gradient(160deg, #7B1D40 0%, #B5426A 100%); padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 24px; border-radius: 0 0 28px 28px; }
@@ -544,12 +545,72 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 
 /* ===== PROFILE ===== */
 .profile-header-bg { background: linear-gradient(160deg, var(--dark2), #4A1A2F); padding: max(52px, calc(env(safe-area-inset-top) + 8px)) 20px 30px; text-align: center; }
-.profile-avatar-wrap { position: relative; display: inline-block; margin-bottom: 12px; }
-.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--rose), var(--rose-dark)); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.3); margin: 0 auto; overflow: hidden; position: relative; }
-.avatar-camera-btn { position: absolute; bottom: -2px; left: -2px; background: var(--rose); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 2; }
+.profile-avatar-wrap {
+  position: relative !important;
+  display: inline-block !important;
+  margin-bottom: 22px !important;
+}
+
+.profile-avatar {
+  width: 88px !important;
+  height: 88px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, var(--rose), var(--rose-dark)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  color: white !important;
+  border: 3px solid rgba(255, 255, 255, 0.9) !important;
+  margin: 0 auto !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(229, 193, 88, 0.4) !important;
+}
+
+.avatar-camera-btn, 
+.profile-avatar-cam {
+  position: absolute !important;
+  bottom: 2px !important;
+  left: 2px !important;
+  right: auto !important;
+  top: auto !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #7b1d40 0%, #5c0b24 100%) !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  z-index: 4 !important;
+  pointer-events: none !important;
+}
+
 .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
-.profile-avatar-cam { position: absolute; bottom: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; background: var(--rose, #8C1C3D); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); pointer-events: none; z-index: 3; }
-.profile-tier-badge { position: absolute; bottom: -4px; right: -4px; background: var(--gold); color: var(--dark); font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 99px; }
+
+.profile-tier-badge {
+  position: absolute !important;
+  bottom: -12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  right: auto !important;
+  top: auto !important;
+  background: linear-gradient(135deg, #FFF8E7 0%, #FFE4EC 100%) !important;
+  border: 1.5px solid rgba(229, 193, 88, 0.8) !important;
+  color: #7b1d40 !important;
+  font-family: 'El Messiri', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  padding: 3px 14px !important;
+  border-radius: 99px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), 0 0 10px rgba(229, 193, 88, 0.35) !important;
+  z-index: 5 !important;
+}
 .profile-header-bg h2 { color: white; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .profile-header-bg p { color: rgba(255,255,255,0.6); font-size: 14px; }
 
@@ -610,9 +671,13 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   font-family: 'El Messiri', sans-serif;
   font-size: 11px;
   font-weight: 600;
-  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s ease,
+              color 0.22s ease !important;
   position: relative;
   opacity: 0.78;
+  will-change: transform, opacity;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn:active {
@@ -629,12 +694,12 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   font-size: 22px;
   line-height: 1;
   display: inline-block;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: transform;
 }
 
 .nav-btn.active .nav-icon {
-  transform: translateY(-3px) scale(1.2);
-  filter: drop-shadow(0 4px 10px rgba(123, 29, 64, 0.35));
+  transform: translateY(-2px) scale(1.16);
 }
 
 .nav-btn.active::after {

@@ -58,18 +58,18 @@ function goBack() {
 
 function switchTab(name, btn) {
   const target = document.getElementById('tab-' + name);
-  // Toggle in the SAME frame → new tab fades in while old fades out (clean crossfade, no blank flash).
+  // Instant frame 0 UI tab switch (0ms lag, immediate feedback)
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (target) target.classList.add('active');
   if (btn) btn.classList.add('active');
 
-  // Defer the heavy data loads so they never stutter the transition.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  // Defer heavy list rendering to the next tick so the transition runs at smooth 60fps
+  setTimeout(() => {
     if (name === 'bookings') loadMyBookings();
     else if (name === 'chat') { loadConversations(); document.getElementById('chat-badge')?.classList.add('hidden'); }
     else if (name === 'profile') loadProfile();
-  }));
+  }, 10);
 }
 
 function closeModal() {

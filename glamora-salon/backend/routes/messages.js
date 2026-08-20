@@ -66,7 +66,7 @@ router.get('/conversations', authenticate, async (req, res) => {
       const stRows = (await query('SELECT user_id, salon_id FROM stylists WHERE user_id = ANY($1)', [otherIds])).rows;
       const salonIds = [...new Set(stRows.map(s => s.salon_id))];
       const salonMap = {};
-      if (salonIds.length) (await query('SELECT id, name, cover_emoji FROM salons WHERE id = ANY($1)', [salonIds])).rows.forEach(s => { salonMap[s.id] = s; });
+      if (salonIds.length) (await query('SELECT id, name, cover_emoji, cover_url FROM salons WHERE id = ANY($1)', [salonIds])).rows.forEach(s => { salonMap[s.id] = s; });
       stRows.forEach(s => { if (salonMap[s.salon_id]) salonByUser[s.user_id] = salonMap[s.salon_id]; });
     }
     const convs = Object.values(convMap).map(c => {
@@ -76,7 +76,7 @@ router.get('/conversations', authenticate, async (req, res) => {
       return {
         ...c,
         other_name: salon ? salon.name : (other?.name || ''),
-        other_avatar: salon ? (salon.cover_emoji || '💅') : other?.avatar,
+        other_avatar: salon ? (salon.cover_url || salon.cover_emoji || '💅') : other?.avatar,
         other_role: other?.role,
         unread_count: unread,
       };
