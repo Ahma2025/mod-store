@@ -2887,3 +2887,41 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
   font-weight: 800 !important;
   box-shadow: 0 2px 10px rgba(229, 193, 88, 0.2) !important;
 }
+
+/* ============================================================
+   SVG NAV ICONS — elegant line icons that fill when active
+   (replaces the emoji nav icons; applies to client + stylist)
+   ============================================================ */
+.nav-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 13px;
+  line-height: 0;
+  transition: background 0.22s ease, box-shadow 0.22s ease;
+}
+.nav-icon svg {
+  width: 24px; height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+.nav-btn.active .nav-icon {
+  background: linear-gradient(135deg, #9B1B3B, #C4567A);
+  box-shadow: 0 5px 14px rgba(155, 27, 59, 0.34);
+  transform: none;
+}
+.nav-btn.active .nav-icon svg { stroke: #ffffff; }
+/* center + button as a crisp SVG */
+.nav-plus svg {
+  width: 26px; height: 26px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
