@@ -830,8 +830,11 @@ async function openSalon(id) {
 
   try {
     const data = await Api.salons.get(id);
+    const sig = (d) => !d ? '' : `${d.rating}|${d.reviews_count}|${(d.services || []).map(s => s.id + ':' + s.price).join(',')}|${(d.stylists || []).length}|${(d.salon_ratings || []).length}|${(d.media || []).length}`;
+    const changed = !cached || !cached.services || sig(data) !== sig(cached);
     _pageCacheSet('salon_' + id, data);
-    _paintSalon(data, id);
+    if (changed) _paintSalon(data, id);   // re-paint only if something changed → no flicker on repeat visits
+    else currentSalonData = data;          // keep data fresh without a visible re-render
   } catch (e) {
     if (!cached) showToast('خطأ في تحميل بيانات الصالون');
   }
@@ -1617,12 +1620,14 @@ function _pageCacheSet(key, data) {
 let _bookingsFilter = 'upcoming';
 async function loadMyBookings() {
   const cached = _pageCacheGet('bookings');
-  if (Array.isArray(cached)) { allBookings = cached; filterBookings(_bookingsFilter); }  // instant paint
+  let shownSig = null;
+  const bkSig = (a) => (a || []).map(b => `${b.id}|${b.status}|${b.booking_date}|${b.booking_time}`).join(';');
+  if (Array.isArray(cached)) { allBookings = cached; filterBookings(_bookingsFilter); shownSig = bkSig(cached); }  // instant paint
   else document.getElementById('bookings-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
     allBookings = await Api.bookings.my();
     _pageCacheSet('bookings', allBookings);
-    filterBookings(_bookingsFilter);
+    if (bkSig(allBookings) !== shownSig) filterBookings(_bookingsFilter);   // re-render only if changed
   } catch (e) {
     if (!Array.isArray(cached)) document.getElementById('bookings-list').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>${window.VELOUR_LANG === 'en' ? 'Failed to load bookings' : 'تعذر تحميل الحجوزات'}</h3></div>`;
   }
@@ -1807,14 +1812,19 @@ let voiceRecorder = null;
 let voiceChunks = [];
 let voiceRecording = false;
 
+function _convSig(convs) {
+  return (convs || []).map(c => `${c.other_id}|${c.last_time}|${c.unread_count || 0}|${c.last_message || ''}`).join(';');
+}
+
 async function loadConversations() {
   const cached = _pageCacheGet('convos');
-  if (Array.isArray(cached)) _renderConversations(cached);   // instant paint
+  let shownSig = null;
+  if (Array.isArray(cached)) { _renderConversations(cached); shownSig = _convSig(cached); }   // instant paint
   else document.getElementById('conversations-list').innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
   try {
     const convs = await Api.messages.conversations();
     _pageCacheSet('convos', convs);
-    _renderConversations(convs);
+    if (_convSig(convs) !== shownSig) _renderConversations(convs);   // re-render only if changed → no flicker
   } catch (e) {}
 }
 
@@ -1846,13 +1856,26 @@ function _renderConversations(convs) {
   }).join('');
 }
 
+// A cheap fingerprint of a message list — same fingerprint ⇒ nothing to re-render.
+function _msgSig(msgs) {
+  if (!Array.isArray(msgs) || !msgs.length) return '0';
+  const last = msgs[msgs.length - 1];
+  return msgs.length + ':' + (last.id || last.created_at || '');
+}
+
 function _renderChatMessages(msgs) {
   renderedMsgIds.clear();
   msgs.forEach(m => { if (m.id) renderedMsgIds.add(m.id); });
   const container = document.getElementById('chat-messages');
   if (!container) return;
   container.innerHTML = msgs.map(m => buildMsgHtml(m)).join('');
-  container.scrollTop = container.scrollHeight;
+  const toBottom = () => { container.scrollTop = container.scrollHeight; };
+  toBottom();
+  requestAnimationFrame(toBottom);   // after layout settles
+  // Keep pinned to the bottom as images finish loading (kills the "jumps to old messages" flicker).
+  container.querySelectorAll('img.chat-img').forEach(img => {
+    if (!img.complete) img.addEventListener('load', toBottom, { once: true });
+  });
 }
 
 async function openChatWith(userId, userName, avatar) {
@@ -1864,18 +1887,17 @@ async function openChatWith(userId, userName, avatar) {
   // Show the last-seen messages instantly, then refresh from the server in the background.
   const container = document.getElementById('chat-messages');
   const cached = _pageCacheGet('chat_' + userId);
-  if (Array.isArray(cached)) _renderChatMessages(cached);
+  let shownSig = null;
+  if (Array.isArray(cached)) { _renderChatMessages(cached); shownSig = _msgSig(cached); }
   else if (container) container.innerHTML = '';   // clear the previous chat so it doesn't linger
 
   try {
     const msgs = await Api.messages.get(userId);
     _pageCacheSet('chat_' + userId, msgs.slice(-50));   // cap cache size
-    _renderChatMessages(msgs);
+    // Only re-render if something actually changed — this removes the open-chat flicker.
+    if (_msgSig(msgs) !== shownSig) _renderChatMessages(msgs);
+    else if (container) container.scrollTop = container.scrollHeight;
   } catch (e) {}
-  setTimeout(() => {
-    const c = document.getElementById('chat-messages');
-    if (c) c.scrollTop = c.scrollHeight;
-  }, 100);
   // Clear the "unread" badge for this conversation the INSTANT it's opened (don't wait for a list re-fetch),
   // then tell the server, then refresh the tab badge accurately.
   _clearConvUnread(userId);

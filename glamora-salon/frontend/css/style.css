@@ -869,7 +869,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 @keyframes pulse-rec { from{box-shadow:0 0 0 0 rgba(229,57,53,0.4)} to{box-shadow:0 0 0 8px rgba(229,57,53,0)} }
 /* Chat image / voice bubbles */
 .msg-bubble-media { padding: 4px; }
-.chat-img { max-width: 220px; max-height: 220px; border-radius: 14px; display: block; cursor: zoom-in; object-fit: cover; }
+.chat-img { max-width: 220px; max-height: 220px; min-height: 60px; border-radius: 14px; display: block; cursor: zoom-in; object-fit: cover; background: var(--cream2); }
 .chat-audio { max-width: 220px; height: 40px; border-radius: 20px; outline: none; }
 /* Voice player — Messenger style */
 .voice-player {
