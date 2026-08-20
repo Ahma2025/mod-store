@@ -57,21 +57,19 @@ function goBack() {
 }
 
 function switchTab(name, btn) {
+  const target = document.getElementById('tab-' + name);
+  // Toggle in the SAME frame → new tab fades in while old fades out (clean crossfade, no blank flash).
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
 
-  // let the remove paint first, then add for a smooth cross-fade
-  requestAnimationFrame(() => {
-    document.getElementById('tab-' + name)?.classList.add('active');
-    btn?.classList.add('active');
-  });
-
-  if (name === 'bookings') loadMyBookings();
-  if (name === 'chat') {
-    loadConversations();
-    document.getElementById('chat-badge')?.classList.add('hidden');
-  }
-  if (name === 'profile') loadProfile();
+  // Defer the heavy data loads so they never stutter the transition.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (name === 'bookings') loadMyBookings();
+    else if (name === 'chat') { loadConversations(); document.getElementById('chat-badge')?.classList.add('hidden'); }
+    else if (name === 'profile') loadProfile();
+  }));
 }
 
 function closeModal() {

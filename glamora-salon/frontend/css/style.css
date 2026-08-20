@@ -359,9 +359,9 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 .tab {
   position: absolute; inset: 0; overflow-y: auto;
   opacity: 0; pointer-events: none;
-  transform: translateY(6px);
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(4px);
+  transition: opacity 0.17s ease-out,
+              transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   padding-bottom: 80px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
