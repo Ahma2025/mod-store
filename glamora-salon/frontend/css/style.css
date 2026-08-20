@@ -2893,13 +2893,29 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
    (replaces the emoji nav icons; applies to client + stylist)
    ============================================================ */
 .nav-icon {
+  position: relative;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   padding: 5px;
   border-radius: 13px;
   line-height: 0;
-  transition: background 0.22s ease, box-shadow 0.22s ease;
+  isolation: isolate;              /* keep the svg above the fill layer */
+}
+/* The fill "chip" is a separate layer faded/scaled in with opacity+transform only —
+   GPU-composited, so it's perfectly smooth (no gradient-background transition jank). */
+.nav-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #9B1B3B, #C4567A);
+  box-shadow: 0 5px 14px rgba(155, 27, 59, 0.32);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.2s ease, transform 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+  will-change: opacity, transform;
 }
 .nav-icon svg {
   width: 24px; height: 24px;
@@ -2909,12 +2925,17 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
   stroke-linecap: round;
   stroke-linejoin: round;
   display: block;
+  transition: stroke 0.2s ease;
 }
+/* neutralise the old bouncy nav-icon animations so the fill stays silky */
 .nav-btn.active .nav-icon {
-  background: linear-gradient(135deg, #9B1B3B, #C4567A);
-  box-shadow: 0 5px 14px rgba(155, 27, 59, 0.34);
-  transform: none;
+  background: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
 }
+.nav-btn.active .nav-icon::before { opacity: 1; transform: scale(1); }
 .nav-btn.active .nav-icon svg { stroke: #ffffff; }
 /* center + button as a crisp SVG */
 .nav-plus svg {
