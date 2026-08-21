@@ -874,6 +874,38 @@
     </div>
   </div>
 
+  <!-- ======= SALON SHARE (link + QR) ======= -->
+  <div id="screen-salon-share" class="screen slide-up">
+    <div class="page-header">
+      <button class="back-btn" onclick="goBack()" aria-label="رجوع"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <h2>🔗 مشاركة صالوني</h2>
+    </div>
+    <div class="share-screen">
+      <div class="share-hero">
+        <div class="share-logo" id="share-logo">💅</div>
+        <div class="share-salon-name" id="share-salon-name">صالوني</div>
+        <div class="share-hint">أي زبونة تفتح الرابط أو تمسح الباركود بتوصل لصالونك مباشرة 🌹</div>
+      </div>
+      <div class="share-qr-frame">
+        <div class="share-qr-inner"><img id="share-qr-img" alt="QR"></div>
+        <div class="share-qr-caption">امسحي الباركود</div>
+      </div>
+      <div class="share-link-pill" id="share-link-pill" onclick="copySalonLink()">
+        <span class="share-link-text" id="share-link-text">—</span>
+        <span class="share-copy-chip">نسخ</span>
+      </div>
+      <button class="share-main-btn" onclick="shareSalonLink()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+        مشاركة
+      </button>
+      <div class="share-mini-btns">
+        <button onclick="copySalonLink()">📋 نسخ الرابط</button>
+        <button onclick="saveSalonQr()">💾 حفظ الباركود</button>
+      </div>
+      <div style="height:30px"></div>
+    </div>
+  </div>
+
   <!-- ======= STYLIST AI ASSISTANT ======= -->
   <div id="screen-stylist-assistant" class="screen slide-up">
     <div class="chat-header">
@@ -1010,19 +1042,6 @@
               <p id="st-saddress" style="font-size:12px;color:var(--gray)"></p>
             </div>
             <button class="btn-icon-edit" onclick="showEditSalonForm()">✏️</button>
-          </div>
-
-          <!-- Share salon (link + QR) -->
-          <div class="salon-share-card" id="salon-share-card">
-            <div class="share-head">🔗 شارك صالونك</div>
-            <p class="share-sub">انشري الرابط أو الباركود على حساباتك — أي زبونة تفتحه بتوصل لصالونك مباشرة 🌹</p>
-            <div class="share-qr-box"><img id="salon-share-qr" alt="QR" width="200" height="200"></div>
-            <div class="share-link" id="salon-share-link" onclick="copySalonLink()">—</div>
-            <div class="share-actions">
-              <button class="share-btn primary" onclick="shareSalonLink()">📤 مشاركة</button>
-              <button class="share-btn" onclick="copySalonLink()">📋 نسخ الرابط</button>
-              <button class="share-btn" onclick="saveSalonQr()">💾 حفظ الباركود</button>
-            </div>
           </div>
 
           <!-- Salon Location -->
@@ -1203,6 +1222,14 @@
           <div class="menu-text">
             <span>التحليلات والإحصائيات</span>
             <span class="menu-sub">تقرير الحجوزات والدخل والخدمات</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="profile-menu-item" onclick="openSalonShareScreen()">
+          <span class="menu-icon">🔗</span>
+          <div class="menu-text">
+            <span>مشاركة صالوني</span>
+            <span class="menu-sub">رابط وباركود صالونك للزبونات</span>
           </div>
           <span class="menu-arrow">›</span>
         </div>

@@ -1285,16 +1285,38 @@ function _salonShareUrl() {
   return `${base}/s/${id}`;
 }
 
+let _salonQrUrl = null;
+function _buildQrUrl(link, size) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=6&data=${encodeURIComponent(link)}`;
+}
+
+// Called on dashboard load — pre-fetches the QR into the browser cache so the
+// share screen opens instantly (no loading spinner).
 function renderSalonShare() {
-  const card = document.getElementById('salon-share-card');
   const url = _salonShareUrl();
-  if (!card) return;
-  if (!url) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  const linkEl = document.getElementById('salon-share-link');
+  if (!url) { _salonQrUrl = null; return; }
+  _salonQrUrl = _buildQrUrl(url, 208);
+  const pre = new Image();
+  pre.src = _salonQrUrl;
+}
+
+// Opens the dedicated share screen — everything is populated from data already in
+// memory (name, logo) + the pre-warmed QR, so it appears with zero loading.
+function openSalonShareScreen() {
+  const url = _salonShareUrl();
+  if (!url) { showToast(window.VELOUR_LANG === 'en' ? 'Create your salon first' : 'أنشئي صالونك أولاً'); return; }
+  const logo = document.getElementById('share-logo');
+  if (logo) {
+    if (stSalonData && stSalonData.cover_url) logo.innerHTML = `<img src="${stSalonData.cover_url}" alt="">`;
+    else { logo.textContent = (stSalonData && stSalonData.cover_emoji) || '💅'; }
+  }
+  const nameEl = document.getElementById('share-salon-name');
+  if (nameEl) nameEl.textContent = (stSalonData && stSalonData.name) || 'صالوني';
+  const linkEl = document.getElementById('share-link-text');
   if (linkEl) linkEl.textContent = url;
-  const qr = document.getElementById('salon-share-qr');
-  if (qr) qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(url)}`;
+  const qr = document.getElementById('share-qr-img');
+  if (qr) qr.src = _salonQrUrl || _buildQrUrl(url, 208);
+  showScreen('salon-share');
 }
 
 async function copySalonLink() {
@@ -1316,7 +1338,9 @@ async function shareSalonLink() {
   const url = _salonShareUrl();
   if (!url) return;
   const name = (stSalonData && stSalonData.name) || 'صالوني';
-  const text = `احجزي موعدك في ${name} عبر تطبيق فيلور 🌹\n${url}`;
+  const text = (window.VELOUR_LANG === 'en')
+    ? `Book your appointment at ${name} on the Velour app 🌹\n${url}`
+    : `احجزي موعدك في ${name} عبر تطبيق فيلور 🌹\n${url}`;
   try {
     const Share = (typeof Capacitor !== 'undefined') && Capacitor.Plugins && Capacitor.Plugins.Share;
     if (Share && Share.share) { await Share.share({ title: name, text, url, dialogTitle: 'شارك صالونك' }); return; }

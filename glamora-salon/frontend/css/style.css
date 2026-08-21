@@ -3100,35 +3100,63 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ============================================================
-   SALON SHARE CARD (link + QR) — stylist salon management
+   SALON SHARE SCREEN (link + QR) — premium, elegant
    ============================================================ */
-.salon-share-card {
-  background: linear-gradient(150deg, #ffffff 0%, #fff6f8 100%);
-  border: 1px solid #f0dfe6;
-  border-radius: 20px;
-  padding: 18px 16px 16px;
-  margin-bottom: 14px;
-  text-align: center;
-  box-shadow: 0 4px 18px rgba(140, 50, 70, 0.07);
+.share-screen {
+  padding: 8px 22px 24px;
+  max-width: 460px; margin: 0 auto;
+  overflow-y: auto; height: calc(100% - 60px);
 }
-.salon-share-card .share-head { font-size: 16px; font-weight: 800; color: var(--rose, #9B1B3B); }
-.salon-share-card .share-sub { font-size: 12.5px; color: var(--gray, #8a7680); margin: 6px 0 14px; line-height: 1.6; }
-.salon-share-card .share-qr-box {
-  width: 216px; height: 216px; margin: 0 auto 14px;
-  background: #fff; border: 1px solid #efe2e7; border-radius: 18px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 6px 20px rgba(140, 50, 70, 0.1);
+/* soft staggered entrance for each block */
+.share-screen > * { animation: shareIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.share-screen > .share-hero      { animation-delay: 0.04s; }
+.share-screen > .share-qr-frame  { animation-delay: 0.10s; }
+.share-screen > .share-link-pill { animation-delay: 0.16s; }
+.share-screen > .share-main-btn  { animation-delay: 0.21s; }
+.share-screen > .share-mini-btns { animation-delay: 0.26s; }
+@keyframes shareIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.share-hero { text-align: center; margin: 6px 0 22px; }
+.share-logo {
+  width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 50%;
+  background: linear-gradient(135deg, #9B1B3B, #4a0a25);
+  display: flex; align-items: center; justify-content: center; font-size: 42px; overflow: hidden;
+  border: 3px solid #C9A96E; box-shadow: 0 8px 30px rgba(201, 169, 110, 0.4);
 }
-.salon-share-card .share-qr-box img { border-radius: 10px; display: block; }
-.salon-share-card .share-link {
-  font-size: 12.5px; color: #7b1d40; background: #fff0f3; border: 1px dashed #e5c1d0;
-  border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; word-break: break-all;
-  cursor: pointer; direction: ltr; font-family: 'Segoe UI', monospace;
+.share-logo img { width: 100%; height: 100%; object-fit: cover; }
+.share-salon-name { font-size: 22px; font-weight: 800; color: var(--dark2, #2D1520); }
+.share-hint { font-size: 13px; color: var(--gray, #8a7680); line-height: 1.7; margin-top: 6px; padding: 0 6px; }
+
+.share-qr-frame {
+  background: linear-gradient(135deg, #9B1B3B, #4a0a25);
+  border-radius: 26px; padding: 16px; margin: 0 auto 20px; width: fit-content;
+  box-shadow: 0 14px 40px rgba(92, 11, 36, 0.28);
+  border: 1.5px solid rgba(201, 169, 110, 0.55);
 }
-.salon-share-card .share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.salon-share-card .share-btn {
-  flex: 1; min-width: 96px; padding: 11px 8px; border-radius: 13px; border: 1px solid var(--gray-light, #E8D8DF);
-  background: #fff; color: var(--dark2, #2D1520); font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer;
+.share-qr-inner { background: #fff; border-radius: 16px; padding: 14px; display: flex; }
+.share-qr-inner img { width: 208px; height: 208px; display: block; border-radius: 6px; }
+.share-qr-caption { text-align: center; color: #f0d9a8; font-size: 12.5px; font-weight: 700; margin-top: 10px; letter-spacing: 0.5px; }
+
+.share-link-pill {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #fff; border: 1.5px solid #efe2e7; border-radius: 16px;
+  padding: 12px 12px 12px 16px; margin-bottom: 18px; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(140, 50, 70, 0.06);
 }
-.salon-share-card .share-btn.primary { background: linear-gradient(135deg, var(--rose, #9B1B3B), var(--rose-light, #C4567A)); color: #fff; border: none; }
-.salon-share-card .share-btn:active { transform: scale(0.97); }
+.share-link-text { direction: ltr; font-family: 'Segoe UI', monospace; font-size: 12.5px; color: #7b1d40; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.share-copy-chip { background: var(--cream2, #FFF0F3); color: var(--rose, #9B1B3B); font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 20px; white-space: nowrap; }
+
+.share-main-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px; border: none; border-radius: 18px; cursor: pointer;
+  background: linear-gradient(135deg, #9B1B3B, #C4567A); color: #fff;
+  font-family: inherit; font-weight: 800; font-size: 16px;
+  box-shadow: 0 10px 26px rgba(155, 27, 59, 0.34); margin-bottom: 12px;
+}
+.share-main-btn:active { transform: scale(0.98); }
+.share-mini-btns { display: flex; gap: 10px; }
+.share-mini-btns button {
+  flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--gray-light, #E8D8DF);
+  background: #fff; color: var(--dark2, #2D1520); font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.share-mini-btns button:active { transform: scale(0.97); }
