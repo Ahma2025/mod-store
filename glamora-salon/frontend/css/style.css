@@ -3160,3 +3160,29 @@ input:focus, textarea:focus, select:focus {
   background: #fff; color: var(--dark2, #2D1520); font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
 }
 .share-mini-btns button:active { transform: scale(0.97); }
+
+/* ============================================================
+   CLIENT PREVIEW banner (stylist viewing app as a customer)
+   ============================================================ */
+.preview-banner {
+  position: fixed; bottom: 86px; left: 50%;
+  transform: translateX(-50%) translateY(160%);
+  z-index: 3000; display: flex; align-items: center; gap: 10px;
+  max-width: calc(100% - 28px);
+  background: linear-gradient(135deg, #2D1520, #4a0a25); color: #fff;
+  padding: 8px 8px 8px 16px; border-radius: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(201, 169, 110, 0.55);
+  font-family: 'El Messiri', sans-serif; font-size: 13px; font-weight: 700;
+  opacity: 0; pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.3s ease;
+}
+.preview-banner.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: all; }
+.preview-banner .pv-eye { font-size: 16px; }
+.preview-banner .pv-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-banner .pv-exit {
+  background: linear-gradient(135deg, #9B1B3B, #C4567A); color: #fff; border: none;
+  border-radius: 22px; padding: 7px 16px; font-family: inherit; font-weight: 800; font-size: 12.5px;
+  cursor: pointer; white-space: nowrap;
+}
+.preview-banner .pv-exit:active { transform: scale(0.95); }

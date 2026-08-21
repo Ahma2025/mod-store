@@ -950,6 +950,12 @@ const TR = {
   '✅ تم نسخ الرابط': '✅ Link copied',
   '⚠️ تعذّر النسخ': '⚠️ Copy failed',
   'اضغطي مطوّلاً على الباركود لحفظه': 'Long-press the QR to save it',
+  // === client preview ===
+  'معاينة كزبونة': 'Preview as Client',
+  'شوفي صالونك وتطبيقك بعيون الزبونة': "See your salon & app through a client's eyes",
+  'وضع المعاينة — هيك بتشوف الزبونة تطبيقك': 'Preview mode — this is how clients see your app',
+  'خروج': 'Exit',
+  '👁️ هاي معاينة فقط': '👁️ Preview only',
   '⏳ جاري الرفع...': '⏳ Uploading...',
   '✅ تم رفع الصورة (اضغطي للتغيير)': '✅ Photo uploaded (tap to change)',
 

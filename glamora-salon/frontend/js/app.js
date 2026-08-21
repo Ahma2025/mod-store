@@ -56,6 +56,23 @@ function goBack() {
   else document.getElementById('cart-bar')?.classList.remove('show');
 }
 
+// ===== Client preview (stylist views the app as a customer; look-only) =====
+function enterClientPreview() {
+  window._clientPreview = true;
+  document.getElementById('preview-banner')?.classList.add('show');
+  showScreen('main');
+  switchTab('home', document.querySelector('#screen-main .nav-btn:nth-child(1)'));
+  if (typeof loadHome === 'function') loadHome();
+}
+function exitClientPreview() {
+  window._clientPreview = false;
+  document.getElementById('preview-banner')?.classList.remove('show');
+  document.getElementById('cart-bar')?.classList.remove('show');
+  if (typeof cart !== 'undefined') { cart = { salonId: null, salonName: '', items: {} }; }
+  showScreen('stylist');
+  if (typeof stSwitchTab === 'function') stSwitchTab('profile', document.querySelector('#screen-stylist .nav-btn:nth-child(5)'));
+}
+
 function switchTab(name, btn) {
   const target = document.getElementById('tab-' + name);
   // Instant 0ms frame-0 visual feedback
@@ -1014,6 +1031,7 @@ function setSalonRating(val) {
 }
 
 async function submitSalonRating() {
+  if (window._clientPreview) { showToast(window.VELOUR_LANG === 'en' ? '👁️ Preview only' : '👁️ هاي معاينة فقط'); return; }
   const _sbEN = window.VELOUR_LANG === 'en';
   if (!currentUser) { showToast(_sbEN ? 'Please log in first' : 'يجب تسجيل الدخول أولاً'); return; }
   if (!selectedRating) { showToast(_sbEN ? 'Select a star rating first' : 'اختاري عدد النجوم أولاً'); return; }
@@ -1569,6 +1587,7 @@ function wizardPrev() {
 }
 
 async function confirmBooking() {
+  if (window._clientPreview) { showToast(window.VELOUR_LANG === 'en' ? '👁️ Preview only' : '👁️ هاي معاينة فقط'); return; }
   const s = wizardState;
   const _cbEN = window.VELOUR_LANG === 'en';
   if (!s.services?.length || !s.stylist || !s.date || !s.time || !s.salonId) {
@@ -3266,6 +3285,7 @@ function recomputeCheckout() {
 }
 
 async function placeOrder() {
+  if (window._clientPreview) { showToast(window.VELOUR_LANG === 'en' ? '👁️ Preview only' : '👁️ هاي معاينة فقط'); return; }
   if (cartCount() === 0) { showToast('السلة فارغة'); return; }
   const name = (document.getElementById('co-name').value || '').trim();
   const phone = (document.getElementById('co-phone').value || '').trim();

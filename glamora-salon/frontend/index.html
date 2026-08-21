@@ -1233,6 +1233,14 @@
           </div>
           <span class="menu-arrow">›</span>
         </div>
+        <div class="profile-menu-item" onclick="enterClientPreview()">
+          <span class="menu-icon">👁️</span>
+          <div class="menu-text">
+            <span>معاينة كزبونة</span>
+            <span class="menu-sub">شوفي صالونك وتطبيقك بعيون الزبونة</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
         <div class="profile-menu-item" style="border-top:2px solid var(--gray-light);margin-top:8px" onclick="stLogout()">
           <span class="menu-icon">🚪</span>
           <div class="menu-text">
@@ -1371,6 +1379,13 @@
         <button class="btn-secondary" style="flex:1" onclick="document.getElementById('modal-inventory').classList.add('hidden')">إلغاء</button>
       </div>
     </div>
+  </div>
+
+  <!-- client-preview floating banner (stylist viewing the app as a customer) -->
+  <div id="preview-banner" class="preview-banner">
+    <span class="pv-eye">👁️</span>
+    <span class="pv-text">وضع المعاينة — هيك بتشوف الزبونة تطبيقك</span>
+    <button class="pv-exit" onclick="exitClientPreview()">خروج</button>
   </div>
 
   <!-- floating cart bar (top-level: must NOT sit inside a transformed .screen) -->
