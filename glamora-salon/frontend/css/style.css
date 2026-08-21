@@ -705,14 +705,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
 }
 
 .nav-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 16px;
-  height: 3px;
-  background: linear-gradient(90deg, #7b1d40, #e5c158);
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(123, 29, 64, 0.4);
+  display: none !important;
 }
 
 .nav-center-btn {
@@ -3186,3 +3179,6 @@ input:focus, textarea:focus, select:focus {
   cursor: pointer; white-space: nowrap;
 }
 .preview-banner .pv-exit:active { transform: scale(0.95); }
+
+/* remove the gold underline under the active nav tab */
+.nav-btn.active::after { display: none !important; content: none !important; }
