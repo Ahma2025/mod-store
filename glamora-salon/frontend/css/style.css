@@ -3014,3 +3014,85 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ===== GLOBAL MASTER UI/UX MICRO-LUXURY SYSTEM ===== */
+
+/* 1. Global Page Header Glass & Ambient Glow */
+.page-header, .auth-header, .wizard-header, .chat-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(196, 86, 122, 0.15) !important;
+}
+
+.page-header h2, .auth-header h2, .wizard-header h2, .chat-header-info h3 {
+  font-family: 'El Messiri', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  text-shadow: 0 1px 2px rgba(123, 29, 64, 0.08) !important;
+}
+
+/* 2. Global Input & Form Control Silk Touch */
+input, textarea, select {
+  border-radius: 16px !important;
+  border: 1.5px solid rgba(232, 216, 223, 0.9) !important;
+  font-family: 'El Messiri', sans-serif !important;
+  transition: border-color 0.28s ease, box-shadow 0.28s ease, background 0.28s ease !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #e5c158 !important;
+  box-shadow: 0 0 0 3.5px rgba(229, 193, 88, 0.22), 0 6px 20px rgba(123, 29, 64, 0.08) !important;
+  background: #ffffff !important;
+}
+
+/* 3. Global Badge & Tag Refinements */
+.status-confirmed, .status-pending, .status-cancelled, .badge-new, .badge-verified, .badge-hot, .inv-low-badge {
+  font-family: 'El Messiri', sans-serif !important;
+  font-weight: 700 !important;
+  padding: 4px 12px !important;
+  border-radius: 99px !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 4. Global Ultra-Thin Soft Rose Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(196, 86, 122, 0.22) !important;
+  border-radius: 99px !important;
+  transition: background 0.3s ease !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 86, 122, 0.45) !important;
+}
+
+/* 5. Smooth Toast & Notification Banner Animation */
+#toast, .reminder-banner {
+  border-radius: 99px !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(229, 193, 88, 0.5) !important;
+  box-shadow: 0 10px 30px rgba(92, 11, 36, 0.25), 0 0 14px rgba(229, 193, 88, 0.3) !important;
+  font-family: 'El Messiri', sans-serif !important;
+  font-weight: 700 !important;
+}
+
+/* 6. High-End Card Micro-Interactions across ALL Screens */
+.salon-card, .home-salon-card, .featured-card, .service-cat-card, .beauty-card, .loyalty-card, .booking-item, .review-card, .conv-item, .notif-item, .client-card, .inventory-item, .media-item {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.28s ease !important;
+}
+
+.salon-card:hover, .booking-item:hover, .review-card:hover, .conv-item:hover, .notif-item:hover, .client-card:hover, .inventory-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 28px rgba(92, 11, 36, 0.1), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(229, 193, 88, 0.45) !important;
+}
