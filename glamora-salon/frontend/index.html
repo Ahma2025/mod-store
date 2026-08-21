@@ -1012,6 +1012,19 @@
             <button class="btn-icon-edit" onclick="showEditSalonForm()">✏️</button>
           </div>
 
+          <!-- Share salon (link + QR) -->
+          <div class="salon-share-card" id="salon-share-card">
+            <div class="share-head">🔗 شارك صالونك</div>
+            <p class="share-sub">انشري الرابط أو الباركود على حساباتك — أي زبونة تفتحه بتوصل لصالونك مباشرة 🌹</p>
+            <div class="share-qr-box"><img id="salon-share-qr" alt="QR" width="200" height="200"></div>
+            <div class="share-link" id="salon-share-link" onclick="copySalonLink()">—</div>
+            <div class="share-actions">
+              <button class="share-btn primary" onclick="shareSalonLink()">📤 مشاركة</button>
+              <button class="share-btn" onclick="copySalonLink()">📋 نسخ الرابط</button>
+              <button class="share-btn" onclick="saveSalonQr()">💾 حفظ الباركود</button>
+            </div>
+          </div>
+
           <!-- Salon Location -->
           <div class="mgmt-section">
             <div class="mgmt-section-header">

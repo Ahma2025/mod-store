@@ -654,6 +654,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   z-index: 50;
   box-shadow: 0 -8px 30px rgba(107, 15, 43, 0.1), 0 2px 10px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
+  touch-action: manipulation !important;
 }
 
 .nav-btn {
@@ -671,6 +672,7 @@ html, body { height: 100%; font-family: 'El Messiri', sans-serif; background: va
   font-family: 'El Messiri', sans-serif;
   font-size: 11px;
   font-weight: 600;
+  touch-action: manipulation !important;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
               opacity 0.22s ease,
               color 0.22s ease !important;
@@ -2982,7 +2984,7 @@ button, .salon-card, .featured-card, .service-cat-card, .home-salon-card, .cat-c
   box-shadow: 0 5px 14px rgba(155, 27, 59, 0.32);
   opacity: 0;
   transform: scale(0.5);
-  transition: opacity 0.2s ease, transform 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+  transition: opacity 0.14s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 .nav-icon svg {
@@ -3096,3 +3098,37 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 10px 28px rgba(92, 11, 36, 0.1), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
   border-color: rgba(229, 193, 88, 0.45) !important;
 }
+
+/* ============================================================
+   SALON SHARE CARD (link + QR) — stylist salon management
+   ============================================================ */
+.salon-share-card {
+  background: linear-gradient(150deg, #ffffff 0%, #fff6f8 100%);
+  border: 1px solid #f0dfe6;
+  border-radius: 20px;
+  padding: 18px 16px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(140, 50, 70, 0.07);
+}
+.salon-share-card .share-head { font-size: 16px; font-weight: 800; color: var(--rose, #9B1B3B); }
+.salon-share-card .share-sub { font-size: 12.5px; color: var(--gray, #8a7680); margin: 6px 0 14px; line-height: 1.6; }
+.salon-share-card .share-qr-box {
+  width: 216px; height: 216px; margin: 0 auto 14px;
+  background: #fff; border: 1px solid #efe2e7; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(140, 50, 70, 0.1);
+}
+.salon-share-card .share-qr-box img { border-radius: 10px; display: block; }
+.salon-share-card .share-link {
+  font-size: 12.5px; color: #7b1d40; background: #fff0f3; border: 1px dashed #e5c1d0;
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; word-break: break-all;
+  cursor: pointer; direction: ltr; font-family: 'Segoe UI', monospace;
+}
+.salon-share-card .share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.salon-share-card .share-btn {
+  flex: 1; min-width: 96px; padding: 11px 8px; border-radius: 13px; border: 1px solid var(--gray-light, #E8D8DF);
+  background: #fff; color: var(--dark2, #2D1520); font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer;
+}
+.salon-share-card .share-btn.primary { background: linear-gradient(135deg, var(--rose, #9B1B3B), var(--rose-light, #C4567A)); color: #fff; border: none; }
+.salon-share-card .share-btn:active { transform: scale(0.97); }

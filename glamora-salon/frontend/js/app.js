@@ -58,18 +58,18 @@ function goBack() {
 
 function switchTab(name, btn) {
   const target = document.getElementById('tab-' + name);
-  // Instant frame 0 UI tab switch (0ms lag, immediate feedback)
+  // Instant 0ms frame-0 visual feedback
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (target) target.classList.add('active');
   if (btn) btn.classList.add('active');
 
-  // Defer heavy list rendering to the next tick so the transition runs at smooth 60fps
+  // Defer heavy data/DOM updates until after the tab transition finishes (0 frame drops)
   setTimeout(() => {
     if (name === 'bookings') loadMyBookings();
     else if (name === 'chat') { loadConversations(); document.getElementById('chat-badge')?.classList.add('hidden'); }
     else if (name === 'profile') loadProfile();
-  }, 10);
+  }, 180);
 }
 
 function closeModal() {
@@ -150,8 +150,8 @@ function enterApp(user) {
     initFirebaseNotifications();
   }
   requestLocationPermission();
-  // If the app was opened by tapping a push notification, route to it once the UI settles.
-  setTimeout(flushPendingNotifRoute, 1500);
+  // If the app was opened by tapping a push notification or a salon share link, route once ready.
+  setTimeout(() => { flushPendingNotifRoute(); flushPendingSalonDeepLink(); }, 1500);
   if (user.role === 'stylist' || user.role === 'salon_owner') {
     enterStylistDashboard(user);
     return;
@@ -2455,6 +2455,30 @@ function flushPendingNotifRoute() {
   }
 }
 
+// ===== Salon share deep links (velour://salon/<id> or https://.../s/<id>) =====
+function _handleSalonDeepLink(url) {
+  if (!url) return;
+  const m = url.match(/salon\/(\d+)/) || url.match(/\/s\/(\d+)/);
+  if (!m) return;
+  window._pendingSalonDeepLink = parseInt(m[1], 10);
+  flushPendingSalonDeepLink();
+}
+function flushPendingSalonDeepLink() {
+  const id = window._pendingSalonDeepLink;
+  if (!id) return;
+  if (typeof currentUser === 'undefined' || !currentUser) return; // wait until logged in (enterApp will retry)
+  window._pendingSalonDeepLink = null;
+  if (typeof openSalon === 'function') openSalon(id);
+}
+function initDeepLinks() {
+  try {
+    const App = (typeof Capacitor !== 'undefined') && Capacitor.Plugins && Capacitor.Plugins.App;
+    if (!App) return;
+    App.addListener('appUrlOpen', (data) => _handleSalonDeepLink(data && data.url));
+    App.getLaunchUrl().then(res => { if (res && res.url) _handleSalonDeepLink(res.url); }).catch(() => {});
+  } catch (e) {}
+}
+
 async function loadNotifBadge() {
   try {
     const notifs = await Api.users.notifications();
@@ -3803,6 +3827,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // This removes the empty purple gap between the native splash and the app's own splash
   // (native splash stays put because launchAutoHide is false).
   showScreen('splash');
+  if (typeof initDeepLinks === 'function') initDeepLinks();
   if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
     const hideNative = () => { try { Capacitor.Plugins.SplashScreen?.hide(); } catch(e) {} };
     requestAnimationFrame(() => requestAnimationFrame(hideNative));  // after the HTML splash paints

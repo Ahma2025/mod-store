@@ -82,13 +82,13 @@ async function loadStylistDashboard() {
 }
 
 function stSwitchTab(name, btn) {
-  // Instant frame 0 UI tab switch (0ms lag, immediate feedback)
+  // Instant 0ms frame-0 visual feedback
   document.querySelectorAll('#screen-stylist .tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('#screen-stylist .nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('stab-' + name)?.classList.add('active');
   btn?.classList.add('active');
 
-  // Defer heavy list rendering to the next tick so the transition is 60fps butter-smooth
+  // Defer heavy list rendering until after the tab transition finishes (0 frame drops)
   setTimeout(() => {
     if (name === 'bookings') loadStBookings('pending');
     else if (name === 'team') renderTeam();
@@ -98,7 +98,7 @@ function stSwitchTab(name, btn) {
       document.getElementById('quick-replies-row')?.classList.remove('hidden');
     }
     else if (name === 'profile') loadStProfile();
-  }, 10);
+  }, 180);
 }
 
 // ===== SALON HEADER =====
@@ -114,6 +114,7 @@ function renderSalonHeader() {
   document.getElementById('st-scity').textContent = stSalonData.city;
   document.getElementById('st-saddress').textContent = stSalonData.address;
   document.getElementById('st-salon-name').textContent = stSalonData.name;
+  if (typeof renderSalonShare === 'function') renderSalonShare();
   const locEl = document.getElementById('st-location-status');
   if (locEl) {
     const _e = window.VELOUR_LANG === 'en';
@@ -1274,4 +1275,59 @@ async function deleteInventoryItem(id) {
     showToast(_diEN ? 'Deleted ✓' : 'تم الحذف ✓');
     loadInventory();
   } catch (e) { showToast(_diEN ? 'Delete failed' : 'فشل الحذف'); }
+}
+
+// ===== Salon share (link + QR) =====
+function _salonShareUrl() {
+  const id = (typeof stSalonData !== 'undefined' && stSalonData) ? stSalonData.id : null;
+  if (!id) return null;
+  const base = (typeof BASE !== 'undefined' && BASE) ? BASE : 'https://glamora-salon-production.up.railway.app';
+  return `${base}/s/${id}`;
+}
+
+function renderSalonShare() {
+  const card = document.getElementById('salon-share-card');
+  const url = _salonShareUrl();
+  if (!card) return;
+  if (!url) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const linkEl = document.getElementById('salon-share-link');
+  if (linkEl) linkEl.textContent = url;
+  const qr = document.getElementById('salon-share-qr');
+  if (qr) qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(url)}`;
+}
+
+async function copySalonLink() {
+  const url = _salonShareUrl();
+  if (!url) return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const t = document.createElement('textarea');
+      t.value = url; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+    }
+    showToast('✅ تم نسخ الرابط');
+  } catch (e) { showToast('⚠️ تعذّر النسخ'); }
+}
+
+async function shareSalonLink() {
+  const url = _salonShareUrl();
+  if (!url) return;
+  const name = (stSalonData && stSalonData.name) || 'صالوني';
+  const text = `احجزي موعدك في ${name} عبر تطبيق فيلور 🌹\n${url}`;
+  try {
+    const Share = (typeof Capacitor !== 'undefined') && Capacitor.Plugins && Capacitor.Plugins.Share;
+    if (Share && Share.share) { await Share.share({ title: name, text, url, dialogTitle: 'شارك صالونك' }); return; }
+    if (navigator.share) { await navigator.share({ title: name, text, url }); return; }
+    copySalonLink();
+  } catch (e) { /* user cancelled the share sheet */ }
+}
+
+function saveSalonQr() {
+  const url = _salonShareUrl();
+  if (!url) return;
+  const big = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=24&data=${encodeURIComponent(url)}`;
+  try { window.open(big, '_blank'); } catch (e) { showToast('اضغطي مطوّلاً على الباركود لحفظه'); }
 }

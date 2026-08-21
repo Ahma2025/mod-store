@@ -157,6 +157,70 @@ io.on('connection', (socket) => {
 });
 
 
+// ===== Salon share landing page (QR / link target) =====
+// If the app is installed, the OS opens it via the deep link and this page is never seen.
+// Otherwise the visitor lands here: salon name + "open in app" + "download" buttons.
+const IOS_STORE = 'https://apps.apple.com/il/app/velour-salon/id6781790856';
+const ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.velour.salon';
+const _esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+app.get('/s/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  let salon = null;
+  try { salon = await DB.salons.findOne(s => s.id === id); } catch (e) {}
+  const name = salon ? salon.name : 'صالون فيلور';
+  const city = salon ? (salon.city || '') : '';
+  const logo = salon && salon.cover_url ? salon.cover_url : '';
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${_esc(name)} · فيلور</title>
+<meta property="og:title" content="${_esc(name)} على فيلور">
+<meta property="og:description" content="احجزي موعدك في ${_esc(name)} عبر تطبيق فيلور 🌹">
+${logo ? `<meta property="og:image" content="${_esc(logo)}">` : ''}
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 30% 10%,#3a0f22,#1a0a0f 70%);color:#fff;padding:24px}
+  .card{width:100%;max-width:380px;text-align:center}
+  .logo{width:110px;height:110px;border-radius:50%;margin:0 auto 18px;object-fit:cover;
+    background:linear-gradient(135deg,#9B1B3B,#4a0a25);display:flex;align-items:center;justify-content:center;
+    font-size:46px;border:3px solid #C9A96E;box-shadow:0 8px 30px rgba(201,169,110,.35)}
+  h1{font-size:24px;font-weight:800;margin-bottom:4px}
+  .city{color:#e5c9a0;font-size:14px;margin-bottom:6px}
+  .tag{color:#d8b6c2;font-size:14px;margin-bottom:28px}
+  .btn{display:block;width:100%;padding:15px;border-radius:16px;font-size:16px;font-weight:800;text-decoration:none;
+    margin-bottom:12px;border:none;cursor:pointer;font-family:inherit}
+  .btn-primary{background:linear-gradient(135deg,#C9A96E,#a87919);color:#1a050f;box-shadow:0 8px 22px rgba(201,169,110,.4)}
+  .btn-ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18)}
+  .brand{margin-top:26px;color:#8a6b76;font-size:13px;letter-spacing:1px}
+  .brand b{color:#C9A96E}
+</style></head><body>
+<div class="card">
+  ${logo ? `<img class="logo" src="${_esc(logo)}" alt="">` : `<div class="logo">💅</div>`}
+  <h1>${_esc(name)}</h1>
+  ${city ? `<div class="city">📍 ${_esc(city)}</div>` : ''}
+  <div class="tag">احجزي موعدك عبر تطبيق فيلور 🌹</div>
+  <a class="btn btn-primary" id="openBtn" href="velour://salon/${id}">افتح في التطبيق</a>
+  <a class="btn btn-ghost" id="dlBtn" href="${IOS_STORE}">نزّلي تطبيق فيلور</a>
+  <div class="brand">V E L O U R · <b>فيلور</b></div>
+</div>
+<script>
+  var ID=${id}, IOS=${JSON.stringify(IOS_STORE)}, AND=${JSON.stringify(ANDROID_STORE)};
+  var ua=navigator.userAgent||'';
+  var isAndroid=/android/i.test(ua), isIOS=/iphone|ipad|ipod/i.test(ua);
+  document.getElementById('dlBtn').href = isAndroid ? AND : IOS;
+  // Try to open the app; if it isn't installed we simply stay on this page (download button ready).
+  var t=Date.now();
+  document.getElementById('openBtn').addEventListener('click', function(e){
+    e.preventDefault();
+    window.location.href='velour://salon/'+ID;
+    setTimeout(function(){ if(Date.now()-t<2000){ window.location.href=(isAndroid?AND:IOS); } },1200);
+  });
+</script>
+</body></html>`;
+  res.set('Content-Type', 'text/html; charset=utf-8').send(html);
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
