@@ -74,6 +74,10 @@ async function loadStylistDashboard() {
       Api.stylistDash.clients(stSalonData.id)
         .then(r => { try { localStorage.setItem('velour_clients_' + stSalonData.id, JSON.stringify(r.clients)); } catch (e) {} })
         .catch(() => {});
+      // warm the analytics cache too
+      Api.stylistDash.analytics(stSalonData.id)
+        .then(a => { try { localStorage.setItem('velour_analytics_' + stSalonData.id, JSON.stringify(a)); } catch (e) {} })
+        .catch(() => {});
     }
   } catch (e) {
     console.error('loadStylistDashboard:', e);
@@ -1114,27 +1118,64 @@ async function sendReviewReply(reviewId) {
 
 // ===== 59-61: ANALYTICS =====
 let analyticsData = null;
+let _analyticsPeriod = 'total';
+
+function _paintAnalytics() {
+  if (!analyticsData) return;
+  const _anEN = window.VELOUR_LANG === 'en';
+  renderAnalytics(_analyticsPeriod);
+  const ts = document.getElementById('analytics-top-service');
+  if (ts) ts.textContent = analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} ${_anEN ? 'times' : 'مرة'})` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
+  const th = document.getElementById('analytics-top-hour');
+  if (th) th.textContent = analyticsData.busiest_hour ? `${_anEN ? 'Hour' : 'الساعة'} ${analyticsData.busiest_hour}` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
+  const setN = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setN('analytics-pending', analyticsData.bookings.pending);
+  setN('analytics-confirmed', analyticsData.bookings.confirmed);
+  setN('analytics-completed', analyticsData.bookings.completed);
+}
+
 async function showAnalytics() {
   showScreen('analytics');
   if (!stSalonData?.id) return;
+  const cacheKey = 'velour_analytics_' + stSalonData.id;
+  // instant paint from cache — no loading wait
+  let painted = false;
   try {
-    analyticsData = await Api.stylistDash.analytics(stSalonData.id);
-    renderAnalytics('total');
-    const _anEN = window.VELOUR_LANG === 'en';
-    document.getElementById('analytics-top-service').textContent =
-      analyticsData.top_service ? `${analyticsData.top_service.name} (${analyticsData.top_service.count} ${_anEN ? 'times' : 'مرة'})` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
-    document.getElementById('analytics-top-hour').textContent =
-      analyticsData.busiest_hour ? `${_anEN ? 'Hour' : 'الساعة'} ${analyticsData.busiest_hour}` : (_anEN ? 'No data yet' : 'لا توجد بيانات بعد');
-    document.getElementById('analytics-pending').textContent = analyticsData.bookings.pending;
-    document.getElementById('analytics-confirmed').textContent = analyticsData.bookings.confirmed;
-    document.getElementById('analytics-completed').textContent = analyticsData.bookings.completed;
-  } catch (e) { showToast(window.VELOUR_LANG === 'en' ? 'Failed to load analytics' : 'فشل تحميل التحليلات'); }
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (cached) { analyticsData = cached; _paintAnalytics(); painted = true; }
+  } catch (e) {}
+  // refresh silently; only re-render if something actually changed
+  try {
+    const fresh = await Api.stylistDash.analytics(stSalonData.id);
+    const sig = JSON.stringify(fresh);
+    try { localStorage.setItem(cacheKey, sig); } catch (e) {}
+    if (sig !== JSON.stringify(analyticsData)) { analyticsData = fresh; _paintAnalytics(); }
+  } catch (e) { if (!painted) showToast(window.VELOUR_LANG === 'en' ? 'Failed to load analytics' : 'فشل تحميل التحليلات'); }
 }
 
 function renderAnalytics(period) {
   if (!analyticsData) return;
+  _analyticsPeriod = period;
   const map = { today: analyticsData.revenue.today, week: analyticsData.revenue.week, month: analyticsData.revenue.month, total: analyticsData.revenue.total };
-  document.getElementById('analytics-revenue').textContent = `₪${(map[period] || 0).toFixed(2)}`;
+  _animateRevenue(map[period] || 0);
+}
+
+// Smooth count-up on the revenue number (nice motion when opening / switching period).
+function _animateRevenue(target) {
+  const el = document.getElementById('analytics-revenue');
+  if (!el) return;
+  target = Number(target) || 0;
+  const start = parseFloat(el.dataset.val || '0') || 0;
+  if (start === target) { el.textContent = `₪${target.toFixed(2)}`; return; }
+  const dur = 650, t0 = performance.now();
+  const ease = (x) => 1 - Math.pow(1 - x, 3);
+  (function step(now) {
+    const p = Math.min(1, (now - t0) / dur);
+    const v = start + (target - start) * ease(p);
+    el.textContent = `₪${v.toFixed(2)}`;
+    if (p < 1) requestAnimationFrame(step);
+    else { el.textContent = `₪${target.toFixed(2)}`; el.dataset.val = String(target); }
+  })(t0);
 }
 
 function switchAnalyticsPeriod(period, el) {
