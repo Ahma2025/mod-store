@@ -1331,8 +1331,25 @@ function switchSalonTab(name, btn) {
 }
 
 // ===== BOOKING WIZARD =====
+// Rewind the wizard's step panes + progress dots to step 1. Without this, a prior
+// booking leaves the DOM on step 4, so reopening the wizard would skip straight to
+// confirmation until the app is fully restarted (which reloads the pristine HTML).
+function resetWizardDOM() {
+  for (let i = 1; i <= 4; i++) {
+    const pane = document.getElementById('wstep-' + i);
+    const dot = document.getElementById('ws' + i);
+    if (pane) pane.classList.toggle('active', i === 1);
+    if (dot) { dot.classList.toggle('active', i === 1); dot.classList.remove('done'); }
+  }
+  const nx = document.getElementById('wizard-next');
+  const pv = document.getElementById('wizard-prev');
+  if (nx) nx.style.display = 'block';
+  if (pv) pv.style.display = 'none';
+}
+
 function quickBook(serviceId, salonId) {
   wizardState = { step: 1, services: [], stylist: null, date: null, time: null, salonId: salonId || null };
+  resetWizardDOM();
   showScreen('booking-wizard');
   loadWizardStep1(salonId);
 
@@ -1344,6 +1361,7 @@ function quickBook(serviceId, salonId) {
 
 function openStylistBooking(stylistId) {
   wizardState = { step: 1, services: [], stylist: null, date: null, time: null, salonId: null, preStylest: stylistId };
+  resetWizardDOM();
   showScreen('booking-wizard');
   loadWizardStep1(null);
 }
