@@ -133,6 +133,7 @@ function renderHours() {
   const hours = stSalonData?.hours || [];
   const closedDays = hours.filter(h => h.is_closed).map(h => DAYS()[h.day_of_week]);
   const el = document.getElementById('st-hours-list');
+  if (!el) return;   // hours section removed from the UI
   if (!closedDays.length) {
     el.innerHTML = `<div style="font-size:13px;color:var(--gray)">${window.VELOUR_LANG === 'en' ? 'No days off — salon open every day' : 'لا يوجد أيام إجازة — الصالون مفتوح كل الأيام'}</div>`;
     return;
@@ -762,63 +763,109 @@ async function deleteMedia(mediaId) {
 let currentSalonIdForOffers = null;
 
 function showAddOfferForm() {
-  document.getElementById('offer-title').value = '';
-  document.getElementById('offer-desc').value = '';
-  document.getElementById('offer-discount').value = '';
-  document.getElementById('offer-valid-until').value = '';
+  const _ofEN = window.VELOUR_LANG === 'en';
+  const box = document.getElementById('offer-svc-list');
+  const services = stSalonData?.services || [];
+  if (!services.length) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--gray);padding:12px;text-align:center">${_ofEN ? 'Add services first' : 'أضيفي خدمات أولاً'}</div>`;
+  } else {
+    box.innerHTML = services.map(s => {
+      const nm = _ofEN ? (s.name || s.name_ar) : (s.name_ar || s.name);
+      const hasD = s.discount_percent > 0;
+      return `<label style="display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:9px;cursor:pointer;border-bottom:1px solid var(--gray-light)">
+        <input type="checkbox" class="offer-svc-cb" value="${s.id}" ${hasD ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--rose)">
+        <span style="flex:1;font-size:14px;font-weight:600">${_esc(nm)}</span>
+        <span style="font-size:13px;color:var(--gray)">₪${s.price}${hasD ? ` <span style="color:var(--rose-dark);font-weight:700">-${s.discount_percent}%</span>` : ''}</span>
+      </label>`;
+    }).join('');
+  }
+  // prefill discount % from any already-discounted service
+  const cur = services.find(s => s.discount_percent > 0);
+  document.getElementById('offer-discount').value = cur ? cur.discount_percent : '';
+  document.getElementById('offer-valid-until').value = (cur && cur.discount_until) ? cur.discount_until : '';
   document.getElementById('modal-add-offer').classList.remove('hidden');
 }
 
-async function saveOffer() {
+function _selectedOfferSvcIds() {
+  return Array.from(document.querySelectorAll('.offer-svc-cb:checked')).map(cb => parseInt(cb.value));
+}
+
+async function saveServiceDiscount() {
   const _ofEN = window.VELOUR_LANG === 'en';
-  const title = document.getElementById('offer-title').value.trim();
-  if (!title) { showToast(_ofEN ? 'Enter offer title' : 'أدخلي عنوان العرض'); return; }
+  const ids = _selectedOfferSvcIds();
+  if (!ids.length) { showToast(_ofEN ? 'Select at least one service' : 'اختاري خدمة واحدة على الأقل'); return; }
+  const pct = parseInt(document.getElementById('offer-discount').value) || 0;
+  if (pct < 1) { showToast(_ofEN ? 'Enter a discount %' : 'أدخلي نسبة الخصم'); return; }
   const btn = document.querySelector('#modal-add-offer .btn-primary');
   btn.disabled = true; btn.textContent = _ofEN ? 'Sending...' : 'جاري الإرسال...';
   try {
     const salonId = currentSalonIdForOffers;
-    await Api.stylistDash.addOffer(salonId, {
-      title,
-      description: document.getElementById('offer-desc').value.trim(),
-      discount_percent: parseInt(document.getElementById('offer-discount').value) || 0,
+    await Api.stylistDash.setServiceDiscount(salonId, {
+      service_ids: ids,
+      discount_percent: pct,
       valid_until: document.getElementById('offer-valid-until').value || null,
     });
+    _applyDiscountLocal(ids, pct, document.getElementById('offer-valid-until').value || null);
     closeModalById('modal-add-offer');
-    showToast(_ofEN ? '✅ Offer sent & clients notified!' : '✅ تم إرسال العرض وإشعار الزبونات!');
+    showToast(_ofEN ? '✅ Discount applied & clients notified' : '✅ تم تفعيل الخصم وإرسال الإشعار');
     loadOffers(salonId);
   } catch (e) { showToast('⚠️ ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = _ofEN ? 'Send Offer 🎁' : 'إرسال العرض 🎁'; }
+  finally { btn.disabled = false; btn.textContent = _ofEN ? 'Apply discount & notify 🎁' : 'تفعيل الخصم وإرسال إشعار 🎁'; }
+}
+
+async function clearServiceDiscount() {
+  const _ofEN = window.VELOUR_LANG === 'en';
+  const ids = _selectedOfferSvcIds();
+  if (!ids.length) { showToast(_ofEN ? 'Select a service' : 'اختاري خدمة'); return; }
+  try {
+    const salonId = currentSalonIdForOffers;
+    await Api.stylistDash.setServiceDiscount(salonId, { service_ids: ids, discount_percent: 0, valid_until: null });
+    _applyDiscountLocal(ids, 0, null);
+    closeModalById('modal-add-offer');
+    showToast(_ofEN ? '✅ Discount removed' : '✅ تم إلغاء الخصم');
+    loadOffers(salonId);
+  } catch (e) { showToast('⚠️ ' + e.message); }
+}
+
+function _applyDiscountLocal(ids, pct, until) {
+  const set = new Set(ids);
+  (stSalonData?.services || []).forEach(s => {
+    if (set.has(s.id)) { s.discount_percent = pct; s.discount_until = until; }
+  });
 }
 
 async function loadOffers(salonId) {
   currentSalonIdForOffers = salonId;
   const list = document.getElementById('st-offers-list');
   if (!list) return;
-  try {
-    const _loEN = window.VELOUR_LANG === 'en';
-    const offers = await Api.stylistDash.getOffers(salonId);
-    if (!offers.length) {
-      list.innerHTML = `<div style="font-size:13px;color:var(--gray);padding:8px 0">${_loEN ? 'No active offers' : 'لا توجد عروض نشطة'}</div>`;
-      return;
-    }
-    list.innerHTML = offers.map(o => `
-      <div style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:8px;border-right:4px solid var(--rose);display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div>
-          <div style="font-weight:800;font-size:14px">🎁 ${_esc(o.title)}</div>
-          ${o.discount_percent ? `<div style="font-size:12px;color:var(--rose-dark);margin-top:2px">${_loEN ? `${o.discount_percent}% discount` : `خصم ${o.discount_percent}%`}</div>` : ''}
-          ${o.valid_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">${_loEN ? `Valid until ${o.valid_until}` : `صالح حتى ${o.valid_until}`}</div>` : ''}
-        </div>
-        <button onclick="deleteOffer(${o.id})" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;flex-shrink:0">🗑</button>
+  const _loEN = window.VELOUR_LANG === 'en';
+  const today = new Date().toISOString().split('T')[0];
+  const active = (stSalonData?.services || []).filter(s => s.discount_percent > 0 && (!s.discount_until || s.discount_until >= today));
+  if (!active.length) {
+    list.innerHTML = `<div style="font-size:13px;color:var(--gray);padding:8px 0">${_loEN ? 'No active discounts' : 'لا توجد خصومات نشطة'}</div>`;
+    return;
+  }
+  list.innerHTML = active.map(s => {
+    const nm = _loEN ? (s.name || s.name_ar) : (s.name_ar || s.name);
+    const newP = Math.round(s.price * (1 - s.discount_percent / 100));
+    return `<div style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:8px;border-right:4px solid var(--rose);display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div>
+        <div style="font-weight:800;font-size:14px">🎁 ${_esc(nm)}</div>
+        <div style="font-size:12px;margin-top:2px"><span style="text-decoration:line-through;color:var(--gray)">₪${s.price}</span> <span style="color:var(--rose-dark);font-weight:800">₪${newP}</span> <span style="color:var(--rose-dark)">(-${s.discount_percent}%)</span></div>
+        ${s.discount_until ? `<div style="font-size:11px;color:var(--gray);margin-top:2px">${_loEN ? `Valid until ${s.discount_until}` : `صالح حتى ${s.discount_until}`}</div>` : ''}
       </div>
-    `).join('');
-  } catch (e) { list.innerHTML = ''; }
+      <button onclick="removeServiceDiscount(${s.id})" style="background:none;border:none;color:#e74c3c;font-size:18px;cursor:pointer;flex-shrink:0">🗑</button>
+    </div>`;
+  }).join('');
 }
 
-async function deleteOffer(id) {
+async function removeServiceDiscount(id) {
   try {
-    await Api.stylistDash.deleteOffer(id);
-    showToast(window.VELOUR_LANG === 'en' ? 'Offer deleted' : 'تم حذف العرض');
-    loadOffers(currentSalonIdForOffers);
+    const salonId = currentSalonIdForOffers;
+    await Api.stylistDash.setServiceDiscount(salonId, { service_ids: [id], discount_percent: 0, valid_until: null });
+    _applyDiscountLocal([id], 0, null);
+    showToast(window.VELOUR_LANG === 'en' ? '✅ Discount removed' : '✅ تم إلغاء الخصم');
+    loadOffers(salonId);
   } catch (e) { showToast('⚠️ ' + e.message); }
 }
 

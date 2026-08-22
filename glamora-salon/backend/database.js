@@ -264,6 +264,9 @@ async function initDatabase() {
     )`,
     // deep-link target for a notification (booking_id / order_id / sender user_id / salon_id)
     `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ref_id INTEGER`,
+    // per-service discount (special offers)
+    `ALTER TABLE services ADD COLUMN IF NOT EXISTS discount_percent INTEGER DEFAULT 0`,
+    `ALTER TABLE services ADD COLUMN IF NOT EXISTS discount_until TEXT`,
     // ===== product shop =====
     `ALTER TABLE beauty_products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`,
     `ALTER TABLE salons ADD COLUMN IF NOT EXISTS delivery_prices TEXT`,   // JSON {west_bank,jerusalem,inside}

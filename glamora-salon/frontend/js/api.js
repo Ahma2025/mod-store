@@ -211,6 +211,7 @@ const Api = {
     getOffers: (salonId) => apiCall('GET', `/stylist/salon/${salonId}/offers`),
     addOffer: (salonId, data) => apiCall('POST', `/stylist/salon/${salonId}/offers`, data),
     deleteOffer: (id) => apiCall('DELETE', `/stylist/offers/${id}`),
+    setServiceDiscount: (salonId, data) => apiCall('POST', `/stylist/salon/${salonId}/service-discount`, data),
     getBlockedSlots: () => apiCall('GET', '/blocked-slots'),
     addBlockedSlot: (data) => apiCall('POST', '/blocked-slots', data),
     deleteBlockedSlot: (id) => apiCall('DELETE', `/blocked-slots/${id}`),

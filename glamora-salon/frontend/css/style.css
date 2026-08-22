@@ -3202,3 +3202,6 @@ input:focus, textarea:focus, select:focus {
 
 /* remove the gold underline under the active nav tab */
 .nav-btn.active::after { display: none !important; content: none !important; }
+
+/* hide home promo sections while searching */
+.search-hidden { display: none !important; }

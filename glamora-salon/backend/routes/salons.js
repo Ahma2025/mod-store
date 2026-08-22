@@ -25,7 +25,16 @@ router.get('/', async (req, res) => {
 
     let salons = (await query('SELECT * FROM salons WHERE is_active=1')).rows;
     if (city) salons = salons.filter(s => (s.city || '').includes(city));
-    if (search) salons = salons.filter(s => (s.name || '').includes(search) || (s.description || '').includes(search));
+    if (search) {
+      // Match by salon name/description OR by a service they offer (name / category).
+      const svc = (await query(
+        `SELECT DISTINCT salon_id FROM services WHERE is_active=1 AND (name ILIKE $1 OR name_ar ILIKE $1 OR category ILIKE $1)`,
+        ['%' + search + '%']
+      )).rows;
+      const svcSalonIds = new Set(svc.map(r => r.salon_id));
+      const q = search.toLowerCase();
+      salons = salons.filter(s => (s.name || '').toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q) || svcSalonIds.has(s.id));
+    }
     if (!salons.length) { if (cacheable) _listCache = { t: Date.now(), data: [] }; return res.json([]); }
     const ids = salons.map(s => s.id);
 

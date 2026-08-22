@@ -795,9 +795,27 @@ function renderSalonsList(salons, showDistance = false) {
 }
 
 async function searchSalons(q) {
+  const term = (q || '').trim();
+  const _en = window.VELOUR_LANG === 'en';
+  const sections = document.querySelectorAll('#home-scroll > .section');
+  const allHeader = document.querySelector('#section-all-salons .section-header h3');
+  if (!term) {
+    // restore the normal home
+    sections.forEach(s => s.classList.remove('search-hidden'));
+    if (allHeader) allHeader.textContent = _en ? 'All Salons' : 'جميع الصالونات';
+    try { renderSalonsList(allSalonsCache || await Api.salons.list()); } catch (e) {}
+    return;
+  }
+  // search mode: hide the promo sections, show only the results
+  sections.forEach(s => { if (s.id !== 'section-all-salons') s.classList.add('search-hidden'); });
+  if (allHeader) allHeader.textContent = _en ? 'Search results' : 'نتائج البحث';
   try {
-    const salons = await Api.salons.list(q ? { search: q } : {});
-    renderSalonsList(salons);
+    const salons = await Api.salons.list({ search: term });
+    if (!salons.length) {
+      document.getElementById('salons-list').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>${_en ? 'No results' : 'لا توجد نتائج'}</h3><p>${_en ? 'Try another salon or service name' : 'جربي اسم صالون أو خدمة ثانية'}</p></div>`;
+    } else {
+      renderSalonsList(salons);
+    }
   } catch (e) {}
 }
 
@@ -884,7 +902,25 @@ function _paintSalon(data, id) {
     cats.map(c => `<div class="svc-filter-chip" onclick="filterSalonServices(this, '${c}')">${categoryIcon(c)} ${c}</div>`).join('');
 }
 
+// If a service has an active discount, drop its price to the discounted value
+// (so booking totals charge the new price) and stash the original for strikethrough.
+function _svcApplyDiscount(s) {
+  const today = new Date().toISOString().split('T')[0];
+  const pct = parseInt(s.discount_percent) || 0;
+  if (pct > 0 && (!s.discount_until || s.discount_until >= today) && s._origPrice == null) {
+    s._origPrice = parseFloat(s.price);
+    s.price = Math.round(parseFloat(s.price) * (1 - pct / 100));
+  }
+}
+function _priceHtml(s) {
+  if (s._origPrice != null) {
+    return `<div class="service-price"><span style="text-decoration:line-through;color:var(--gray);font-size:.78em;font-weight:600">₪${s._origPrice}</span> ₪${s.price} <span style="color:var(--rose-dark);font-size:.72em;font-weight:800">-${s.discount_percent}%</span></div>`;
+  }
+  return `<div class="service-price">₪${s.price}</div>`;
+}
+
 function renderSalonServices(services) {
+  (services || []).forEach(_svcApplyDiscount);
   const _ssEN = window.VELOUR_LANG === 'en';
   if (!services?.length) { document.getElementById('salon-services-list').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>${_ssEN ? 'No services' : 'لا توجد خدمات'}</h3></div>`; return; }
   document.getElementById('salon-services-list').innerHTML = services.map(s => `
@@ -897,7 +933,7 @@ function renderSalonServices(services) {
         <p translate="no">${s.description ? s.description.substring(0,55) + '...' : ''}</p>
         <div class="duration">⏱ ${s.duration_minutes} ${_ssEN ? 'min' : 'دقيقة'}</div>
       </div>
-      <div class="service-price">₪${s.price}</div>
+      ${_priceHtml(s)}
     </div>
   `).join('');
 }
@@ -1345,6 +1381,7 @@ async function loadWizardStep1(salonId) {
 }
 
 function renderWizardServices(services) {
+  (services || []).forEach(_svcApplyDiscount);
   const selectedIds = new Set((wizardState.services || []).map(s => s.id));
   document.getElementById('wizard-services-list').innerHTML = services.map(s => `
     <div class="wizard-service-item ${selectedIds.has(s.id) ? 'selected' : ''}" onclick="selectWizardService(${JSON.stringify(s).replace(/"/g,"'")})">
@@ -1355,7 +1392,7 @@ function renderWizardServices(services) {
         <h4 translate="no">${_esc(s.name_ar || s.name)}</h4>
         <div class="duration">⏱ ${s.duration_minutes} ${window.VELOUR_LANG === 'en' ? 'min' : 'دقيقة'}</div>
       </div>
-      <div class="service-price">₪${s.price}</div>
+      ${_priceHtml(s)}
       <div class="service-check ${selectedIds.has(s.id) ? 'checked' : ''}">✓</div>
     </div>
   `).join('') + `<div id="wizard-services-footer" class="${(wizardState.services||[]).length ? '' : 'hidden'}">

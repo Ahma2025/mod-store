@@ -406,6 +406,50 @@ router.delete('/offers/:id', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'خطأ' }); }
 });
 
+// Set (or clear, when discount_percent=0) a % discount on selected services, then notify clients.
+router.post('/salon/:id/service-discount', authenticate, async (req, res) => {
+  try {
+    const salonId = parseInt(req.params.id, 10);
+    const stylist = await DB.stylists.findOne(s => s.user_id == req.user.id && s.salon_id === salonId);
+    if (!stylist && req.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
+    let { service_ids = [], discount_percent = 0, valid_until = null } = req.body;
+    service_ids = (Array.isArray(service_ids) ? service_ids : []).map(x => parseInt(x, 10)).filter(Boolean);
+    if (!service_ids.length) return res.status(400).json({ error: 'اختاري خدمة واحدة على الأقل' });
+    const pct = Math.max(0, Math.min(90, parseInt(discount_percent, 10) || 0));
+
+    await query(
+      `UPDATE services SET discount_percent=$1, discount_until=$2 WHERE id = ANY($3) AND salon_id=$4`,
+      [pct, pct > 0 ? (valid_until || null) : null, service_ids, salonId]
+    );
+
+    if (pct <= 0) return res.json({ ok: true, cleared: true });   // clearing a discount → no notification
+
+    const svcRows = (await query(`SELECT name_ar, name FROM services WHERE id = ANY($1)`, [service_ids])).rows;
+    const svcNames = svcRows.map(s => s.name_ar || s.name).filter(Boolean).slice(0, 3).join('، ');
+    const salon = (await query('SELECT * FROM salons WHERE id=$1', [salonId])).rows[0];
+    const clientIds = (await query('SELECT DISTINCT client_id FROM bookings WHERE salon_id=$1 AND client_id IS NOT NULL', [salonId])).rows.map(r => r.client_id);
+
+    res.status(201).json({ ok: true, notified: clientIds.length });
+
+    setImmediate(async () => {
+      try {
+        if (!clientIds.length) return;
+        const fcm = require('../fcm');
+        const title = `عرض خاص من ${salon?.name || 'الصالون'} 🎁`;
+        const body = `خصم ${pct}% على ${svcNames || 'خدمات مختارة'} — احجزي الآن 🌹`;
+        await query(
+          `INSERT INTO notifications (user_id, title, body, type, ref_id)
+           SELECT uid, $2, $3, 'offer', $4 FROM UNNEST($1::int[]) AS uid`,
+          [clientIds, title, body, salonId]
+        );
+        for (const cid of clientIds) req.io?.to(`user_${cid}`).emit('new_notif', { type: 'offer' });
+        const tokenRows = (await query('SELECT fcm_token FROM users WHERE id = ANY($1) AND fcm_token IS NOT NULL', [clientIds])).rows;
+        for (const t of tokenRows) fcm.notifySpecialOffer(t.fcm_token, salon?.name || 'صالون', body, salonId).catch(() => {});
+      } catch (e) { console.error('service-discount bg error:', e.message); }
+    });
+  } catch (e) { console.error('service-discount error:', e.message); res.status(500).json({ error: 'خطأ' }); }
+});
+
 // ===== 59-61: ANALYTICS =====
 router.get('/salon/:id/analytics', authenticate, async (req, res) => {
   try {
